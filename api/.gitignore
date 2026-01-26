@@ -25,10 +25,6 @@ phpstan.neon
 .phpunit.result.cache
 ###< phpunit/phpunit ###
 
-###> Docker/Dockerfile to allow debug in prod ###
-/Dockerfile
-###< Docker/Dockerfile to allow debug in prod ###
-
 ###> Files containing env secret variables ###
 /point.env.(dev)
 /point.env.(prod)
