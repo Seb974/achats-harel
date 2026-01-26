@@ -1,0 +1,16 @@
+/.env
+/helm/api-platform/charts/*
+!/helm/api-platform/charts/.gitignore
+
+###> Compose/Prod Compose with env secret vars ###
+/compose.yaml
+/compose.*.yaml
+/compoz.prod.yaml
+/compoze.(dev).yaml
+/compoze.(prod).yaml
+###< Compose/Prod Compose with env secret vars ###
+
+/API_ARCHIVES/
+/app/
+/components/
+/types/

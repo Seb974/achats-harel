@@ -1,0 +1,820 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service;
+
+use App\Entity\Client;
+use Psr\Log\LoggerInterface;
+
+/**
+ * Service pour communiquer avec l'API XML-RPC d'Odoo
+ * 
+ * Documentation Odoo External API:
+ * https://www.odoo.com/documentation/17.0/developer/reference/external_api.html
+ */
+class OdooApiService
+{
+    private ?string $url = null;
+    private ?string $db = null;
+    private ?string $username = null;
+    private ?string $password = null;
+    private ?int $uid = null;
+
+    public function __construct(
+        private LoggerInterface $logger
+    ) {}
+
+    /**
+     * Configure le service avec les paramètres du client
+     */
+    public function configure(Client $client): self
+    {
+        $this->url = $client->getOdooUrl();
+        $this->db = $client->getOdooDatabase();
+        $this->username = $client->getOdooUsername();
+        $this->password = $client->getOdooApiKey();
+        $this->uid = null; // Reset UID pour forcer une nouvelle authentification
+        
+        return $this;
+    }
+
+    /**
+     * Vérifie si le service est correctement configuré
+     */
+    public function isConfigured(): bool
+    {
+        return $this->url && $this->db && $this->username && $this->password;
+    }
+
+    /**
+     * Authentification auprès d'Odoo et récupération de l'UID
+     */
+    public function authenticate(): ?int
+    {
+        if (!$this->isConfigured()) {
+            throw new \RuntimeException('OdooApiService non configuré. Appelez configure() d\'abord.');
+        }
+
+        if ($this->uid !== null) {
+            return $this->uid;
+        }
+
+        try {
+            $commonUrl = rtrim($this->url, '/') . '/xmlrpc/2/common';
+            
+            $this->uid = $this->xmlRpcCall($commonUrl, 'authenticate', [
+                $this->db,
+                $this->username,
+                $this->password,
+                []
+            ]);
+
+            if (!$this->uid || $this->uid === false) {
+                $this->logger->error('Odoo authentication failed', [
+                    'url' => $this->url,
+                    'db' => $this->db,
+                    'username' => $this->username
+                ]);
+                return null;
+            }
+
+            $this->logger->info('Odoo authentication successful', ['uid' => $this->uid]);
+            return $this->uid;
+
+        } catch (\Throwable $e) {
+            $this->logger->error('Odoo authentication error', [
+                'error' => $e->getMessage(),
+                'url' => $this->url
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Récupère les informations de version d'Odoo
+     */
+    public function getVersion(): array
+    {
+        $commonUrl = rtrim($this->url, '/') . '/xmlrpc/2/common';
+        return $this->xmlRpcCall($commonUrl, 'version', []);
+    }
+
+    /**
+     * Exécute une requête sur un modèle Odoo
+     */
+    public function execute(string $model, string $method, array $args = [], array $kwargs = []): mixed
+    {
+        $uid = $this->authenticate();
+        if (!$uid) {
+            throw new \RuntimeException('Échec de l\'authentification Odoo');
+        }
+
+        $objectUrl = rtrim($this->url, '/') . '/xmlrpc/2/object';
+        
+        return $this->xmlRpcCall($objectUrl, 'execute_kw', [
+            $this->db,
+            $uid,
+            $this->password,
+            $model,
+            $method,
+            $args,
+            $kwargs
+        ]);
+    }
+
+    /**
+     * Recherche des enregistrements
+     */
+    public function search(string $model, array $domain = [], int $limit = 0, int $offset = 0): array
+    {
+        $kwargs = [];
+        if ($limit > 0) $kwargs['limit'] = $limit;
+        if ($offset > 0) $kwargs['offset'] = $offset;
+        
+        return $this->execute($model, 'search', [$domain], $kwargs);
+    }
+
+    /**
+     * Recherche et lecture des enregistrements en une seule requête
+     */
+    public function searchRead(string $model, array $domain = [], array $fields = [], int $limit = 0, int $offset = 0): array
+    {
+        $kwargs = [];
+        if (!empty($fields)) $kwargs['fields'] = $fields;
+        if ($limit > 0) $kwargs['limit'] = $limit;
+        if ($offset > 0) $kwargs['offset'] = $offset;
+        
+        return $this->execute($model, 'search_read', [$domain], $kwargs);
+    }
+
+    /**
+     * Lecture d'enregistrements par leurs IDs
+     */
+    public function read(string $model, array $ids, array $fields = []): array
+    {
+        $kwargs = [];
+        if (!empty($fields)) $kwargs['fields'] = $fields;
+        
+        return $this->execute($model, 'read', [$ids], $kwargs);
+    }
+
+    /**
+     * Compte les enregistrements
+     */
+    public function searchCount(string $model, array $domain = []): int
+    {
+        return $this->execute($model, 'search_count', [$domain]);
+    }
+
+    /**
+     * Crée un enregistrement
+     */
+    public function create(string $model, array $values): int
+    {
+        return $this->execute($model, 'create', [$values]);
+    }
+
+    /**
+     * Met à jour des enregistrements
+     */
+    public function write(string $model, array $ids, array $values): bool
+    {
+        return $this->execute($model, 'write', [$ids, $values]);
+    }
+
+    /**
+     * Supprime des enregistrements
+     */
+    public function unlink(string $model, array $ids): bool
+    {
+        return $this->execute($model, 'unlink', [$ids]);
+    }
+
+    // =========================================================================
+    // MÉTHODES MÉTIER SPÉCIFIQUES
+    // =========================================================================
+
+    /**
+     * Récupère la liste des produits avec leurs packagings
+     * 
+     * @return array Liste des produits formatés pour l'application
+     */
+    public function getProducts(int $limit = 1000, int $offset = 0): array
+    {
+        // Récupérer les produits (product.product pour les variantes)
+        // Champs compatibles Odoo 17/18/19
+        // Note: uom_ids contient les conditionnements (packagings) dans Odoo 19
+        $products = $this->searchRead(
+            'product.product',
+            [['purchase_ok', '=', true]], // Produits achetables
+            [
+                'id',
+                'default_code',       // Code produit
+                'name',               // Libellé
+                'categ_id',           // Catégorie
+                'qty_available',      // Quantité disponible
+                'uom_id',             // Unité de mesure de base
+                'uom_ids',            // Conditionnements (packagings) - Odoo 19
+                'list_price',         // Prix de vente
+                'standard_price',     // Prix d'achat standard
+                'active',
+            ],
+            $limit,
+            $offset
+        );
+
+        // Collecter tous les IDs de UoM (conditionnements) pour les récupérer en une seule requête
+        $allUomIds = [];
+        foreach ($products as $product) {
+            if (!empty($product['uom_ids']) && is_array($product['uom_ids'])) {
+                $allUomIds = array_merge($allUomIds, $product['uom_ids']);
+            }
+            // Ajouter aussi l'UoM de base
+            if (!empty($product['uom_id'])) {
+                $baseUomId = is_array($product['uom_id']) ? $product['uom_id'][0] : $product['uom_id'];
+                $allUomIds[] = $baseUomId;
+            }
+        }
+        $allUomIds = array_unique($allUomIds);
+
+        // Récupérer les détails des UoM (conditionnements)
+        $uomMap = [];
+        if (!empty($allUomIds)) {
+            try {
+                $uoms = $this->read('uom.uom', array_values($allUomIds), ['id', 'name', 'factor', 'relative_factor']);
+                foreach ($uoms as $uom) {
+                    $uomMap[$uom['id']] = [
+                        'id' => $uom['id'],
+                        'name' => $uom['name'],
+                        // relative_factor ou factor contient le nombre d'unités (ex: 6 pour "Sachet de 6")
+                        'unit_factor' => $uom['relative_factor'] ?? $uom['factor'] ?? 1,
+                        'unit' => 'unit',
+                        'barcode' => null,
+                    ];
+                }
+            } catch (\Throwable $e) {
+                $this->logger->info('Could not fetch UoM details: ' . $e->getMessage());
+            }
+        }
+
+        // Récupérer les catégories
+        $categoryIds = array_filter(array_map(fn($p) => is_array($p['categ_id']) ? $p['categ_id'][0] : $p['categ_id'], $products));
+        $categoriesMap = [];
+        if (!empty($categoryIds)) {
+            $categories = $this->read('product.category', array_unique($categoryIds), ['id', 'name', 'complete_name']);
+            foreach ($categories as $cat) {
+                $categoriesMap[$cat['id']] = [
+                    'id' => $cat['id'],
+                    'name' => $cat['name'],
+                    'complete_name' => $cat['complete_name'] ?? $cat['name'],
+                ];
+            }
+        }
+
+        // Formater les produits pour correspondre au format attendu par l'application
+        $formattedProducts = [];
+        foreach ($products as $product) {
+            $categoryId = is_array($product['categ_id']) ? $product['categ_id'][0] : $product['categ_id'];
+            
+            // Construire les packagings à partir de uom_ids (Odoo 19)
+            $productPackagings = [];
+            
+            // Ajouter l'unité de base en premier
+            $baseUomId = is_array($product['uom_id']) ? $product['uom_id'][0] : ($product['uom_id'] ?? 0);
+            $baseUomName = is_array($product['uom_id']) ? ($product['uom_id'][1] ?? 'Unité') : 'Unité';
+            
+            $productPackagings[] = [
+                'id' => $baseUomId,
+                'name' => $baseUomName,
+                'unit_factor' => 1,
+                'unit' => 'unit',
+                'barcode' => null,
+            ];
+            
+            // Ajouter les conditionnements supplémentaires depuis uom_ids
+            if (!empty($product['uom_ids']) && is_array($product['uom_ids'])) {
+                foreach ($product['uom_ids'] as $uomId) {
+                    // Ne pas dupliquer l'unité de base
+                    if ($uomId != $baseUomId && isset($uomMap[$uomId])) {
+                        $productPackagings[] = $uomMap[$uomId];
+                    }
+                }
+            }
+            
+            $formattedProducts[] = [
+                'id' => $product['id'],
+                'code' => $product['default_code'] ?? '',
+                'label' => $product['name'],
+                'category' => $categoriesMap[$categoryId] ?? null,
+                'availableQuantity' => $product['qty_available'] ?? 0,
+                'packagings' => $productPackagings,
+                'taxes' => [], // À enrichir si nécessaire
+                'custom_fields' => [], // Odoo utilise des champs personnalisés différemment
+                'stockManagement' => true,
+                'deleted' => !($product['active'] ?? true),
+                'unitPrice' => $product['standard_price'] ?? 0,
+            ];
+        }
+
+        return $formattedProducts;
+    }
+
+    /**
+     * Récupère un produit par son ID
+     */
+    public function getProduct(int $id): ?array
+    {
+        // Recherche spécifique par ID
+        // Note: uom_ids contient les conditionnements (packagings) dans Odoo 19
+        $product = $this->searchRead(
+            'product.product',
+            [['id', '=', $id]],
+            [
+                'id', 'default_code', 'name', 'categ_id', 'qty_available',
+                'uom_id', 'uom_ids', 'list_price', 'standard_price', 'active'
+            ],
+            1
+        );
+
+        if (empty($product)) {
+            return null;
+        }
+
+        $p = $product[0];
+        $categoryId = is_array($p['categ_id']) ? $p['categ_id'][0] : $p['categ_id'];
+        
+        $category = null;
+        if ($categoryId) {
+            $cats = $this->read('product.category', [$categoryId], ['id', 'name']);
+            $category = !empty($cats) ? ['id' => $cats[0]['id'], 'name' => $cats[0]['name']] : null;
+        }
+
+        // Construire les packagings à partir de uom_ids (Odoo 19)
+        $packagings = [];
+        
+        // Ajouter l'unité de base en premier
+        $baseUomId = is_array($p['uom_id']) ? $p['uom_id'][0] : ($p['uom_id'] ?? 0);
+        $baseUomName = is_array($p['uom_id']) ? ($p['uom_id'][1] ?? 'Unité') : 'Unité';
+        
+        $packagings[] = [
+            'id' => $baseUomId,
+            'name' => $baseUomName,
+            'unit_factor' => 1,
+            'unit' => 'unit',
+            'barcode' => null,
+        ];
+        
+        // Ajouter les conditionnements supplémentaires depuis uom_ids
+        if (!empty($p['uom_ids']) && is_array($p['uom_ids'])) {
+            try {
+                $uoms = $this->read('uom.uom', $p['uom_ids'], ['id', 'name', 'factor', 'relative_factor']);
+                foreach ($uoms as $uom) {
+                    // Ne pas dupliquer l'unité de base
+                    if ($uom['id'] != $baseUomId) {
+                        $packagings[] = [
+                            'id' => $uom['id'],
+                            'name' => $uom['name'],
+                            'unit_factor' => $uom['relative_factor'] ?? $uom['factor'] ?? 1,
+                            'unit' => 'unit',
+                            'barcode' => null,
+                        ];
+                    }
+                }
+            } catch (\Throwable $e) {
+                $this->logger->info('Could not fetch UoM details for product ' . $id . ': ' . $e->getMessage());
+            }
+        }
+
+        return [
+            'id' => $p['id'],
+            'code' => $p['default_code'] ?? '',
+            'label' => $p['name'],
+            'category' => $category,
+            'availableQuantity' => $p['qty_available'] ?? 0,
+            'packagings' => $packagings,
+            'taxes' => [],
+            'custom_fields' => [],
+            'stockManagement' => true,
+            'deleted' => !($p['active'] ?? true),
+            'unitPrice' => $p['standard_price'] ?? 0,
+        ];
+    }
+
+    /**
+     * Récupère la liste des fournisseurs
+     */
+    public function getSuppliers(int $limit = 1000, int $offset = 0): array
+    {
+        // Récupérer tous les partenaires qui peuvent être utilisés comme fournisseurs
+        // On inclut les entreprises ET les contacts avec supplier_rank > 0
+        // Le filtre '|' est un OR dans Odoo
+        $suppliers = $this->searchRead(
+            'res.partner',
+            [
+                '|',
+                ['supplier_rank', '>', 0],  // Partenaires marqués comme fournisseurs
+                ['is_company', '=', true],  // Ou toutes les entreprises
+            ],
+            [
+                'id',
+                'name',
+                'ref',           // Référence interne
+                'email',
+                'phone',
+                'street',
+                'city',
+                'zip',
+                'country_id',
+                'vat',           // Numéro de TVA
+                'active',
+            ],
+            $limit,
+            $offset
+        );
+
+        $formattedSuppliers = [];
+        foreach ($suppliers as $supplier) {
+            $formattedSuppliers[] = [
+                'id' => $supplier['id'],
+                'name' => $supplier['name'],
+                'ref' => $supplier['ref'] ?? '',
+                'email' => $supplier['email'] ?? '',
+                'phone' => $supplier['phone'] ?? '',
+                'address' => $supplier['street'] ?? '',
+                'city' => $supplier['city'] ?? '',
+                'zip' => $supplier['zip'] ?? '',
+                'country' => is_array($supplier['country_id']) ? $supplier['country_id'][1] : null,
+                'vat' => $supplier['vat'] ?? '',
+                'active' => $supplier['active'] ?? true,
+            ];
+        }
+
+        return $formattedSuppliers;
+    }
+
+    /**
+     * Crée une demande de devis (Request For Quotation) dans Odoo
+     * 
+     * @param int $supplierId ID du fournisseur
+     * @param array $lines Lignes de commande [['product_id' => int, 'quantity' => float, 'price_unit' => float], ...]
+     * @param array $options Options supplémentaires (date_order, notes, etc.)
+     * @return array Informations sur le RFQ créé
+     */
+    public function createRFQ(int $supplierId, array $lines, array $options = []): array
+    {
+        // Créer l'en-tête du bon de commande fournisseur
+        // Note: Dans Odoo 19, le champ s'appelle 'note' (singulier) pas 'notes'
+        $orderData = [
+            'partner_id' => $supplierId,
+            'state' => 'draft',  // RFQ = brouillon
+            'date_order' => $options['date_order'] ?? date('Y-m-d H:i:s'),
+        ];
+        
+        // Ajouter les notes si fournies
+        if (!empty($options['notes'])) {
+            $orderData['note'] = $options['notes'];
+        }
+
+        // Ajouter la référence origine si fournie
+        if (!empty($options['origin'])) {
+            $orderData['origin'] = $options['origin'];
+        }
+
+        // Créer le bon de commande
+        $orderId = $this->create('purchase.order', $orderData);
+
+        // Créer les lignes de commande
+        foreach ($lines as $line) {
+            $lineData = [
+                'order_id' => $orderId,
+                'product_id' => $line['product_id'],
+                'product_qty' => $line['quantity'],
+                'price_unit' => $line['price_unit'],  // Prix de revient rapproché
+            ];
+
+            // Ajouter la description si fournie
+            if (!empty($line['name'])) {
+                $lineData['name'] = $line['name'];
+            }
+
+            // Ajouter l'unité de mesure si fournie
+            // Note: Dans Odoo 19, le champ s'appelle 'product_uom_id' pas 'product_uom'
+            if (!empty($line['product_uom'])) {
+                $lineData['product_uom_id'] = $line['product_uom'];
+            }
+
+            $this->create('purchase.order.line', $lineData);
+        }
+
+        // Récupérer les informations du RFQ créé
+        $rfq = $this->read('purchase.order', [$orderId], [
+            'id', 'name', 'partner_id', 'date_order', 'amount_total', 'state', 'order_line'
+        ]);
+
+        return [
+            'success' => true,
+            'rfq_id' => $orderId,
+            'rfq_name' => $rfq[0]['name'] ?? "PO{$orderId}",
+            'supplier' => is_array($rfq[0]['partner_id']) ? $rfq[0]['partner_id'][1] : $rfq[0]['partner_id'],
+            'amount_total' => $rfq[0]['amount_total'] ?? 0,
+            'state' => $rfq[0]['state'] ?? 'draft',
+            'lines_count' => count($lines),
+        ];
+    }
+
+    /**
+     * Confirme un RFQ en bon de commande
+     */
+    public function confirmRFQ(int $orderId): bool
+    {
+        return $this->execute('purchase.order', 'button_confirm', [[$orderId]]);
+    }
+
+    /**
+     * Crée une commande fournisseur confirmée dans Odoo
+     * 
+     * Cette méthode crée directement un bon de commande avec les prix de revient calculés.
+     * La commande est automatiquement confirmée (state = 'purchase').
+     * 
+     * @param int $supplierId ID du fournisseur dans Odoo
+     * @param array $lines Lignes de commande avec prix de revient
+     *        [['product_id' => int, 'product_qty' => float, 'price_unit' => float, 'product_uom' => int, 'name' => string], ...]
+     * @param array $options Options (date_order, date_planned, origin, notes)
+     * @return array Informations sur la commande créée
+     */
+    public function createPurchaseOrder(int $supplierId, array $lines, array $options = []): array
+    {
+        // Créer l'en-tête du bon de commande fournisseur
+        // Note: Dans Odoo 19, le champ s'appelle 'note' (singulier) pas 'notes'
+        $orderData = [
+            'partner_id' => $supplierId,
+            'date_order' => $options['date_order'] ?? date('Y-m-d H:i:s'),
+        ];
+        
+        // Ajouter les notes si fournies (champ 'note' dans Odoo 19)
+        if (!empty($options['notes'])) {
+            $orderData['note'] = $options['notes'];
+        }
+
+        // Ajouter la date de livraison prévue si fournie
+        if (!empty($options['date_planned'])) {
+            $orderData['date_planned'] = $options['date_planned'];
+        }
+
+        // Ajouter la référence origine si fournie
+        if (!empty($options['origin'])) {
+            $orderData['origin'] = $options['origin'];
+        }
+
+        // Créer le bon de commande en brouillon d'abord
+        $orderId = $this->create('purchase.order', $orderData);
+
+        // Créer les lignes de commande
+        foreach ($lines as $line) {
+            $lineData = [
+                'order_id' => $orderId,
+                'product_id' => $line['product_id'],
+                'product_qty' => $line['product_qty'],
+                'price_unit' => $line['price_unit'],
+            ];
+
+            // Ajouter la description si fournie
+            if (!empty($line['name'])) {
+                $lineData['name'] = $line['name'];
+            }
+
+            // Ajouter l'unité de mesure si fournie
+            // Note: Dans Odoo 19, le champ s'appelle 'product_uom_id' pas 'product_uom'
+            if (!empty($line['product_uom'])) {
+                $lineData['product_uom_id'] = $line['product_uom'];
+            }
+
+            $this->create('purchase.order.line', $lineData);
+        }
+
+        // Confirmer automatiquement la commande
+        $this->confirmRFQ($orderId);
+
+        // Récupérer les informations de la commande créée
+        $order = $this->read('purchase.order', [$orderId], [
+            'id', 'name', 'partner_id', 'date_order', 'date_planned', 
+            'amount_untaxed', 'amount_total', 'state', 'order_line', 'origin'
+        ]);
+
+        return [
+            'success' => true,
+            'order_id' => $orderId,
+            'order_name' => $order[0]['name'] ?? "PO{$orderId}",
+            'supplier' => is_array($order[0]['partner_id']) ? $order[0]['partner_id'][1] : $order[0]['partner_id'],
+            'amount_untaxed' => $order[0]['amount_untaxed'] ?? 0,
+            'amount_total' => $order[0]['amount_total'] ?? 0,
+            'state' => $order[0]['state'] ?? 'purchase',
+            'origin' => $order[0]['origin'] ?? '',
+            'lines_count' => count($lines),
+        ];
+    }
+
+    // =========================================================================
+    // MÉTHODES UTILITAIRES PRIVÉES
+    // =========================================================================
+
+    /**
+     * Effectue un appel XML-RPC (implémentation sans extension xmlrpc)
+     */
+    private function xmlRpcCall(string $url, string $method, array $params): mixed
+    {
+        $request = $this->encodeXmlRpcRequest($method, $params);
+        
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $request,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: text/xml; charset=utf-8',
+                'Content-Length: ' . strlen($request),
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+        
+        if ($response === false) {
+            throw new \RuntimeException("XML-RPC call failed: " . $error);
+        }
+
+        if ($httpCode >= 400) {
+            throw new \RuntimeException("XML-RPC HTTP error: $httpCode");
+        }
+
+        return $this->decodeXmlRpcResponse($response);
+    }
+
+    /**
+     * Encode une requête XML-RPC
+     */
+    private function encodeXmlRpcRequest(string $method, array $params): string
+    {
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>';
+        $xml .= '<methodCall>';
+        $xml .= '<methodName>' . htmlspecialchars($method) . '</methodName>';
+        $xml .= '<params>';
+        
+        foreach ($params as $param) {
+            $xml .= '<param>' . $this->encodeValue($param) . '</param>';
+        }
+        
+        $xml .= '</params>';
+        $xml .= '</methodCall>';
+        
+        return $xml;
+    }
+
+    /**
+     * Encode une valeur pour XML-RPC
+     */
+    private function encodeValue(mixed $value): string
+    {
+        if ($value === null) {
+            return '<value><nil/></value>';
+        }
+        
+        if (is_bool($value)) {
+            return '<value><boolean>' . ($value ? '1' : '0') . '</boolean></value>';
+        }
+        
+        if (is_int($value)) {
+            return '<value><int>' . $value . '</int></value>';
+        }
+        
+        if (is_float($value)) {
+            return '<value><double>' . $value . '</double></value>';
+        }
+        
+        if (is_string($value)) {
+            return '<value><string>' . htmlspecialchars($value, ENT_XML1, 'UTF-8') . '</string></value>';
+        }
+        
+        if (is_array($value)) {
+            // Vérifier si c'est un tableau associatif (struct) ou indexé (array)
+            if ($this->isAssociativeArray($value)) {
+                $xml = '<value><struct>';
+                foreach ($value as $key => $val) {
+                    $xml .= '<member>';
+                    $xml .= '<name>' . htmlspecialchars((string)$key, ENT_XML1, 'UTF-8') . '</name>';
+                    $xml .= $this->encodeValue($val);
+                    $xml .= '</member>';
+                }
+                $xml .= '</struct></value>';
+                return $xml;
+            } else {
+                $xml = '<value><array><data>';
+                foreach ($value as $val) {
+                    $xml .= $this->encodeValue($val);
+                }
+                $xml .= '</data></array></value>';
+                return $xml;
+            }
+        }
+        
+        return '<value><string>' . htmlspecialchars((string)$value, ENT_XML1, 'UTF-8') . '</string></value>';
+    }
+
+    /**
+     * Vérifie si un tableau est associatif
+     */
+    private function isAssociativeArray(array $array): bool
+    {
+        if (empty($array)) {
+            return false;
+        }
+        return array_keys($array) !== range(0, count($array) - 1);
+    }
+
+    /**
+     * Décode une réponse XML-RPC
+     */
+    private function decodeXmlRpcResponse(string $xml): mixed
+    {
+        libxml_use_internal_errors(true);
+        $doc = simplexml_load_string($xml);
+        
+        if ($doc === false) {
+            $errors = libxml_get_errors();
+            libxml_clear_errors();
+            throw new \RuntimeException("Invalid XML-RPC response: " . ($errors[0]->message ?? 'Parse error'));
+        }
+
+        // Vérifier si c'est une erreur (fault)
+        if (isset($doc->fault)) {
+            $fault = $this->decodeValue($doc->fault->value);
+            throw new \RuntimeException("XML-RPC fault [{$fault['faultCode']}]: " . ($fault['faultString'] ?? 'Unknown error'));
+        }
+
+        // Extraire la valeur de retour
+        if (isset($doc->params->param->value)) {
+            return $this->decodeValue($doc->params->param->value);
+        }
+
+        return null;
+    }
+
+    /**
+     * Décode une valeur XML-RPC
+     */
+    private function decodeValue(\SimpleXMLElement $value): mixed
+    {
+        // Si la valeur contient directement du texte (pas de type spécifié = string)
+        $children = $value->children();
+        if (count($children) === 0) {
+            return (string)$value;
+        }
+
+        $child = $children[0];
+        $type = $child->getName();
+
+        switch ($type) {
+            case 'nil':
+                return null;
+            case 'boolean':
+                return (string)$child === '1' || strtolower((string)$child) === 'true';
+            case 'int':
+            case 'i4':
+            case 'i8':
+                return (int)$child;
+            case 'double':
+                return (float)$child;
+            case 'string':
+                return (string)$child;
+            case 'array':
+                $result = [];
+                if (isset($child->data->value)) {
+                    foreach ($child->data->value as $val) {
+                        $result[] = $this->decodeValue($val);
+                    }
+                }
+                return $result;
+            case 'struct':
+                $result = [];
+                if (isset($child->member)) {
+                    foreach ($child->member as $member) {
+                        $name = (string)$member->name;
+                        $result[$name] = $this->decodeValue($member->value);
+                    }
+                }
+                return $result;
+            case 'base64':
+                return base64_decode((string)$child);
+            case 'dateTime.iso8601':
+                return (string)$child;
+            default:
+                return (string)$child;
+        }
+    }
+}

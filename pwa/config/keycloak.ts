@@ -1,0 +1,5 @@
+export const NEXT_PUBLIC_OIDC_CLIENT_ID: string = process.env.NEXT_PUBLIC_OIDC_CLIENT_ID || 'api-platform-pwa';
+// export const NEXT_PUBLIC_OIDC_SERVER_URL: string = process.env.NEXT_PUBLIC_OIDC_SERVER_URL || `${window.origin}/realms/creazot`;
+export const NEXT_PUBLIC_OIDC_SERVER_URL: string = process.env.NEXT_PUBLIC_OIDC_SERVER_URL || `http://localhost:8080/realms/creazot`;
+export const NEXT_PUBLIC_OIDC_SERVER_URL_INTERNAL: string = process.env.NEXT_PUBLIC_OIDC_SERVER_URL_INTERNAL || 'http://keycloak:8080/realms/creazot';
+export const NEXT_PUBLIC_OIDC_AUTHORIZATION_CLIENT_ID: string = process.env.NEXT_PUBLIC_OIDC_AUTHORIZATION_CLIENT_ID || 'api-platform-api';

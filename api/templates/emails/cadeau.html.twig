@@ -1,0 +1,10 @@
+<p>Bonjour {{ cadeau.offreur }},</p>
+<p>Merci pour votre achat. Vous trouverez en pièce jointe votre bon cadeau au nom de {{ cadeau.beneficiaire }}.</p>
+<p>Bonne journée !</p>
+<br/>
+<br/>
+<p>
+    {{ client.name }}<br/>
+    TEL: {{ client.phone }}<br/>
+    <a href="mailto:{{ client.email }}">Nous écrire</a> - <a href="{{ client.website }}">{{ client.website|replace({'https://': '', 'http://': ''}) }}</a>
+</p>
