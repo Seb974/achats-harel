@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import axios from 'axios';
-import { post, get, API_DOMAIN } from './api';;
+// import { post, get, API_DOMAIN } from './api';;
 import { RedirectType, redirect } from 'next/navigation';
 import { toast } from 'react-hot-toast';
  
@@ -51,7 +51,7 @@ export async function createPassenger(prevState: State, formData: FormData) {
     const { nom, prenom, email, telephone } = validatedFields.data;
     const date = new Date().toISOString().split('T')[0];
     try {
-        await post('/passagers', {nom, prenom, email, telephone, date})
+        await axios.post('/passagers', {nom, prenom, email, telephone, date})
         toast.success(`Merci ${prenom}. Bon vol à vous !`, {duration: 3000})
     } catch (error) {
         const violations = error.response.data.violations || [];
