@@ -363,6 +363,7 @@ const AdminWithOIDC = () => {
         <Resource 
           name={productResource} 
           {...productResourceProps} 
+          // @ts-ignore
           options={{ ...productResourceProps.options, label: productLabel }}
         />
         
