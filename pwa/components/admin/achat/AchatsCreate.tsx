@@ -487,6 +487,7 @@ export const AchatsCreate = () => {
   const clientDecimal = client?.decimalRound ?? 3;
   const groupingElement = client?.groupingElement ?? "CATEGORY";
   const defaultItem = [{ product: '', quantity: '', incomingUnitPrice: '', outGoingUnitPriceHT: '' }];
+  // @ts-ignore
   const isSmall = useMediaQuery<Theme>(theme => theme.breakpoints.down('sm'));
   
   // Détecter si le client utilise Odoo comme source de données
@@ -603,7 +604,7 @@ export const AchatsCreate = () => {
 
   // Récupérer le nom du fournisseur depuis son ID (pour Odoo)
   const getSupplierName = (supplierId) => {
-    if (!supplierId || !isOdoo) return data?.supplier ?? '';
+    if (!supplierId || !isOdoo) return '';
     const supplier = suppliers.find(s => s.id === supplierId);
     return supplier?.name ?? '';
   };
