@@ -25,7 +25,7 @@ const STATUS_REVERSE_MAP: Record<string, string> = {
 interface KanbanColumnProps {
     status: any;
     achats: any[];
-    onDrop: (achatId: number, targetStatus: any) => void;
+    onDrop: (achatId: string, targetStatus: any) => void;
     onShowOdoo: (achat: any) => void;
     onCheckReception: (achat: any) => void;
 }
@@ -125,8 +125,8 @@ const KanbanColumn = ({ status, achats, onDrop, onShowOdoo, onCheckReception }: 
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         setIsDragOver(false);
-        const achatId = parseInt(e.dataTransfer.getData('achat_id'));
-        if (!isNaN(achatId)) {
+        const achatId = e.dataTransfer.getData('achat_id');
+        if (achatId) {
             onDrop(achatId, status);
         }
     };
@@ -253,8 +253,8 @@ export const AchatsKanban = () => {
         return STATUS_REVERSE_MAP[fromCode] === toCode;
     };
 
-    const handleDrop = useCallback(async (achatId: number, targetStatus: any) => {
-        const achat = data.find((a: any) => a.id === achatId);
+    const handleDrop = useCallback(async (achatId: string, targetStatus: any) => {
+        const achat = data.find((a: any) => String(a.id) === String(achatId));
         if (!achat) return;
 
         const fromCode = achat.status?.code;
@@ -294,9 +294,10 @@ export const AchatsKanban = () => {
 
             const transferResult = await syncTransitStatus(achat, fromStatus, targetStatus);
 
+            const statusIri = targetStatus['@id'] || targetStatus.id || `/statuses/${targetStatus.id}`;
             await update('achats', {
                 id: achat.id,
-                data: { status: targetStatus['@id'] || `/statuses/${targetStatus.id}` },
+                data: { status: statusIri },
                 previousData: achat,
             });
 
