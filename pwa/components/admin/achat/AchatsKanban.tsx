@@ -199,6 +199,7 @@ export const AchatsKanban = () => {
         getPurchaseOrderPickings,
         createPurchaseOrder,
         convertAchatToPurchaseOrder,
+        findSupplierByName,
     } = useOdoo();
 
     const [prDialog, setPrDialog] = useState<{ open: boolean; achat: any; targetStatus: any }>({ open: false, achat: null, targetStatus: null });
@@ -321,10 +322,23 @@ export const AchatsKanban = () => {
         }
 
         const fullAchat = await fetchFullAchat(achat.id);
+
+        if (!fullAchat.supplierId && fullAchat.supplier) {
+            const match = await findSupplierByName(fullAchat.supplier);
+            if (match) {
+                fullAchat.supplierId = match.id;
+                await patchAchat(achat.id, { supplierId: match.id });
+            }
+        }
+
         const poData = convertAchatToPurchaseOrder(fullAchat);
 
         if (!poData) {
             await patchAchat(achat.id, { status: statusIri });
+            const reason = !fullAchat.supplierId
+                ? `Fournisseur "${fullAchat.supplier || '?'}" introuvable dans Odoo. Associez-le manuellement.`
+                : 'Aucun article dans cet achat.';
+            notify(`Statut → Envoyé, mais commande Odoo NON créée : ${reason}`, { type: 'warning', autoHideDuration: 8000 });
             return;
         }
 
@@ -341,7 +355,7 @@ export const AchatsKanban = () => {
             }
         } catch (e: any) {
             await patchAchat(achat.id, { status: statusIri });
-            notify(`Statut mis à jour mais erreur Odoo : ${e.message}`, { type: 'warning' });
+            notify(`Statut → Envoyé, mais erreur Odoo : ${e.message}`, { type: 'warning', autoHideDuration: 8000 });
         }
     };
 
@@ -361,14 +375,17 @@ export const AchatsKanban = () => {
     };
 
     const handleStockTransition = async (achat: any, targetStatus: any, statusIri: string, isReverse: boolean) => {
-        const fromStatus = achat.status;
+        const fromStatusCode = achat.status?.code;
+        const fromStatus = getStatusByCode(fromStatusCode) || achat.status;
+
         const srcLocationId = isReverse ? targetStatus.odooLocationId : fromStatus?.odooLocationId;
         const destLocationId = isReverse ? fromStatus?.odooLocationId : targetStatus.odooLocationId;
 
         if (srcLocationId && destLocationId) {
+            const fullAchat = await fetchFullAchat(achat.id);
             try {
                 await syncTransitStatus(
-                    achat,
+                    fullAchat,
                     isReverse ? targetStatus : fromStatus,
                     isReverse ? fromStatus : targetStatus,
                 );

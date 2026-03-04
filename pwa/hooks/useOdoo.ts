@@ -1,7 +1,9 @@
 import { useCallback, useState } from 'react';
 import { useDataProvider, useNotify } from 'react-admin';
 import { useClient } from '../components/admin/ClientProvider';
+import { useSessionContext } from '../components/admin/SessionContextProvider';
 import { clientWithTaxes } from '../app/lib/client';
+import { ENTRYPOINT } from '../config/entrypoint';
 
 interface OdooRFQLine {
     product_id: number;
@@ -123,6 +125,7 @@ interface UseOdooReturn {
     testConnection: () => Promise<boolean>;
     getProducts: (limit?: number, offset?: number) => Promise<any[]>;
     getSuppliers: (limit?: number, offset?: number) => Promise<any[]>;
+    findSupplierByName: (name: string) => Promise<{ id: number; name: string } | null>;
     createRFQ: (data: OdooRFQData) => Promise<OdooRFQResult>;
     createPurchaseOrder: (data: OdooPurchaseOrderData) => Promise<OdooPurchaseOrderResult>;
     convertAchatToRFQ: (achat: any) => OdooRFQData | null;
@@ -154,9 +157,15 @@ export const useOdoo = (): UseOdooReturn => {
     const dataProvider = useDataProvider();
     const notify = useNotify();
     const { client } = useClient();
+    const { session } = useSessionContext();
     
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const authHeaders = (): Record<string, string> => ({
+        Authorization: `Bearer ${session?.accessToken}`,
+        'Content-Type': 'application/json',
+    });
 
     // Vérifier si Odoo est configuré pour ce client
     // Note: odooApiKey n'est pas exposé en lecture (sécurité), 
@@ -240,6 +249,23 @@ export const useOdoo = (): UseOdooReturn => {
             setLoading(false);
         }
     }, [dataProvider, notify]);
+
+    /**
+     * Recherche un fournisseur Odoo par nom (correspondance insensible à la casse)
+     */
+    const findSupplierByName = useCallback(async (name: string): Promise<{ id: number; name: string } | null> => {
+        if (!name) return null;
+        try {
+            const suppliers = await getSuppliers(5000, 0);
+            const normalizedName = name.trim().toLowerCase();
+            const match = suppliers.find((s: any) =>
+                s.name?.trim().toLowerCase() === normalizedName
+            );
+            return match ? { id: match.id, name: match.name } : null;
+        } catch {
+            return null;
+        }
+    }, [getSuppliers]);
 
     /**
      * Crée une demande de devis (RFQ) dans Odoo
@@ -598,9 +624,9 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         setError(null);
 
         try {
-            const response = await fetch('/odoo/stock-transfer', {
+            const response = await fetch(`${ENTRYPOINT}/odoo/stock-transfer`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: authHeaders(),
                 body: JSON.stringify(data),
             });
             const result = await response.json();
@@ -621,7 +647,7 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         } finally {
             setLoading(false);
         }
-    }, [notify]);
+    }, [notify, session]);
 
     /**
      * Met à jour les prix d'un PO existant dans Odoo
@@ -634,9 +660,9 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         setError(null);
 
         try {
-            const response = await fetch(`/odoo/purchase-order/${orderId}/lines`, {
+            const response = await fetch(`${ENTRYPOINT}/odoo/purchase-order/${orderId}/lines`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: authHeaders(),
                 body: JSON.stringify({ lines }),
             });
             const result = await response.json();
@@ -655,7 +681,7 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         } finally {
             setLoading(false);
         }
-    }, [notify]);
+    }, [notify, session]);
 
     /**
      * Annule un PO dans Odoo
@@ -665,8 +691,9 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         setError(null);
 
         try {
-            const response = await fetch(`/odoo/purchase-order/${orderId}/cancel`, {
+            const response = await fetch(`${ENTRYPOINT}/odoo/purchase-order/${orderId}/cancel`, {
                 method: 'POST',
+                headers: authHeaders(),
             });
             const result = await response.json();
 
@@ -684,32 +711,36 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         } finally {
             setLoading(false);
         }
-    }, [notify]);
+    }, [notify, session]);
 
     /**
      * Récupère les pickings liés à un PO
      */
     const getPurchaseOrderPickings = useCallback(async (orderId: number): Promise<any[]> => {
         try {
-            const response = await fetch(`/odoo/purchase-order/${orderId}/pickings`);
+            const response = await fetch(`${ENTRYPOINT}/odoo/purchase-order/${orderId}/pickings`, {
+                headers: authHeaders(),
+            });
             const result = await response.json();
             return result.pickings ?? [];
         } catch {
             return [];
         }
-    }, []);
+    }, [session]);
 
     /**
      * Vérifie l'état d'un picking (réception)
      */
     const checkPickingState = useCallback(async (pickingId: number): Promise<PickingState> => {
         try {
-            const response = await fetch(`/odoo/picking/${pickingId}/state`);
+            const response = await fetch(`${ENTRYPOINT}/odoo/picking/${pickingId}/state`, {
+                headers: authHeaders(),
+            });
             return await response.json();
         } catch {
             return { found: false };
         }
-    }, []);
+    }, [session]);
 
     /**
      * Synchronise un changement de statut transit avec Odoo
@@ -755,6 +786,7 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         testConnection,
         getProducts,
         getSuppliers,
+        findSupplierByName,
         createRFQ,
         createPurchaseOrder,
         convertAchatToRFQ,
