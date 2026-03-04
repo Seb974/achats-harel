@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
-import { useListContext, useUpdate, useNotify, useRefresh, useRedirect, useDataProvider } from 'react-admin';
+import { useListContext, useNotify, useRefresh, useRedirect, useDataProvider } from 'react-admin';
 import {
     Box, Card, CardContent, Typography, Chip, IconButton, Tooltip,
     Dialog, DialogTitle, DialogContent, DialogActions, Button,
@@ -41,7 +41,6 @@ const KanbanCard = ({ achat, onShowOdoo, onCheckReception }: {
 
     const handleDragStart = (e: React.DragEvent) => {
         e.dataTransfer.setData('achat_id', String(achat.id));
-        e.dataTransfer.setData('achat_json', JSON.stringify(achat));
         e.dataTransfer.effectAllowed = 'move';
     };
 
@@ -186,25 +185,25 @@ const KanbanColumn = ({ status, achats, onDrop, onShowOdoo, onCheckReception }: 
 
 export const AchatsKanban = () => {
     const { data: rawData, isLoading } = useListContext();
-    const [update] = useUpdate();
     const notify = useNotify();
     const refresh = useRefresh();
     const redirect = useRedirect();
+    const dataProvider = useDataProvider();
     const {
         loading: odooLoading,
+        isOdooConfigured,
         syncTransitStatus,
         updatePurchaseOrderPrices,
         cancelPurchaseOrder,
         calculateCostPrices,
-        checkPickingState,
         getPurchaseOrderPickings,
+        createPurchaseOrder,
+        convertAchatToPurchaseOrder,
     } = useOdoo();
 
-    const dataProvider = useDataProvider();
     const [prDialog, setPrDialog] = useState<{ open: boolean; achat: any; targetStatus: any }>({ open: false, achat: null, targetStatus: null });
     const [processing, setProcessing] = useState(false);
     const [allStatuses, setAllStatuses] = useState<any[]>([]);
-    const dragAchatRef = useRef<any>(null);
 
     const data = useMemo(() => rawData ?? [], [rawData]);
 
@@ -213,7 +212,7 @@ export const AchatsKanban = () => {
             pagination: { page: 1, perPage: 100 },
             sort: { field: 'id', order: 'ASC' },
             filter: {},
-        }).then(({ data: statusData }) => {
+        }).then(({ data: statusData }: any) => {
             setAllStatuses(statusData ?? []);
         }).catch(() => setAllStatuses([]));
     }, [dataProvider]);
@@ -253,6 +252,16 @@ export const AchatsKanban = () => {
         return STATUS_REVERSE_MAP[fromCode] === toCode;
     };
 
+    const patchAchat = async (achatId: string, patchData: Record<string, any>) => {
+        // @ts-ignore - patchResource is a custom method added to data provider
+        return dataProvider.patchResource('achats', achatId, patchData);
+    };
+
+    const fetchFullAchat = async (achatId: string): Promise<any> => {
+        const { data: fullAchat } = await dataProvider.getOne('achats', { id: achatId });
+        return fullAchat;
+    };
+
     const handleDrop = useCallback(async (achatId: string, targetStatus: any) => {
         const achat = data.find((a: any) => String(a.id) === String(achatId));
         if (!achat) return;
@@ -268,12 +277,11 @@ export const AchatsKanban = () => {
         }
 
         if (!isValidTransition(fromCode, toCode)) {
-            notify(`Transition ${fromCode} → ${toCode} non autorisée`, { type: 'warning' });
+            notify(`Transition ${fromCode} → ${toCode} non autorisée (adjacente uniquement)`, { type: 'warning' });
             return;
         }
 
         if (toCode === 'A_RECEPTIONNER') {
-            dragAchatRef.current = achat;
             setPrDialog({ open: true, achat, targetStatus });
             return;
         }
@@ -283,31 +291,93 @@ export const AchatsKanban = () => {
 
     const executeTransition = async (achat: any, targetStatus: any) => {
         setProcessing(true);
-        const fromStatus = achat.status;
+        const fromCode = achat.status?.code;
         const toCode = targetStatus.code;
-        const isReverse = isReverseTransition(fromStatus?.code, toCode);
+        const isReverse = isReverseTransition(fromCode, toCode);
+        const statusIri = targetStatus['@id'] || `/statuses/${targetStatus.id}`;
 
         try {
-            if (isReverse && fromStatus?.code === 'ENVOYE' && achat.odooPurchaseOrderId) {
-                await cancelPurchaseOrder(achat.odooPurchaseOrderId);
+            if (fromCode === 'BROUILLON' && toCode === 'ENVOYE') {
+                await handleBrouillonToEnvoye(achat, statusIri);
+            } else if (isReverse && fromCode === 'ENVOYE' && toCode === 'BROUILLON') {
+                await handleEnvoyeToBrouillon(achat, statusIri);
+            } else {
+                await handleStockTransition(achat, targetStatus, statusIri, isReverse);
             }
 
-            const transferResult = await syncTransitStatus(achat, fromStatus, targetStatus);
-
-            const statusIri = targetStatus['@id'] || targetStatus.id || `/statuses/${targetStatus.id}`;
-            await update('achats', {
-                id: achat.id,
-                data: { status: statusIri },
-                previousData: achat,
-            });
-
-            notify(`${achat.supplier || achat.shipNumber} → ${targetStatus.label}`, { type: 'success' });
+            notify(`${achat.supplier || achat.shipNumber || '#' + achat.id} → ${targetStatus.label}`, { type: 'success' });
             refresh();
         } catch (e: any) {
             notify(e.message || 'Erreur lors de la transition', { type: 'error' });
         } finally {
             setProcessing(false);
         }
+    };
+
+    const handleBrouillonToEnvoye = async (achat: any, statusIri: string) => {
+        if (!isOdooConfigured) {
+            await patchAchat(achat.id, { status: statusIri });
+            return;
+        }
+
+        const fullAchat = await fetchFullAchat(achat.id);
+        const poData = convertAchatToPurchaseOrder(fullAchat);
+
+        if (!poData) {
+            await patchAchat(achat.id, { status: statusIri });
+            return;
+        }
+
+        try {
+            const result = await createPurchaseOrder(poData);
+            if (result.success && result.order_id) {
+                await patchAchat(achat.id, {
+                    status: statusIri,
+                    odooPurchaseOrderId: result.order_id,
+                    odooPurchaseOrderName: result.order_name ?? null,
+                });
+            } else {
+                throw new Error(result.error || 'Erreur création PO Odoo');
+            }
+        } catch (e: any) {
+            await patchAchat(achat.id, { status: statusIri });
+            notify(`Statut mis à jour mais erreur Odoo : ${e.message}`, { type: 'warning' });
+        }
+    };
+
+    const handleEnvoyeToBrouillon = async (achat: any, statusIri: string) => {
+        if (achat.odooPurchaseOrderId) {
+            try {
+                await cancelPurchaseOrder(achat.odooPurchaseOrderId);
+            } catch (e: any) {
+                notify(`Annulation PO Odoo échouée : ${e.message}`, { type: 'warning' });
+            }
+        }
+        await patchAchat(achat.id, {
+            status: statusIri,
+            odooPurchaseOrderId: null,
+            odooPurchaseOrderName: null,
+        });
+    };
+
+    const handleStockTransition = async (achat: any, targetStatus: any, statusIri: string, isReverse: boolean) => {
+        const fromStatus = achat.status;
+        const srcLocationId = isReverse ? targetStatus.odooLocationId : fromStatus?.odooLocationId;
+        const destLocationId = isReverse ? fromStatus?.odooLocationId : targetStatus.odooLocationId;
+
+        if (srcLocationId && destLocationId) {
+            try {
+                await syncTransitStatus(
+                    achat,
+                    isReverse ? targetStatus : fromStatus,
+                    isReverse ? fromStatus : targetStatus,
+                );
+            } catch (e: any) {
+                notify(`Transfert stock Odoo échoué : ${e.message}. Statut mis à jour quand même.`, { type: 'warning' });
+            }
+        }
+
+        await patchAchat(achat.id, { status: statusIri });
     };
 
     const handlePrConfirm = async (choice: 'yes' | 'no' | 'later') => {
@@ -324,8 +394,9 @@ export const AchatsKanban = () => {
         setProcessing(true);
         try {
             if (achat.odooPurchaseOrderId) {
-                const costItems = calculateCostPrices(achat);
-                const lines = costItems.map(item => ({
+                const fullAchat = await fetchFullAchat(achat.id);
+                const costItems = calculateCostPrices(fullAchat);
+                const lines = costItems.map((item: any) => ({
                     product_id: item.productId,
                     price_unit: item.mainPr,
                 }));
@@ -335,7 +406,6 @@ export const AchatsKanban = () => {
             await executeTransition(achat, targetStatus);
         } catch (e: any) {
             notify(e.message || 'Erreur mise à jour PR', { type: 'error' });
-        } finally {
             setProcessing(false);
         }
     };
@@ -359,16 +429,12 @@ export const AchatsKanban = () => {
             }
 
             const allDone = receptionPickings.every((p: any) => p.state === 'done');
-            const hasPending = receptionPickings.some((p: any) => p.state !== 'done');
 
             if (allDone) {
                 const recuStatus = getStatusByCode('RECU');
                 if (recuStatus) {
-                    await update('achats', {
-                        id: achat.id,
-                        data: { status: recuStatus['@id'] || `/statuses/${recuStatus.id}` },
-                        previousData: achat,
-                    });
+                    const statusIri = recuStatus['@id'] || `/statuses/${recuStatus.id}`;
+                    await patchAchat(achat.id, { status: statusIri });
                     notify('Réception complète — statut passé à REÇU', { type: 'success' });
                     refresh();
                 }
@@ -422,7 +488,6 @@ export const AchatsKanban = () => {
                 ))}
             </Box>
 
-            {/* Dialog PR — DOUANE → A_RECEPTIONNER */}
             <Dialog open={prDialog.open} onClose={() => handlePrConfirm('later')} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <LocalShippingIcon color="primary" />
