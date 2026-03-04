@@ -13,6 +13,7 @@ use Doctrine\ORM\Mapping as ORM;
 use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Put;
 use Symfony\Component\Serializer\Annotation\Groups;
@@ -34,6 +35,7 @@ use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
         new Post(),
         new Get(),
         new Put(),
+        new Patch(inputFormats: ['json' => ['application/merge-patch+json']]),
         new Delete(),
     ],
     normalizationContext: [

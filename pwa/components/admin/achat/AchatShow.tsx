@@ -1,4 +1,4 @@
-import { Show, TextField, NumberField, TopToolbar, ListButton, DateField, ArrayField, Datagrid, EditButton, FunctionField, FileField, ReferenceArrayField, TabbedShowLayout, useRecordContext, useNotify, useRefresh, useUpdate } from 'react-admin';
+import { Show, TextField, NumberField, TopToolbar, ListButton, DateField, ArrayField, Datagrid, EditButton, FunctionField, FileField, ReferenceArrayField, TabbedShowLayout, useRecordContext, useNotify, useRefresh, useDataProvider } from 'react-admin';
 import { formatNumber, getShipStyle, isDefined } from '../../../app/lib/utils';
 import { clientWithCoeffCalculation, clientWithTaxes } from '../../../app/lib/client';
 import { ItemsAnalytics } from "./ItemsAnalytics";
@@ -35,7 +35,7 @@ const CheckReceptionButton = () => {
     const record = useRecordContext();
     const notify = useNotify();
     const refresh = useRefresh();
-    const [update] = useUpdate();
+    const dataProvider = useDataProvider();
     const { getPurchaseOrderPickings } = useOdoo();
     const [checking, setChecking] = useState(false);
 
@@ -57,17 +57,17 @@ const CheckReceptionButton = () => {
             const allDone = receptions.every((p: any) => p.state === 'done');
 
             if (allDone) {
-                // @ts-ignore
-                const statusesResp = await fetch('/statuses?code=RECU');
-                const statusesData = await statusesResp.json();
-                const recuStatus = statusesData?.['hydra:member']?.[0];
+                const statusesResp = await dataProvider.getList('statuses', {
+                    pagination: { page: 1, perPage: 100 },
+                    sort: { field: 'id', order: 'ASC' },
+                    filter: {},
+                });
+                const recuStatus = (statusesResp.data ?? []).find((s: any) => s.code === 'RECU');
 
                 if (recuStatus) {
-                    await update('achats', {
-                        id: record.id,
-                        data: { status: recuStatus['@id'] },
-                        previousData: record,
-                    });
+                    const statusIri = recuStatus['@id'] || `/statuses/${recuStatus.id}`;
+                    // @ts-ignore - patchResource is a custom method
+                    await dataProvider.patchResource('achats', record.id, { status: statusIri });
                     notify('Réception complète — statut passé à REÇU', { type: 'success' });
                     refresh();
                 }

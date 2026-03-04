@@ -192,6 +192,25 @@ const AdminAdapter = ({session, children}: { session: Session; children?: React.
       return response.json();
     },
     // =========================================================================
+    // PATCH (partial update) — safe status changes without data loss
+    // =========================================================================
+    patchResource: async (resource: string, id: string, data: Record<string, any>) => {
+      const response = await fetch(`${ENTRYPOINT}${id}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+          'Content-Type': 'application/merge-patch+json',
+          'Accept': 'application/ld+json',
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData['hydra:description'] || errorData.message || `Erreur PATCH ${resource}`);
+      }
+      return { data: await response.json() };
+    },
+    // =========================================================================
     // GENERIC METHODS (HAREL + ODOO)
     // =========================================================================
     getList: async (resource, params) => {
