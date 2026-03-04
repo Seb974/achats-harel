@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
-import { useListContext, useUpdate, useNotify, useRefresh, useRedirect } from 'react-admin';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { useListContext, useUpdate, useNotify, useRefresh, useRedirect, useDataProvider } from 'react-admin';
 import {
     Box, Card, CardContent, Typography, Chip, IconButton, Tooltip,
     Dialog, DialogTitle, DialogContent, DialogActions, Button,
@@ -200,24 +200,29 @@ export const AchatsKanban = () => {
         getPurchaseOrderPickings,
     } = useOdoo();
 
+    const dataProvider = useDataProvider();
     const [prDialog, setPrDialog] = useState<{ open: boolean; achat: any; targetStatus: any }>({ open: false, achat: null, targetStatus: null });
     const [processing, setProcessing] = useState(false);
+    const [allStatuses, setAllStatuses] = useState<any[]>([]);
     const dragAchatRef = useRef<any>(null);
 
     const data = useMemo(() => rawData ?? [], [rawData]);
 
+    useEffect(() => {
+        dataProvider.getList('statuses', {
+            pagination: { page: 1, perPage: 100 },
+            sort: { field: 'id', order: 'ASC' },
+            filter: {},
+        }).then(({ data: statusData }) => {
+            setAllStatuses(statusData ?? []);
+        }).catch(() => setAllStatuses([]));
+    }, [dataProvider]);
+
     const statuses = useMemo(() => {
-        const statusMap = new Map<string, any>();
-        data.forEach((achat: any) => {
-            const s = achat.status;
-            if (s?.code && !statusMap.has(s.code)) {
-                statusMap.set(s.code, s);
-            }
-        });
         return KANBAN_ORDER
-            .map(code => statusMap.get(code))
+            .map(code => allStatuses.find((s: any) => s.code === code))
             .filter(Boolean);
-    }, [data]);
+    }, [allStatuses]);
 
     const achatsByStatus = useMemo(() => {
         const grouped: Record<string, any[]> = {};
