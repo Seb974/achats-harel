@@ -658,7 +658,6 @@ class OdooApiService
                 'product_uom_qty' => $p['qty'],
                 'location_id' => $locationSrcId,
                 'location_dest_id' => $locationDestId,
-                'name' => $origin,
             ]);
         }
 
