@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dossier d'Intégration Odoo - AH CHOU SARL</title>
+    <style>
+        :root {
+            --primary: #714B67;
+            --primary-light: #9c7a91;
+            --secondary: #017e84;
+            --success: #28a745;
+            --warning: #ffc107;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background: white;
+            padding: 40px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        h1 { color: var(--primary); margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--primary); font-size: 1.8rem; }
+        h2 { color: var(--secondary); margin: 25px 0 15px; font-size: 1.3rem; }
+        h3 { color: var(--primary); margin: 20px 0 10px; font-size: 1.1rem; }
+        h4 { margin: 15px 0 10px; font-size: 1rem; }
+        
+        .card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .card-header {
+            background: var(--primary);
+            color: white;
+            padding: 12px 20px;
+            margin: -20px -20px 20px;
+            border-radius: 8px 8px 0 0;
+            font-weight: 600;
+        }
+        
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.9rem; }
+        th, td { padding: 10px 12px; text-align: left; border: 1px solid #dee2e6; }
+        th { background: var(--light); font-weight: 600; }
+        tr:nth-child(even) { background: #fafafa; }
+        
+        .status-ok { color: var(--success); font-weight: bold; }
+        .status-warning { color: var(--warning); font-weight: bold; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin: 15px 0; }
+        
+        .stat-card {
+            background: var(--light);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+            text-align: center;
+        }
+        .stat-card .value { font-size: 1.5rem; font-weight: bold; color: var(--primary); }
+        .stat-card .label { font-size: 0.85rem; color: var(--gray); margin-top: 5px; }
+        
+        .highlight { background: #e8f5e9; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid var(--success); }
+        .warning-box { background: #fff3e0; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid var(--warning); }
+        
+        ul, ol { margin: 10px 0 10px 25px; }
+        li { margin: 5px 0; }
+        
+        code { background: #f1f1f1; padding: 2px 6px; border-radius: 3px; font-size: 0.85em; }
+        
+        .page-break { page-break-after: always; }
+        
+        .cover {
+            min-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .cover h1 { font-size: 2.2rem; border: none; margin-bottom: 10px; }
+        .cover h2 { font-size: 1.4rem; color: var(--secondary); font-weight: normal; margin: 0; }
+        
+        .toc { background: var(--light); padding: 25px; border-radius: 10px; margin: 30px 0; }
+        .toc-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #ccc; }
+        .toc-item:last-child { border-bottom: none; }
+        
+        @media print {
+            body { padding: 20px; }
+            .card { break-inside: avoid; }
+            .page-break { page-break-after: always; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- PAGE DE COUVERTURE -->
+<div class="cover page-break">
+    <div style="margin-bottom: 40px;">
+        <h1>DOSSIER D'INTÉGRATION ODOO</h1>
+        <h2>AH CHOU SARL</h2>
+    </div>
+    <div style="background: var(--light); padding: 30px 50px; border-radius: 10px; margin: 30px 0;">
+        <p style="font-size: 1.1rem; margin-bottom: 15px;"><strong>Activité :</strong> Import et distribution de produits surgelés</p>
+        <p style="font-size: 1.1rem; margin-bottom: 15px;"><strong>Solution :</strong> Odoo Enterprise (SaaS)</p>
+        <p style="font-size: 1.1rem;"><strong>Modules :</strong> Ventes, Achats, Inventaire, Comptabilité</p>
+    </div>
+    <div style="margin-top: 50px; padding-top: 20px; border-top: 2px solid var(--primary);">
+        <p style="color: var(--gray);">Document technique de paramétrage</p>
+    </div>
+</div>
+
+<!-- SOMMAIRE -->
+<div class="page-break">
+    <h1>Sommaire</h1>
+    <div class="toc">
+        <div class="toc-item"><span><strong>Bloc 1</strong> - Configuration Générale</span><span>Société, utilisateurs, devises</span></div>
+        <div class="toc-item"><span><strong>Bloc 2</strong> - Champs Personnalisés</span><span>Fiches produits, clients, fournisseurs</span></div>
+        <div class="toc-item"><span><strong>Bloc 3</strong> - Tarification</span><span>Listes de prix, remises, promotions</span></div>
+        <div class="toc-item"><span><strong>Bloc 4</strong> - Catégories</span><span>Produits, tags clients/fournisseurs</span></div>
+        <div class="toc-item"><span><strong>Bloc 5</strong> - Gestion des Stocks</span><span>Entrepôts, emplacements, FEFO</span></div>
+        <div class="toc-item"><span><strong>Bloc 6</strong> - Import des Données</span><span>Fournisseurs, clients, produits</span></div>
+    </div>
+    
+    <h2>Statut Global</h2>
+    <div class="grid">
+        <div class="stat-card"><div class="value">6/6</div><div class="label">Blocs configurés</div></div>
+        <div class="stat-card"><div class="value">76</div><div class="label">Fournisseurs</div></div>
+        <div class="stat-card"><div class="value">231</div><div class="label">Clients</div></div>
+        <div class="stat-card"><div class="value">299</div><div class="label">Produits</div></div>
+    </div>
+</div>
+
+<!-- BLOC 1 -->
+<div class="page-break">
+    <h1>Bloc 1 : Configuration Générale</h1>
+    
+    <div class="card">
+        <div class="card-header">Société</div>
+        <table>
+            <tr><th style="width:30%;">Paramètre</th><th>Valeur</th></tr>
+            <tr><td>Raison sociale</td><td>AH CHOU SARL</td></tr>
+            <tr><td>Activité</td><td>Import et distribution de produits surgelés</td></tr>
+            <tr><td>Devise principale</td><td>EUR (€)</td></tr>
+            <tr><td>Pays</td><td>France (La Réunion)</td></tr>
+            <tr><td>Langue</td><td>Français</td></tr>
+            <tr><td>Fuseau horaire</td><td>Indian/Reunion (UTC+4)</td></tr>
+        </table>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Devises Configurées</div>
+        <table>
+            <tr><th>Devise</th><th>Code</th><th>Utilisation</th><th>Statut</th></tr>
+            <tr><td>Euro</td><td>EUR</td><td>Devise principale, ventes locales</td><td class="status-ok">✓ Actif</td></tr>
+            <tr><td>Dollar US</td><td>USD</td><td>Achats internationaux (Asie, Inde)</td><td class="status-ok">✓ Actif</td></tr>
+        </table>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Plan Comptable</div>
+        <p>Plan comptable français standard adapté à l'activité d'import-distribution :</p>
+        <table>
+            <tr><th>Classe</th><th>Intitulé</th><th>Comptes clés</th></tr>
+            <tr><td>Classe 4</td><td>Tiers</td><td>401xxx (Fournisseurs), 411xxx (Clients)</td></tr>
+            <tr><td>Classe 6</td><td>Charges</td><td>601xxx (Achats stockés), 6241 (Transports)</td></tr>
+            <tr><td>Classe 7</td><td>Produits</td><td>701xxx (Ventes de produits)</td></tr>
+        </table>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Captures d'écran - Bloc 1</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+                <p style="font-size:0.85rem; color:var(--gray); margin-bottom:5px;">Configuration société</p>
+                <img src="screenshots/bloc1/01_societe.png" alt="Société" style="width:100%; border:1px solid #ddd; border-radius:5px;">
+            </div>
+            <div>
+                <p style="font-size:0.85rem; color:var(--gray); margin-bottom:5px;">Devises</p>
+                <img src="screenshots/bloc1/03_devises.png" alt="Devises" style="width:100%; border:1px solid #ddd; border-radius:5px;">
+            </div>
+            <div>
+                <p style="font-size:0.85rem; color:var(--gray); margin-bottom:5px;">Taxes</p>
+                <img src="screenshots/bloc1/02_taxes.png" alt="Taxes" style="width:100%; border:1px solid #ddd; border-radius:5px;">
+            </div>
+            <div>
+                <p style="font-size:0.85rem; color:var(--gray); margin-bottom:5px;">Modules installés</p>
+                <img src="screenshots/bloc1/06_modules.png" alt="Modules" style="width:100%; border:1px solid #ddd; border-radius:5px;">
+            </div>
+        </div>
+        <p style="margin-top:15px; font-size:0.9rem;"><a href="https://ah-chou1.odoo.com/odoo/settings" target="_blank">🔗 Paramètres généraux Odoo</a></p>
+    </div>
+</div>
+
+<!-- BLOC 2 -->
+<div class="page-break">
+    <h1>Bloc 2 : Champs Personnalisés</h1>
+    
+    <div class="card">
+        <div class="card-header">Fiche Produit - Champs Ajoutés</div>
+        <table>
+            <tr><th>Champ</th><th>Type</th><th>Description</th></tr>
+            <tr><td>Nom long</td><td>Texte</td><td>Désignation complète du produit</td></tr>
+            <tr><td>Contenu</td><td>Texte</td><td>Description du contenu</td></tr>
+            <tr><td>Conditionnement</td><td>Texte</td><td>Type d'emballage</td></tr>
+            <tr><td>PCB</td><td>Entier</td><td>Par Combien (unités par carton)</td></tr>
+            <tr><td>Poids brut</td><td>Décimal</td><td>Poids brut en kg</td></tr>
+            <tr><td>Coefficient d'approche</td><td>Décimal</td><td>Coefficient pour calcul prix revient</td></tr>
+            <tr><td>PRMUP</td><td>Décimal</td><td>Prix de Revient Moyen Unitaire Pondéré</td></tr>
+            <tr><td>Marque</td><td>Texte</td><td>Marque du produit</td></tr>
+            <tr><td>Origine</td><td>Attribut</td><td>Pays d'origine (variantes)</td></tr>
+            <tr><td>Gencod</td><td>Texte</td><td>Code EAN/GTIN</td></tr>
+        </table>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Fiche Client - Champs Ajoutés</div>
+        <table>
+            <tr><th>Champ</th><th>Type</th><th>Description</th></tr>
+            <tr><td>Groupe client</td><td>Sélection</td><td>Classification commerciale</td></tr>
+            <tr><td>Enseigne</td><td>Sélection</td><td>Enseigne commerciale</td></tr>
+            <tr><td>Responsable 1</td><td>Texte</td><td>Contact principal</td></tr>
+            <tr><td>Code tarif</td><td>Sélection</td><td>Liste de prix applicable</td></tr>
+        </table>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Fiche Fournisseur - Champs Ajoutés</div>
+        <table>
+            <tr><th>Champ</th><th>Type</th><th>Description</th></tr>
+            <tr><td>Groupe fournisseur</td><td>Sélection</td><td>Classification (Producteur, Transitaire...)</td></tr>
+            <tr><td>Incoterm</td><td>Sélection</td><td>Condition de livraison internationale</td></tr>
+            <tr><td>Délai livraison</td><td>Entier</td><td>Délai moyen en jours</td></tr>
+        </table>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Accès Odoo - Champs personnalisés</div>
+        <p style="font-size:0.95rem; line-height: 2;">
+            <a href="https://ah-chou1.odoo.com/odoo/settings/technical?search=x_" target="_blank">🔗 Studio - Champs personnalisés (x_*)</a><br>
+            <a href="https://ah-chou1.odoo.com/odoo/product-template" target="_blank">🔗 Voir une fiche produit</a><br>
+            <a href="https://ah-chou1.odoo.com/odoo/contacts" target="_blank">🔗 Voir une fiche partenaire</a>
+        </p>
+    </div>
+</div>
+
+<!-- BLOC 3 -->
+<div class="page-break">
+    <h1>Bloc 3 : Tarification</h1>
+    
+    <div class="card">
+        <div class="card-header">Listes de Prix</div>
+        <p>Système de tarification par liste avec calcul automatique basé sur le prix d'achat :</p>
+        <table>
+            <tr><th>Code</th><th>Nom</th><th>Calcul</th><th>Cible</th></tr>
+            <tr><td>00</td><td>Tarif Public</td><td>Prix d'achat + 35%</td><td>Particuliers, petits commerces</td></tr>
+            <tr><td>90</td><td>Tarif Grossiste</td><td>Prix d'achat + 25%</td><td>Grossistes</td></tr>
+            <tr><td>91</td><td>Tarif GMS</td><td>Prix d'achat + 20%</td><td>Grandes surfaces</td></tr>
+            <tr><td>92</td><td>Tarif Restauration</td><td>Prix d'achat + 22%</td><td>Restaurants, hôtels</td></tr>
+            <tr><td>93</td><td>Tarif Export</td><td>Prix d'achat + 18%</td><td>Clients export</td></tr>
+        </table>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Mécanisme de Calcul</div>
+        <div class="highlight">
+            <p><strong>Formule :</strong> Prix de vente HT = Prix d'achat × (1 + Marge%)</p>
+            <p style="margin-top:10px;">Le prix d'achat utilisé est le <strong>Prix d'achat standard</strong> (champ <code>standard_price</code>) mis à jour à chaque réception.</p>
+        </div>
+        
+        <h4>Exemple de calcul</h4>
+        <table>
+            <tr><th>Produit</th><th>Prix achat</th><th>Tarif 00 (+35%)</th><th>Tarif 91 (+20%)</th></tr>
+            <tr><td>Crevettes 16/20</td><td>8,50 €</td><td>11,48 €</td><td>10,20 €</td></tr>
+            <tr><td>Bichique Premium</td><td>12,00 €</td><td>16,20 €</td><td>14,40 €</td></tr>
+        </table>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Promotions</div>
+        <p>Les promotions sont gérées via des règles de liste de prix avec dates de validité :</p>
+        <ul>
+            <li>Remises en pourcentage sur catégories</li>
+            <li>Prix fixes temporaires</li>
+            <li>Conditions de quantité minimum</li>
+        </ul>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Captures d'écran - Bloc 3</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+                <p style="font-size:0.85rem; color:var(--gray); margin-bottom:5px;">Listes de prix configurées</p>
+                <img src="screenshots/bloc3/01_listes_prix.png" alt="Listes de prix" style="width:100%; border:1px solid #ddd; border-radius:5px;">
+            </div>
+            <div>
+                <p style="font-size:0.85rem; color:var(--gray); margin-bottom:5px;">Règle de calcul (% sur prix d'achat)</p>
+                <img src="screenshots/bloc3/02_regle_prix_catalogue.png" alt="Règle prix" style="width:100%; border:1px solid #ddd; border-radius:5px;">
+            </div>
+        </div>
+        <p style="margin-top:15px; font-size:0.9rem;"><a href="https://ah-chou1.odoo.com/odoo/pricelists" target="_blank">🔗 Listes de prix Odoo</a></p>
+    </div>
+</div>
+
+<!-- BLOC 4 -->
+<div class="page-break">
+    <h1>Bloc 4 : Catégories</h1>
+    
+    <div class="card">
+        <div class="card-header">Catégories Produits</div>
+        <table>
+            <tr><th>Catégorie</th><th>Description</th><th>Nb produits</th></tr>
+            <tr><td><strong>GEL OI</strong></td><td>Catégorie racine - Produits surgelés</td><td>-</td></tr>
+            <tr><td>├─ Poissons</td><td>Poissons entiers, filets, darnes</td><td>~120</td></tr>
+            <tr><td>├─ Crustacés</td><td>Crevettes, langoustes, crabes</td><td>~80</td></tr>
+            <tr><td>├─ Céphalopodes</td><td>Calamars, poulpes, seiches</td><td>~30</td></tr>
+            <tr><td>├─ Préparations</td><td>Beignets, bouchons, plats cuisinés</td><td>~40</td></tr>
+            <tr><td>├─ Légumes</td><td>Légumes surgelés</td><td>~15</td></tr>
+            <tr><td>└─ Divers</td><td>Autres produits surgelés</td><td>~14</td></tr>
+        </table>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Tags Clients (Groupes)</div>
+        <table>
+            <tr><th>Type de tag</th><th>Valeurs</th><th>Utilisation</th></tr>
+            <tr><td>Groupe</td><td>GMS, CHR, Grossiste, Export</td><td>Segmentation commerciale</td></tr>
+            <tr><td>Enseigne</td><td>Carrefour, Leclerc, U, etc.</td><td>Identification enseigne</td></tr>
+        </table>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Tags Fournisseurs</div>
+        <table>
+            <tr><th>Tag</th><th>Description</th></tr>
+            <tr><td>Producteur</td><td>Fournisseurs de produits (usines, pêcheries)</td></tr>
+            <tr><td>Transitaire</td><td>Sociétés de transport maritime</td></tr>
+            <tr><td>Logisticien</td><td>Prestataires logistiques locaux</td></tr>
+        </table>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Attribut Produit : Origine</div>
+        <p>Un attribut "Origine" permet de gérer les variantes par pays de provenance :</p>
+        <div class="grid" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="stat-card"><div class="value">175</div><div class="label">Vietnam</div></div>
+            <div class="stat-card"><div class="value">115</div><div class="label">Inde</div></div>
+            <div class="stat-card"><div class="value">18</div><div class="label">Indonésie</div></div>
+        </div>
+        <p style="margin-top:15px;">Autres origines disponibles : Chine, Thaïlande, Madagascar, La Réunion, France</p>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Captures d'écran - Bloc 4</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+                <p style="font-size:0.85rem; color:var(--gray); margin-bottom:5px;">Tags Groupes Clients</p>
+                <img src="screenshots/bloc4/01_tags_groupes_clients.png" alt="Tags groupes" style="width:100%; border:1px solid #ddd; border-radius:5px;">
+            </div>
+            <div>
+                <p style="font-size:0.85rem; color:var(--gray); margin-bottom:5px;">Tags Enseignes</p>
+                <img src="screenshots/bloc4/02_tags_enseignes.png" alt="Tags enseignes" style="width:100%; border:1px solid #ddd; border-radius:5px;">
+            </div>
+            <div>
+                <p style="font-size:0.85rem; color:var(--gray); margin-bottom:5px;">Tags Fournisseurs</p>
+                <img src="screenshots/bloc4/03_tags_fournisseurs.png" alt="Tags fournisseurs" style="width:100%; border:1px solid #ddd; border-radius:5px;">
+            </div>
+            <div>
+                <p style="font-size:0.85rem; color:var(--gray); margin-bottom:5px;">Catégories Produits</p>
+                <img src="screenshots/bloc4/04_categories_produits.png" alt="Catégories" style="width:100%; border:1px solid #ddd; border-radius:5px;">
+            </div>
+        </div>
+        <p style="margin-top:15px; font-size:0.9rem;">
+            <a href="https://ah-chou1.odoo.com/odoo/product-category" target="_blank">🔗 Catégories produits</a> | 
+            <a href="https://ah-chou1.odoo.com/odoo/res-partner-category" target="_blank">🔗 Tags partenaires</a>
+        </p>
+    </div>
+</div>
+
+<!-- BLOC 5 -->
+<div class="page-break">
+    <h1>Bloc 5 : Gestion des Stocks</h1>
+    
+    <div class="card">
+        <div class="card-header">Structure des Entrepôts</div>
+        <table>
+            <tr><th>Entrepôt</th><th>Code</th><th>Fonction</th></tr>
+            <tr><td><strong>AH CHOU</strong></td><td>WH</td><td>Entrepôt principal</td></tr>
+        </table>
+        
+        <h4 style="margin-top:20px;">Emplacements configurés</h4>
+        <table>
+            <tr><th>Emplacement</th><th>Type</th><th>Utilisation</th></tr>
+            <tr><td>TRANSIT MARITIME</td><td>Interne</td><td>Marchandises en transit (bateau)</td></tr>
+            <tr><td>├─ Container 1, 2, 3</td><td>Interne</td><td>Suivi par container</td></tr>
+            <tr><td>LOGISTISUD</td><td>Interne</td><td>Stock déporté prestataire</td></tr>
+            <tr><td>├─ Congélateur / Réfrigéré</td><td>Interne</td><td>Zones température</td></tr>
+            <tr><td>STOCK</td><td>Interne</td><td>Stock principal</td></tr>
+            <tr><td>├─ CONGELATEUR 1, 2, 3</td><td>Interne</td><td>Chambres froides -18°C</td></tr>
+            <tr><td>├─ REFRIGERE</td><td>Interne</td><td>Chambre froide +4°C</td></tr>
+            <tr><td>├─ PICKING</td><td>Interne</td><td>Zone de préparation</td></tr>
+            <tr><td>└─ QUARANTAINE</td><td>Interne</td><td>Produits en attente contrôle</td></tr>
+            <tr><td>RECEPTION</td><td>Interne</td><td>Zone de réception</td></tr>
+            <tr><td>EXPEDITION</td><td>Interne</td><td>Zone d'expédition</td></tr>
+        </table>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Stratégie FEFO (First Expired, First Out)</div>
+        <div class="highlight">
+            <p><strong>FEFO activé</strong> sur toutes les zones de stockage</p>
+            <p style="margin-top:10px;">Les produits avec la date d'expiration la plus proche sont prélevés en priorité.</p>
+        </div>
+        
+        <h4>Fonctionnement</h4>
+        <ol>
+            <li><strong>Réception :</strong> Création d'un lot avec date d'expiration (DLC/DLUO)</li>
+            <li><strong>Stockage :</strong> Rangement dans l'emplacement approprié</li>
+            <li><strong>Picking :</strong> Odoo propose automatiquement le lot qui expire en premier</li>
+            <li><strong>Alertes :</strong> Notification pour les produits proches de l'expiration</li>
+        </ol>
+        
+        <div class="warning-box">
+            <p><strong>Prérequis :</strong> Le module "Dates d'expiration des produits" doit être activé et la traçabilité par lots configurée sur chaque produit.</p>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Captures d'écran - Bloc 5</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+                <p style="font-size:0.85rem; color:var(--gray); margin-bottom:5px;">Liste des emplacements</p>
+                <img src="screenshots/bloc5/01_emplacements.png" alt="Emplacements" style="width:100%; border:1px solid #ddd; border-radius:5px;">
+            </div>
+            <div>
+                <p style="font-size:0.85rem; color:var(--gray); margin-bottom:5px;">Configuration entrepôt</p>
+                <img src="screenshots/bloc5/02_entrepot.png" alt="Entrepôt" style="width:100%; border:1px solid #ddd; border-radius:5px;">
+            </div>
+        </div>
+        <p style="margin-top:15px; font-size:0.9rem;">
+            <a href="https://ah-chou1.odoo.com/odoo/stock-warehouse" target="_blank">🔗 Entrepôts</a> | 
+            <a href="https://ah-chou1.odoo.com/odoo/stock-location" target="_blank">🔗 Emplacements</a>
+        </p>
+    </div>
+</div>
+
+<!-- BLOC 6 -->
+<div class="page-break">
+    <h1>Bloc 6 : Import des Données</h1>
+    
+    <div class="card">
+        <div class="card-header">Résumé de l'Import</div>
+        <div class="grid">
+            <div class="stat-card" style="border-left-color: var(--success);"><div class="value">76</div><div class="label">Fournisseurs</div></div>
+            <div class="stat-card" style="border-left-color: var(--success);"><div class="value">231</div><div class="label">Clients</div></div>
+            <div class="stat-card" style="border-left-color: var(--success);"><div class="value">299</div><div class="label">Produits</div></div>
+        </div>
+        
+        <h4 style="margin-top:20px;">Détail par type</h4>
+        <table>
+            <tr><th>Type</th><th>Fichier source</th><th>Importés</th><th>Statut</th></tr>
+            <tr><td>Fournisseurs</td><td>Liste des fournisseurs.xlsx</td><td>76</td><td class="status-ok">✓ Complet</td></tr>
+            <tr><td>Clients</td><td>Liste des clients.xlsx</td><td>231</td><td class="status-ok">✓ Complet</td></tr>
+            <tr><td>Produits</td><td>Liste des produits.xlsx</td><td>299</td><td class="status-warning">⚠ Partiel*</td></tr>
+        </table>
+        <p style="margin-top:10px; font-size:0.9rem; color:var(--gray);">* 78 produits en attente - voir section "Variantes" ci-dessous</p>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Gestion des Variantes (Codes-barres)</div>
+        <p>Certains produits partagent le même code-barre car ils représentent le même article avec des origines différentes.</p>
+        
+        <div class="warning-box">
+            <p><strong>Solution mise en place :</strong> Utilisation de l'attribut "Origine" pour créer des variantes de produit.</p>
+        </div>
+        
+        <h4>Exemple</h4>
+        <table>
+            <tr><th>Produit parent</th><th>Variantes</th></tr>
+            <tr>
+                <td>Carri de thon 400g</td>
+                <td>
+                    • Origine Inde<br>
+                    • Origine Vietnam<br>
+                    • Origine Indonésie
+                </td>
+            </tr>
+            <tr>
+                <td>Escalope de marlin 400g</td>
+                <td>
+                    • Origine Inde<br>
+                    • Origine Vietnam<br>
+                    • Origine Indonésie
+                </td>
+            </tr>
+        </table>
+        
+        <p style="margin-top:15px;">Chaque variante peut avoir son propre code-barre, prix et niveau de stock.</p>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Mapping des Champs</div>
+        <p>Correspondance entre les colonnes Excel et les champs Odoo :</p>
+        <table>
+            <tr><th>Excel</th><th>→</th><th>Odoo</th></tr>
+            <tr><td>N° Interne</td><td>→</td><td>Référence interne</td></tr>
+            <tr><td>Désignation</td><td>→</td><td>Nom du produit</td></tr>
+            <tr><td>Ean 13</td><td>→</td><td>Code-barres</td></tr>
+            <tr><td>PR HT</td><td>→</td><td>Prix d'achat</td></tr>
+            <tr><td>PV HT</td><td>→</td><td>Prix de vente</td></tr>
+            <tr><td>Poids net</td><td>→</td><td>Poids</td></tr>
+        </table>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Liens Odoo - Données importées</div>
+        <p style="font-size:0.95rem; line-height: 2;">
+            <a href="https://ah-chou1.odoo.com/odoo/contacts?domain=%5B%5B%22supplier_rank%22%2C%22%3E%22%2C0%5D%5D" target="_blank">🔗 Liste des fournisseurs (76)</a><br>
+            <a href="https://ah-chou1.odoo.com/odoo/contacts?domain=%5B%5B%22customer_rank%22%2C%22%3E%22%2C0%5D%5D" target="_blank">🔗 Liste des clients (231)</a><br>
+            <a href="https://ah-chou1.odoo.com/odoo/product-template" target="_blank">🔗 Liste des produits (299)</a>
+        </p>
+    </div>
+</div>
+
+<!-- PROCHAINES ETAPES -->
+<div>
+    <h1>Prochaines Étapes</h1>
+    
+    <div class="card">
+        <div class="card-header">Phase de Test</div>
+        <ol>
+            <li><strong>Accès de test</strong> - Mise à disposition d'un accès pour validation</li>
+            <li><strong>Revue fonctionnelle</strong> - Parcours des processus métier</li>
+            <li><strong>Ajustements</strong> - Corrections si nécessaire</li>
+        </ol>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Mise en Production</div>
+        <ol>
+            <li><strong>Données finales</strong> - Import des données nettoyées définitives</li>
+            <li><strong>Activation contrat</strong> - Souscription Odoo Enterprise</li>
+            <li><strong>Formation</strong> - Accompagnement des utilisateurs</li>
+            <li><strong>Go-live</strong> - Démarrage en production</li>
+        </ol>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Journal de Paramétrage Odoo - AH CHOU</title>
+    <style>
+        :root {
+            --primary: #714B67;
+            --primary-light: #9c7a91;
+            --secondary: #017e84;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --light: #f8f9fa;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--light);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 8px;
+        }
+        
+        header h1 { margin-bottom: 10px; }
+        header p { opacity: 0.9; }
+        
+        .bloc {
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .bloc-header {
+            background: var(--primary);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .bloc-header h2 { font-size: 1.2rem; }
+        
+        .bloc-content {
+            padding: 20px;
+        }
+        
+        .action {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+        
+        .action-header {
+            background: #f9f9f9;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .action-header:hover { background: #f0f0f0; }
+        
+        .action-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .action-content {
+            padding: 15px;
+            border-top: 1px solid #eee;
+            display: none;
+        }
+        
+        .action.expanded .action-content {
+            display: block;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        
+        .badge-pending { background: #e9ecef; color: #495057; }
+        .badge-progress { background: #fff3cd; color: #856404; }
+        .badge-done { background: #d4edda; color: #155724; }
+        .badge-error { background: #f8d7da; color: #721c24; }
+        
+        .steps {
+            counter-reset: step;
+        }
+        
+        .step {
+            position: relative;
+            padding-left: 40px;
+            margin-bottom: 15px;
+        }
+        
+        .step::before {
+            counter-increment: step;
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            width: 28px;
+            height: 28px;
+            background: var(--secondary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        
+        .step.done::before {
+            content: '✓';
+            background: var(--success);
+        }
+        
+        .screenshot {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 10px 0;
+            max-width: 100%;
+        }
+        
+        .screenshot img {
+            width: 100%;
+            display: block;
+        }
+        
+        .screenshot-placeholder {
+            background: #f9f9f9;
+            padding: 40px;
+            text-align: center;
+            color: #999;
+            border: 2px dashed #ddd;
+            border-radius: 4px;
+        }
+        
+        .code {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: 'Monaco', monospace;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        th { background: var(--primary); color: white; }
+        
+        .note {
+            background: #e7f5ff;
+            border-left: 4px solid var(--secondary);
+            padding: 12px 15px;
+            margin: 15px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid var(--warning);
+            padding: 12px 15px;
+            margin: 15px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .summary-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .summary-card .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--success);
+            transition: width 0.3s;
+        }
+        
+        .expandable { cursor: pointer; }
+        .expandable::after { content: ' ▼'; font-size: 0.8em; }
+        .expandable.collapsed::after { content: ' ▶'; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📋 Journal de Paramétrage Odoo</h1>
+            <p>AH CHOU SARL - Instance: ah-chou1.odoo.com</p>
+        </header>
+        
+        <div class="summary">
+            <div class="summary-card">
+                <div class="value" id="bloc-total">0/5</div>
+                <div>Blocs complétés</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="summary-card">
+                <div class="value" id="actions-done">0</div>
+                <div>Actions réalisées</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" id="actions-pending">0</div>
+                <div>Actions en attente</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" id="last-update">-</div>
+                <div>Dernière MAJ</div>
+            </div>
+        </div>
+        
+        <!-- BLOC 1: PARAMETRAGE GENERAL -->
+        <div class="bloc" id="bloc-1">
+            <div class="bloc-header">
+                <h2>BLOC 1: Paramétrage Général</h2>
+                <span class="badge badge-pending" id="bloc-1-status">En attente validation</span>
+            </div>
+            <div class="bloc-content">
+                <p>Configuration de base de l'instance Odoo: société, localisation, devises.</p>
+                
+                <div class="action expanded" id="action-1-1">
+                    <div class="action-header" onclick="toggleAction('action-1-1')">
+                        <div class="action-title">
+                            <span class="badge badge-pending">⏳</span>
+                            <strong>1.1 - Configuration Société</strong>
+                        </div>
+                        <span>Paramètres > Sociétés</span>
+                    </div>
+                    <div class="action-content">
+                        <div class="steps">
+                            <div class="step">Aller dans <strong>Paramètres > Utilisateurs & Sociétés > Sociétés</strong></div>
+                            <div class="step">Modifier la société principale</div>
+                            <div class="step">Renseigner les informations ci-dessous</div>
+                        </div>
+                        
+                        <table>
+                            <tr><th>Champ</th><th>Valeur</th></tr>
+                            <tr><td>Nom de la société</td><td>AH CHOU SARL</td></tr>
+                            <tr><td>Adresse</td><td>La Réunion (974)</td></tr>
+                            <tr><td>Pays</td><td>France</td></tr>
+                            <tr><td>Devise</td><td>EUR</td></tr>
+                            <tr><td>Fuseau horaire</td><td>Indian/Reunion (UTC+4)</td></tr>
+                            <tr><td>TVA intracommunautaire</td><td>À renseigner</td></tr>
+                            <tr><td>SIRET</td><td>À renseigner</td></tr>
+                        </table>
+                        
+                        <div class="screenshot-placeholder">
+                            📷 Capture d'écran à ajouter après configuration
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="action" id="action-1-2">
+                    <div class="action-header" onclick="toggleAction('action-1-2')">
+                        <div class="action-title">
+                            <span class="badge badge-pending">⏳</span>
+                            <strong>1.2 - Localisation fiscale DOM</strong>
+                        </div>
+                        <span>Comptabilité > Configuration > Taxes</span>
+                    </div>
+                    <div class="action-content">
+                        <div class="note">
+                            <strong>Important:</strong> La Réunion a des taux de TVA spécifiques (DOM).
+                        </div>
+                        
+                        <div class="steps">
+                            <div class="step">Aller dans <strong>Comptabilité > Configuration > Taxes</strong></div>
+                            <div class="step">Créer ou vérifier les taxes suivantes</div>
+                        </div>
+                        
+                        <table>
+                            <tr><th>Nom</th><th>Taux</th><th>Type</th><th>Comptes</th></tr>
+                            <tr><td>TVA 2.1% DOM (Ventes)</td><td>2.1%</td><td>Vente</td><td>44571</td></tr>
+                            <tr><td>TVA 2.1% DOM (Achats)</td><td>2.1%</td><td>Achat</td><td>44566</td></tr>
+                            <tr><td>TVA 8.5% DOM (Ventes)</td><td>8.5%</td><td>Vente</td><td>44571</td></tr>
+                            <tr><td>TVA 8.5% DOM (Achats)</td><td>8.5%</td><td>Achat</td><td>44566</td></tr>
+                            <tr><td>Exonéré DOM</td><td>0%</td><td>Vente/Achat</td><td>-</td></tr>
+                        </table>
+                        
+                        <div class="screenshot-placeholder">
+                            📷 Capture d'écran à ajouter après configuration
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="action" id="action-1-3">
+                    <div class="action-header" onclick="toggleAction('action-1-3')">
+                        <div class="action-title">
+                            <span class="badge badge-pending">⏳</span>
+                            <strong>1.3 - Configuration Devises</strong>
+                        </div>
+                        <span>Comptabilité > Configuration > Devises</span>
+                    </div>
+                    <div class="action-content">
+                        <div class="steps">
+                            <div class="step">Aller dans <strong>Comptabilité > Configuration > Devises</strong></div>
+                            <div class="step">Activer EUR et USD</div>
+                            <div class="step">Configurer le taux de change USD</div>
+                        </div>
+                        
+                        <table>
+                            <tr><th>Devise</th><th>Symbole</th><th>Active</th><th>Taux (vs EUR)</th></tr>
+                            <tr><td>Euro</td><td>€</td><td>✅ Oui</td><td>1.0000</td></tr>
+                            <tr><td>Dollar US</td><td>$</td><td>✅ Oui</td><td>À actualiser</td></tr>
+                        </table>
+                        
+                        <div class="note">
+                            Le taux USD sera utilisé pour les calculs de prix de revient dans l'App Achats.
+                        </div>
+                        
+                        <div class="screenshot-placeholder">
+                            📷 Capture d'écran à ajouter après configuration
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="action" id="action-1-4">
+                    <div class="action-header" onclick="toggleAction('action-1-4')">
+                        <div class="action-title">
+                            <span class="badge badge-pending">⏳</span>
+                            <strong>1.4 - Activation Modules</strong>
+                        </div>
+                        <span>Applications</span>
+                    </div>
+                    <div class="action-content">
+                        <div class="steps">
+                            <div class="step">Aller dans <strong>Applications</strong></div>
+                            <div class="step">Installer les modules suivants</div>
+                        </div>
+                        
+                        <table>
+                            <tr><th>Module</th><th>Nom technique</th><th>Requis</th></tr>
+                            <tr><td>Ventes</td><td>sale_management</td><td>✅</td></tr>
+                            <tr><td>Achats</td><td>purchase</td><td>✅</td></tr>
+                            <tr><td>Inventaire</td><td>stock</td><td>✅</td></tr>
+                            <tr><td>Comptabilité</td><td>account_accountant</td><td>✅</td></tr>
+                            <tr><td>Point de Vente</td><td>point_of_sale</td><td>✅</td></tr>
+                            <tr><td>Traçabilité par lots</td><td>stock_lot</td><td>✅</td></tr>
+                            <tr><td>Dates d'expiration</td><td>product_expiry</td><td>✅</td></tr>
+                        </table>
+                        
+                        <div class="screenshot-placeholder">
+                            📷 Capture d'écran à ajouter après configuration
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- BLOC 2: CHAMPS PERSONNALISES -->
+        <div class="bloc" id="bloc-2">
+            <div class="bloc-header">
+                <h2>BLOC 2: Champs Personnalisés</h2>
+                <span class="badge badge-pending" id="bloc-2-status">En attente</span>
+            </div>
+            <div class="bloc-content">
+                <p>Création des champs personnalisés (x_) nécessaires pour les imports.</p>
+                
+                <div class="action" id="action-2-1">
+                    <div class="action-header" onclick="toggleAction('action-2-1')">
+                        <div class="action-title">
+                            <span class="badge badge-pending">⏳</span>
+                            <strong>2.1 - Champs Clients (res.partner)</strong>
+                        </div>
+                        <span>Paramètres > Technique > Champs</span>
+                    </div>
+                    <div class="action-content">
+                        <div class="warning">
+                            Utiliser <strong>Odoo Studio</strong> ou <strong>Paramètres > Technique > Modèles > Champs</strong>
+                        </div>
+                        
+                        <table>
+                            <tr><th>Nom technique</th><th>Libellé</th><th>Type</th><th>Valeurs (si sélection)</th></tr>
+                            <tr><td>x_groupe_client</td><td>Groupe Client</td><td>Selection</td><td>gbh, smdis, cellule_u, caille, distrimascareignes, ibl, tk, lot</td></tr>
+                            <tr><td>x_enseigne</td><td>Enseigne</td><td>Selection</td><td>auchan, carrefour, carrefour_market, carrefour_city, promocash, u, leclerc, intermark, run_market, cocci_market, leader_price, gel_oi, independant</td></tr>
+                            <tr><td>x_typologie</td><td>Typologie</td><td>Selection</td><td>hyper, super, marche, express, cash, autres</td></tr>
+                            <tr><td>x_taux_remise</td><td>Taux de remise (%)</td><td>Float</td><td>-</td></tr>
+                            <tr><td>x_taux_rfa</td><td>Taux RFA (%)</td><td>Float</td><td>-</td></tr>
+                            <tr><td>x_blocage</td><td>Blocage</td><td>Selection</td><td>non, oui_toujours, oui_depassement</td></tr>
+                            <tr><td>x_compte_comptable</td><td>N° Compte comptable</td><td>Char</td><td>-</td></tr>
+                            <tr><td>x_responsable_1</td><td>Responsable 1</td><td>Char</td><td>-</td></tr>
+                            <tr><td>x_responsable_2</td><td>Responsable 2</td><td>Char</td><td>-</td></tr>
+                            <tr><td>x_resp_compta</td><td>Responsable comptabilité</td><td>Char</td><td>-</td></tr>
+                            <tr><td>x_tel_compta</td><td>Tél. comptabilité</td><td>Char</td><td>-</td></tr>
+                            <tr><td>x_email_compta</td><td>Email comptabilité</td><td>Char</td><td>-</td></tr>
+                            <tr><td>x_groupe_facturation</td><td>Groupe facturation</td><td>Char</td><td>-</td></tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="action" id="action-2-2">
+                    <div class="action-header" onclick="toggleAction('action-2-2')">
+                        <div class="action-title">
+                            <span class="badge badge-pending">⏳</span>
+                            <strong>2.2 - Champs Produits (product.template)</strong>
+                        </div>
+                        <span>Paramètres > Technique > Champs</span>
+                    </div>
+                    <div class="action-content">
+                        <table>
+                            <tr><th>Nom technique</th><th>Libellé</th><th>Type</th></tr>
+                            <tr><td>x_code_interne</td><td>Code interne</td><td>Char</td></tr>
+                            <tr><td>x_nom_long</td><td>Nom long</td><td>Char</td></tr>
+                            <tr><td>x_contenu</td><td>Contenu</td><td>Float</td></tr>
+                            <tr><td>x_conditionnement</td><td>Conditionnement</td><td>Float</td></tr>
+                            <tr><td>x_pcb</td><td>PCB</td><td>Float</td></tr>
+                            <tr><td>x_poids_brut</td><td>Poids brut</td><td>Float</td></tr>
+                            <tr><td>x_coef_approche</td><td>Coefficient d'approche</td><td>Float</td></tr>
+                            <tr><td>x_zone_peche</td><td>Zone de pêche</td><td>Char</td></tr>
+                            <tr><td>x_nom_scientifique</td><td>Nom scientifique</td><td>Char</td></tr>
+                            <tr><td>x_origine</td><td>Origine</td><td>Char</td></tr>
+                            <tr><td>x_marque</td><td>Marque</td><td>Char</td></tr>
+                            <tr><td>x_segment</td><td>Segment</td><td>Char</td></tr>
+                            <tr><td>x_tarif_t1_ht</td><td>Tarif T1 HT</td><td>Float</td></tr>
+                            <tr><td>x_tarif_t2_ht</td><td>Tarif T2 HT</td><td>Float</td></tr>
+                            <tr><td>x_tarif_t3_ht</td><td>Tarif T3 HT</td><td>Float</td></tr>
+                            <tr><td>x_tarif_t4_ht</td><td>Tarif T4 HT</td><td>Float</td></tr>
+                            <tr><td>x_tarif_t5_ht</td><td>Tarif T5 HT</td><td>Float</td></tr>
+                            <tr><td>x_tarif_t6_ht</td><td>Tarif T6 HT</td><td>Float</td></tr>
+                            <tr><td>x_pv_ttc</td><td>Prix vente TTC</td><td>Float</td></tr>
+                            <tr><td>x_prmup</td><td>PRMUP</td><td>Float</td></tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="action" id="action-2-3">
+                    <div class="action-header" onclick="toggleAction('action-2-3')">
+                        <div class="action-title">
+                            <span class="badge badge-pending">⏳</span>
+                            <strong>2.3 - Champs Fournisseurs (res.partner)</strong>
+                        </div>
+                        <span>Paramètres > Technique > Champs</span>
+                    </div>
+                    <div class="action-content">
+                        <table>
+                            <tr><th>Nom technique</th><th>Libellé</th><th>Type</th><th>Valeurs</th></tr>
+                            <tr><td>x_groupe_fournisseur</td><td>Groupe fournisseur</td><td>Selection</td><td>asie_inde, europe, local, afrique, amerique, oceanie, autres</td></tr>
+                            <tr><td>x_is_transitaire</td><td>Est transitaire</td><td>Boolean</td><td>-</td></tr>
+                            <tr><td>x_delai_livraison</td><td>Délai livraison (jours)</td><td>Integer</td><td>-</td></tr>
+                            <tr><td>x_incoterm</td><td>Incoterm</td><td>Char</td><td>-</td></tr>
+                            <tr><td>x_conditions_achat</td><td>Conditions d'achat</td><td>Text</td><td>-</td></tr>
+                            <tr><td>x_numero_client_chez_frs</td><td>N° client chez fournisseur</td><td>Char</td><td>-</td></tr>
+                            <tr><td>x_compte_auxiliaire</td><td>Compte auxiliaire</td><td>Char</td><td>-</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- BLOC 3: LISTES DE PRIX -->
+        <div class="bloc" id="bloc-3">
+            <div class="bloc-header">
+                <h2>BLOC 3: Listes de Prix & Conditions</h2>
+                <span class="badge badge-pending" id="bloc-3-status">En attente</span>
+            </div>
+            <div class="bloc-content">
+                <div class="action" id="action-3-1">
+                    <div class="action-header" onclick="toggleAction('action-3-1')">
+                        <div class="action-title">
+                            <span class="badge badge-pending">⏳</span>
+                            <strong>3.1 - Création Listes de Prix</strong>
+                        </div>
+                        <span>Ventes > Configuration > Listes de prix</span>
+                    </div>
+                    <div class="action-content">
+                        <table>
+                            <tr><th>Nom</th><th>Description</th></tr>
+                            <tr><td>Tarif Base</td><td>Prix de vente standard</td></tr>
+                            <tr><td>Tarif T1</td><td>Premier niveau de remise</td></tr>
+                            <tr><td>Tarif T2</td><td>Deuxième niveau</td></tr>
+                            <tr><td>Tarif T3</td><td>Troisième niveau</td></tr>
+                            <tr><td>Tarif T4</td><td>Quatrième niveau</td></tr>
+                            <tr><td>Tarif T5</td><td>Cinquième niveau</td></tr>
+                            <tr><td>Tarif T6</td><td>Sixième niveau</td></tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="action" id="action-3-2">
+                    <div class="action-header" onclick="toggleAction('action-3-2')">
+                        <div class="action-title">
+                            <span class="badge badge-pending">⏳</span>
+                            <strong>3.2 - Conditions de Paiement</strong>
+                        </div>
+                        <span>Comptabilité > Configuration > Conditions de paiement</span>
+                    </div>
+                    <div class="action-content">
+                        <table>
+                            <tr><th>Nom</th><th>Délai</th></tr>
+                            <tr><td>Comptant</td><td>Immédiat</td></tr>
+                            <tr><td>15 jours</td><td>15 jours</td></tr>
+                            <tr><td>30 jours</td><td>30 jours</td></tr>
+                            <tr><td>60 jours</td><td>60 jours</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- BLOC 4: CATEGORIES -->
+        <div class="bloc" id="bloc-4">
+            <div class="bloc-header">
+                <h2>BLOC 4: Catégories</h2>
+                <span class="badge badge-pending" id="bloc-4-status">En attente</span>
+            </div>
+            <div class="bloc-content">
+                <div class="action" id="action-4-1">
+                    <div class="action-header" onclick="toggleAction('action-4-1')">
+                        <div class="action-title">
+                            <span class="badge badge-pending">⏳</span>
+                            <strong>4.1 - Catégories Clients</strong>
+                        </div>
+                        <span>Contacts > Configuration > Étiquettes</span>
+                    </div>
+                    <div class="action-content">
+                        <table>
+                            <tr><th>Catégorie</th></tr>
+                            <tr><td>GMS</td></tr>
+                            <tr><td>PLATE-FORME</td></tr>
+                            <tr><td>GROSSISTE</td></tr>
+                            <tr><td>CHR</td></tr>
+                            <tr><td>DIVERS</td></tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="action" id="action-4-2">
+                    <div class="action-header" onclick="toggleAction('action-4-2')">
+                        <div class="action-title">
+                            <span class="badge badge-pending">⏳</span>
+                            <strong>4.2 - Catégories Produits</strong>
+                        </div>
+                        <span>Inventaire > Configuration > Catégories de produits</span>
+                    </div>
+                    <div class="action-content">
+                        <p>Hiérarchie à 3 niveaux: Rayon > Groupe > Sous-groupe</p>
+                        <div class="code">
+Pêche
+├── Crustacé
+│   ├── Entier
+│   ├── Décortiqué
+│   └── Etêté
+├── Poisson
+│   ├── Entier
+│   ├── Filet
+│   └── Tranche
+└── Mollusque
+    └── Entier
+
+Condiment
+└── Nature
+
+Snacking Vapeur
+└── Traiteur
+
+Snacking Friture
+└── Friture
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- BLOC 5: ENTREPOTS -->
+        <div class="bloc" id="bloc-5">
+            <div class="bloc-header">
+                <h2>BLOC 5: Entrepôts & Stock</h2>
+                <span class="badge badge-pending" id="bloc-5-status">En attente</span>
+            </div>
+            <div class="bloc-content">
+                <div class="action" id="action-5-1">
+                    <div class="action-header" onclick="toggleAction('action-5-1')">
+                        <div class="action-title">
+                            <span class="badge badge-pending">⏳</span>
+                            <strong>5.1 - Configuration Entrepôts</strong>
+                        </div>
+                        <span>Inventaire > Configuration > Entrepôts</span>
+                    </div>
+                    <div class="action-content">
+                        <table>
+                            <tr><th>Zone</th><th>Description</th></tr>
+                            <tr><td>Zone 1</td><td>À définir</td></tr>
+                            <tr><td>Zone 2</td><td>À définir</td></tr>
+                            <tr><td>Zone 3</td><td>À définir</td></tr>
+                            <tr><td>Zone 4</td><td>À définir</td></tr>
+                            <tr><td>Zone 5</td><td>À définir</td></tr>
+                            <tr><td>Zone 6</td><td>À définir</td></tr>
+                        </table>
+                        
+                        <div class="warning">
+                            ⚠️ Les noms des zones doivent être confirmés par le client
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="action" id="action-5-2">
+                    <div class="action-header" onclick="toggleAction('action-5-2')">
+                        <div class="action-title">
+                            <span class="badge badge-pending">⏳</span>
+                            <strong>5.2 - Paramètres Traçabilité</strong>
+                        </div>
+                        <span>Inventaire > Configuration > Paramètres</span>
+                    </div>
+                    <div class="action-content">
+                        <table>
+                            <tr><th>Paramètre</th><th>Valeur</th></tr>
+                            <tr><td>Traçabilité par lots</td><td>✅ Activé</td></tr>
+                            <tr><td>Dates d'expiration</td><td>✅ Activé</td></tr>
+                            <tr><td>Méthode de coût</td><td>PRMUP (coût moyen)</td></tr>
+                            <tr><td>Multi-emplacements</td><td>✅ Activé</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function toggleAction(id) {
+            const action = document.getElementById(id);
+            action.classList.toggle('expanded');
+        }
+        
+        // Calculer les stats
+        function updateStats() {
+            const blocs = document.querySelectorAll('.bloc');
+            let blocsDone = 0;
+            let actionsDone = 0;
+            let actionsPending = 0;
+            
+            blocs.forEach(bloc => {
+                const badges = bloc.querySelectorAll('.action .badge');
+                let allDone = true;
+                badges.forEach(badge => {
+                    if (badge.classList.contains('badge-done')) {
+                        actionsDone++;
+                    } else {
+                        actionsPending++;
+                        allDone = false;
+                    }
+                });
+                if (allDone && badges.length > 0) blocsDone++;
+            });
+            
+            document.getElementById('bloc-total').textContent = `${blocsDone}/${blocs.length}`;
+            document.getElementById('progress-fill').style.width = `${(blocsDone/blocs.length)*100}%`;
+            document.getElementById('actions-done').textContent = actionsDone;
+            document.getElementById('actions-pending').textContent = actionsPending;
+            document.getElementById('last-update').textContent = new Date().toLocaleDateString('fr-FR');
+        }
+        
+        updateStats();
+    </script>
+</body>
+</html>

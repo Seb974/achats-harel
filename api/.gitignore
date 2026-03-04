@@ -32,5 +32,7 @@ phpstan.neon
 ###> liip/imagine-bundle ###
 /public/media/cache/
 ###< liip/imagine-bundle ###
-/public/images/
-/public/media/
+/public/images/*
+!/public/images/.gitkeep
+/public/media/*
+!/public/media/.gitkeep

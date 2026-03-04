@@ -169,6 +169,18 @@ class Achat
     #[Groups(groups: ['Achat:write', 'Achat:read', 'Item:read'])]
     private Collection $coveringCosts;
 
+    #[ORM\Column(nullable: true)]
+    #[Groups(groups: ['Achat:write', 'Achat:read'])]
+    private ?int $odooPurchaseOrderId = null;
+
+    #[ORM\Column(length: 50, nullable: true)]
+    #[Groups(groups: ['Achat:write', 'Achat:read'])]
+    private ?string $odooPurchaseOrderName = null;
+
+    #[ORM\Column(nullable: true)]
+    #[Groups(groups: ['Achat:write', 'Achat:read'])]
+    private ?int $odooPickingId = null;
+
     public function __construct()
     {
         $this->items = new ArrayCollection();
@@ -573,11 +585,46 @@ class Achat
     public function removeCoveringCost(CoveringCost $coveringCost): static
     {
         if ($this->coveringCosts->removeElement($coveringCost)) {
-            // set the owning side to null (unless already changed)
             if ($coveringCost->getAchat() === $this) {
                 $coveringCost->setAchat(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getOdooPurchaseOrderId(): ?int
+    {
+        return $this->odooPurchaseOrderId;
+    }
+
+    public function setOdooPurchaseOrderId(?int $odooPurchaseOrderId): static
+    {
+        $this->odooPurchaseOrderId = $odooPurchaseOrderId;
+
+        return $this;
+    }
+
+    public function getOdooPurchaseOrderName(): ?string
+    {
+        return $this->odooPurchaseOrderName;
+    }
+
+    public function setOdooPurchaseOrderName(?string $odooPurchaseOrderName): static
+    {
+        $this->odooPurchaseOrderName = $odooPurchaseOrderName;
+
+        return $this;
+    }
+
+    public function getOdooPickingId(): ?int
+    {
+        return $this->odooPickingId;
+    }
+
+    public function setOdooPickingId(?int $odooPickingId): static
+    {
+        $this->odooPickingId = $odooPickingId;
 
         return $this;
     }
