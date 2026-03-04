@@ -82,30 +82,60 @@ interface CostPriceItem {
     mainPr: number;
 }
 
+interface StockTransferData {
+    location_src_id: number;
+    location_dest_id: number;
+    products: { product_id: number; qty: number }[];
+    origin?: string;
+}
+
+interface StockTransferResult {
+    success: boolean;
+    picking_id?: number;
+    picking_name?: string;
+    state?: string;
+    error?: string;
+}
+
+interface PickingState {
+    found: boolean;
+    id?: number;
+    name?: string;
+    state?: string;
+    date_done?: string | null;
+    has_backorder?: boolean;
+    backorder_id?: number | null;
+    moves?: {
+        product_id: number;
+        product_name: string;
+        qty_expected: number;
+        qty_done: number;
+        state: string;
+    }[];
+}
+
 interface UseOdooReturn {
-    // État
     loading: boolean;
     error: string | null;
-    
-    // Vérification de configuration
     isOdooConfigured: boolean;
     dataSource: string;
-    
-    // Méthodes
+
     testConnection: () => Promise<boolean>;
     getProducts: (limit?: number, offset?: number) => Promise<any[]>;
     getSuppliers: (limit?: number, offset?: number) => Promise<any[]>;
     createRFQ: (data: OdooRFQData) => Promise<OdooRFQResult>;
     createPurchaseOrder: (data: OdooPurchaseOrderData) => Promise<OdooPurchaseOrderResult>;
-    
-    // Helper pour convertir un achat en RFQ
     convertAchatToRFQ: (achat: any) => OdooRFQData | null;
-    
-    // Helper pour convertir un achat en Purchase Order avec prix de revient
     convertAchatToPurchaseOrder: (achat: any) => OdooPurchaseOrderData | null;
-    
-    // Helper pour calculer les prix de revient
     calculateCostPrices: (achat: any) => CostPriceItem[];
+
+    // Transit / Stock
+    createStockTransfer: (data: StockTransferData) => Promise<StockTransferResult>;
+    updatePurchaseOrderPrices: (orderId: number, lines: { product_id: number; price_unit: number }[]) => Promise<boolean>;
+    cancelPurchaseOrder: (orderId: number) => Promise<boolean>;
+    getPurchaseOrderPickings: (orderId: number) => Promise<any[]>;
+    checkPickingState: (pickingId: number) => Promise<PickingState>;
+    syncTransitStatus: (achat: any, fromStatus: any, toStatus: any) => Promise<StockTransferResult | null>;
 }
 
 /**
@@ -560,6 +590,163 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         };
     }, [notify, calculateCostPrices, generateOdooNotes]);
 
+    /**
+     * Crée un transfert de stock interne dans Odoo
+     */
+    const createStockTransfer = useCallback(async (data: StockTransferData): Promise<StockTransferResult> => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const response = await fetch('/odoo/stock-transfer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || result.error || 'Erreur transfert stock');
+            }
+
+            if (result.success) {
+                notify(`Transfert ${result.picking_name} créé`, { type: 'success' });
+            }
+            return result;
+        } catch (e: any) {
+            const msg = e.message || 'Erreur transfert stock';
+            setError(msg);
+            notify(msg, { type: 'error' });
+            return { success: false, error: msg };
+        } finally {
+            setLoading(false);
+        }
+    }, [notify]);
+
+    /**
+     * Met à jour les prix d'un PO existant dans Odoo
+     */
+    const updatePurchaseOrderPrices = useCallback(async (
+        orderId: number,
+        lines: { product_id: number; price_unit: number }[]
+    ): Promise<boolean> => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const response = await fetch(`/odoo/purchase-order/${orderId}/lines`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lines }),
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || 'Erreur mise à jour prix');
+            }
+
+            notify('Prix de revient mis à jour dans Odoo', { type: 'success' });
+            return true;
+        } catch (e: any) {
+            const msg = e.message || 'Erreur mise à jour prix';
+            setError(msg);
+            notify(msg, { type: 'error' });
+            return false;
+        } finally {
+            setLoading(false);
+        }
+    }, [notify]);
+
+    /**
+     * Annule un PO dans Odoo
+     */
+    const cancelPurchaseOrder = useCallback(async (orderId: number): Promise<boolean> => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const response = await fetch(`/odoo/purchase-order/${orderId}/cancel`, {
+                method: 'POST',
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || 'Erreur annulation');
+            }
+
+            notify('Commande annulée dans Odoo', { type: 'success' });
+            return true;
+        } catch (e: any) {
+            const msg = e.message || 'Erreur annulation PO';
+            setError(msg);
+            notify(msg, { type: 'error' });
+            return false;
+        } finally {
+            setLoading(false);
+        }
+    }, [notify]);
+
+    /**
+     * Récupère les pickings liés à un PO
+     */
+    const getPurchaseOrderPickings = useCallback(async (orderId: number): Promise<any[]> => {
+        try {
+            const response = await fetch(`/odoo/purchase-order/${orderId}/pickings`);
+            const result = await response.json();
+            return result.pickings ?? [];
+        } catch {
+            return [];
+        }
+    }, []);
+
+    /**
+     * Vérifie l'état d'un picking (réception)
+     */
+    const checkPickingState = useCallback(async (pickingId: number): Promise<PickingState> => {
+        try {
+            const response = await fetch(`/odoo/picking/${pickingId}/state`);
+            return await response.json();
+        } catch {
+            return { found: false };
+        }
+    }, []);
+
+    /**
+     * Synchronise un changement de statut transit avec Odoo
+     * Crée le transfert de stock correspondant entre les emplacements Odoo
+     */
+    const syncTransitStatus = useCallback(async (
+        achat: any,
+        fromStatus: any,
+        toStatus: any
+    ): Promise<StockTransferResult | null> => {
+        const srcLocationId = fromStatus?.odooLocationId;
+        const destLocationId = toStatus?.odooLocationId;
+
+        if (!srcLocationId || !destLocationId) {
+            return null;
+        }
+
+        const products = (achat.items ?? []).map((item: any) => ({
+            product_id: item.productId || item.product_id,
+            qty: item.mainQuantity || item.quantity || 1,
+        })).filter((p: any) => p.product_id);
+
+        if (products.length === 0) {
+            notify('Aucun produit à transférer', { type: 'warning' });
+            return null;
+        }
+
+        const origin = achat.shipNumber || `HAREL-${achat.id}`;
+
+        return createStockTransfer({
+            location_src_id: srcLocationId,
+            location_dest_id: destLocationId,
+            products,
+            origin,
+        });
+    }, [createStockTransfer, notify]);
+
     return {
         loading,
         error,
@@ -573,6 +760,12 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         convertAchatToRFQ,
         convertAchatToPurchaseOrder,
         calculateCostPrices,
+        createStockTransfer,
+        updatePurchaseOrderPrices,
+        cancelPurchaseOrder,
+        getPurchaseOrderPickings,
+        checkPickingState,
+        syncTransitStatus,
     };
 };
 

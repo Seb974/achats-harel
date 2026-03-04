@@ -1,0 +1,2741 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dossier d'Intégration Odoo - AH CHOU SARL</title>
+    <style>
+        :root {
+            --primary: #714B67;
+            --primary-light: #9c7a91;
+            --secondary: #017e84;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background: var(--light);
+        }
+        
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--primary);
+            color: white;
+            padding: 20px 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        
+        .sidebar h1 {
+            font-size: 1.2rem;
+            padding: 0 20px 20px;
+            border-bottom: 1px solid var(--primary-light);
+            margin-bottom: 20px;
+        }
+        
+        .sidebar h1 span {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: normal;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        
+        .nav-section {
+            margin-bottom: 10px;
+        }
+        
+        .nav-section-title {
+            padding: 10px 20px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.7;
+        }
+        
+        .nav-item {
+            display: block;
+            padding: 10px 20px;
+            color: white;
+            text-decoration: none;
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+        
+        .nav-item:hover, .nav-item.active {
+            background: var(--primary-light);
+        }
+        
+        .nav-item.sub {
+            padding-left: 35px;
+            font-size: 0.9rem;
+        }
+        
+        /* Main content */
+        .main {
+            flex: 1;
+            margin-left: 280px;
+            padding: 40px;
+            max-width: 1000px;
+        }
+        
+        .section {
+            display: block;
+            page-break-after: always;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
+        /* Cacher la sidebar et ajuster pour impression */
+        .sidebar {
+            display: none !important;
+        }
+        
+        .main {
+            margin-left: 0 !important;
+            max-width: 100% !important;
+            padding: 20px !important;
+        }
+        
+        @media print {
+            body { background: white; }
+            .sidebar { display: none !important; }
+            .main { margin-left: 0; max-width: 100%; }
+            .section { page-break-inside: avoid; }
+            .card { page-break-inside: avoid; }
+            a { color: var(--primary) !important; text-decoration: none; }
+            a::after { content: " (" attr(href) ")"; font-size: 0.8em; color: #666; }
+            a[href^="#"]::after { content: ""; }
+            a[href^="javascript"]::after { content: ""; }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        h1 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary);
+        }
+        
+        h2 {
+            color: var(--secondary);
+            margin: 30px 0 15px;
+        }
+        
+        h3 {
+            color: var(--dark);
+            margin: 20px 0 10px;
+        }
+        
+        p {
+            margin-bottom: 15px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: var(--primary);
+            color: white;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .card-header {
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .badge-success { background: var(--success); color: white; }
+        .badge-warning { background: var(--warning); color: var(--dark); }
+        .badge-danger { background: var(--danger); color: white; }
+        .badge-info { background: var(--secondary); color: white; }
+        .badge-primary { background: var(--primary); color: white; }
+        
+        .checklist {
+            list-style: none;
+        }
+        
+        .checklist li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .checklist li:before {
+            content: "☐ ";
+            color: var(--gray);
+        }
+        
+        .checklist li.done:before {
+            content: "✅ ";
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        
+        .alert-info {
+            background: #e7f5ff;
+            border-left: 4px solid var(--secondary);
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            border-left: 4px solid var(--warning);
+        }
+        
+        .code {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9rem;
+            margin: 15px 0;
+        }
+        
+        .diagram {
+            background: white;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre;
+            overflow-x: auto;
+            font-size: 0.85rem;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--success);
+            transition: width 0.3s;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .stat-card .label {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+        
+        /* Print */
+        @media print {
+            .sidebar { display: none; }
+            .main { margin-left: 0; }
+            .section { display: block !important; page-break-after: always; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <h1>
+                Intégration Odoo
+                <span>AH CHOU SARL</span>
+            </h1>
+            
+            <div class="nav-section">
+                <div class="nav-section-title">Vue d'ensemble</div>
+                <a class="nav-item active" onclick="showSection('resume')">Résumé du projet</a>
+                <a class="nav-item" onclick="showSection('questionnaire')">Réponses questionnaire</a>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-section-title">Paramétrage général</div>
+                <a class="nav-item" onclick="showSection('societe')">Société</a>
+                <a class="nav-item" onclick="showSection('fiscal')">Localisation fiscale</a>
+                <a class="nav-item" onclick="showSection('devises')">Devises</a>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-section-title">Modules Odoo</div>
+                <a class="nav-item" onclick="showSection('ventes')">Ventes</a>
+                <a class="nav-item sub" onclick="showSection('tarifs')">└ Tarification</a>
+                <a class="nav-item sub" onclick="showSection('promos')">└ Promos & 3xNet</a>
+                <a class="nav-item" onclick="showSection('achats')">Achats</a>
+                <a class="nav-item sub" onclick="showSection('integration')">└ Intégration App</a>
+                <a class="nav-item" onclick="showSection('stock')">Stock</a>
+                <a class="nav-item sub" onclick="showSection('tracabilite')">└ Traçabilité</a>
+                <a class="nav-item" onclick="showSection('compta')">Comptabilité</a>
+                <a class="nav-item" onclick="showSection('pos')">Point de vente</a>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-section-title">Données</div>
+                <a class="nav-item" onclick="showSection('clients')">Structure Clients</a>
+                <a class="nav-item" onclick="showSection('produits')">Structure Produits</a>
+                <a class="nav-item" onclick="showSection('fournisseurs')">Structure Fournisseurs</a>
+                <a class="nav-item" onclick="showSection('scripts')">Scripts d'import ✅</a>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-section-title">Dashboards</div>
+                <a class="nav-item" onclick="showSection('dash-ventes')">Dashboards Ventes</a>
+                <a class="nav-item" onclick="showSection('dash-achats')">Dashboards Achats</a>
+                <a class="nav-item" onclick="showSection('dash-stock')">Dashboards Stock</a>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-section-title">Utilisateurs</div>
+                <a class="nav-item" onclick="showSection('profils')">Profils</a>
+                <a class="nav-item" onclick="showSection('droits')">Droits d'accès</a>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-section-title">Validation</div>
+                <a class="nav-item" onclick="showSection('tests')">Scénarios de test</a>
+                <a class="nav-item" onclick="showSection('checklist')">Checklist</a>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-section-title">Paramétrage Odoo</div>
+                <a class="nav-item" onclick="showSection('param-bloc1')">📋 Bloc 1: Général</a>
+                <a class="nav-item" onclick="showSection('param-bloc2')">📋 Bloc 2: Champs</a>
+                <a class="nav-item" onclick="showSection('param-bloc3')">📋 Bloc 3: Prix</a>
+                <a class="nav-item" onclick="showSection('param-bloc4')">📋 Bloc 4: Catégories</a>
+                <a class="nav-item" onclick="showSection('param-bloc5')">📋 Bloc 5: Stock</a>
+                <a class="nav-item" onclick="showSection('param-bloc6')">📋 Bloc 6: Import</a>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-section-title">Outils</div>
+                <a class="nav-item" href="interface_validation/index.html" target="_blank">🔍 Validation fichiers</a>
+            </div>
+        </nav>
+        
+        <main class="main">
+            <!-- PAGE DE COUVERTURE -->
+            <div style="min-height: 90vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; page-break-after: always;">
+                <div style="margin-bottom: 40px;">
+                    <img src="https://ah-chou1.odoo.com/web/image/website/1/logo" alt="Logo" style="max-width: 200px; margin-bottom: 20px;" onerror="this.style.display='none'">
+                    <h1 style="font-size: 2.5rem; color: #714B67; border: none; margin-bottom: 10px;">DOSSIER D'INTÉGRATION ODOO</h1>
+                    <h2 style="font-size: 1.5rem; color: #017e84; font-weight: normal;">AH CHOU SARL</h2>
+                </div>
+                <div style="background: #f8f9fa; padding: 30px 50px; border-radius: 10px; margin: 30px 0;">
+                    <p style="font-size: 1.1rem; margin-bottom: 15px;"><strong>Activité :</strong> Import et distribution de produits surgelés</p>
+                    <p style="font-size: 1.1rem; margin-bottom: 15px;"><strong>Instance Odoo :</strong> ah-chou1.odoo.com</p>
+                    <p style="font-size: 1.1rem;"><strong>Version :</strong> Odoo 19 (SaaS Enterprise)</p>
+                </div>
+                <div style="margin-top: 50px; padding: 20px; border-top: 2px solid #714B67;">
+                    <p style="color: #6c757d; font-size: 0.9rem;">Document technique - Paramétrage et configuration</p>
+                    <p style="color: #6c757d; font-size: 0.9rem;">Préparé par l'équipe d'intégration</p>
+                </div>
+            </div>
+            
+            <!-- RESUME -->
+            <div id="resume" class="section active">
+                <h1>Résumé du Projet</h1>
+                
+                <div class="grid">
+                    <div class="stat-card">
+                        <div class="value">377</div>
+                        <div class="label">Produits à importer</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value">999</div>
+                        <div class="label">Fournisseurs</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value">~500</div>
+                        <div class="label">Clients</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value">910</div>
+                        <div class="label">Comptes Cegid</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">Informations générales</div>
+                    <table>
+                        <tr><td><strong>Client</strong></td><td>AH CHOU SARL</td></tr>
+                        <tr><td><strong>Activité</strong></td><td>Distribution de produits surgelés (La Réunion)</td></tr>
+                        <tr><td><strong>Instance Odoo</strong></td><td>https://ah-chou1.odoo.com/odoo</td></tr>
+                        <tr><td><strong>Version</strong></td><td><span class="badge badge-primary">Odoo 19 Enterprise</span></td></tr>
+                        <tr><td><strong>Date début</strong></td><td>-</td></tr>
+                    </table>
+                </div>
+                
+                <h2>Architecture cible</h2>
+                <div class="diagram">┌─────────────────────────────────────────────────────────────────┐
+│                        ODOO 19 ENTERPRISE                        │
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌───────┐ │
+│  │ VENTES  │  │ ACHATS  │  │  STOCK  │  │ COMPTA  │  │  POS  │ │
+│  └────┬────┘  └────┬────┘  └────┬────┘  └────┬────┘  └───┬───┘ │
+│       │            │            │            │           │      │
+│       └────────────┴────────────┴────────────┴───────────┘      │
+│                              │                                   │
+│                      ┌───────┴───────┐                          │
+│                      │   DASHBOARDS  │                          │
+│                      └───────────────┘                          │
+└─────────────────────────────────────────────────────────────────┘
+                               │
+                               │ API XML-RPC
+                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    MODULE ACHATS HAREL 4.0                       │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  CALCULETTE : Calcul PR avec coef approche, parité USD  │    │
+│  └─────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────┘</div>
+                
+                <h2>Modules à activer</h2>
+                <table>
+                    <tr><th>Module</th><th>Priorité</th><th>Statut</th></tr>
+                    <tr><td>Ventes (sale)</td><td>⭐⭐⭐</td><td><span class="badge badge-warning">À configurer</span></td></tr>
+                    <tr><td>Achats (purchase)</td><td>⭐⭐⭐</td><td><span class="badge badge-warning">À configurer</span></td></tr>
+                    <tr><td>Stock (stock)</td><td>⭐⭐⭐</td><td><span class="badge badge-warning">À configurer</span></td></tr>
+                    <tr><td>Comptabilité (account)</td><td>⭐⭐⭐</td><td><span class="badge badge-warning">À configurer</span></td></tr>
+                    <tr><td>Point de Vente (point_of_sale)</td><td>⭐⭐</td><td><span class="badge badge-warning">À configurer</span></td></tr>
+                </table>
+                
+                <h2>Planning des phases</h2>
+                <table>
+                    <tr><th>Phase</th><th>Contenu</th><th>Progression</th></tr>
+                    <tr>
+                        <td>Phase 1</td>
+                        <td>Paramétrage général (société, localisation, TVA)</td>
+                        <td><div class="progress-bar"><div class="progress-bar-fill" style="width: 100%"></div></div> <span class="badge badge-success">Documentation ✅</span></td>
+                    </tr>
+                    <tr>
+                        <td>Phase 2</td>
+                        <td>Structure données (catégories, UoM, groupes)</td>
+                        <td><div class="progress-bar"><div class="progress-bar-fill" style="width: 100%"></div></div> <span class="badge badge-success">Documentation ✅</span></td>
+                    </tr>
+                    <tr>
+                        <td>Phase 3</td>
+                        <td>Import données (clients, articles, fournisseurs)</td>
+                        <td><div class="progress-bar"><div class="progress-bar-fill" style="width: 100%"></div></div> <span class="badge badge-success">Scripts prêts ✅</span></td>
+                    </tr>
+                    <tr>
+                        <td>Phase 4</td>
+                        <td>Configuration modules (ventes, achats, stock)</td>
+                        <td><div class="progress-bar"><div class="progress-bar-fill" style="width: 100%"></div></div> <span class="badge badge-success">Documentation ✅</span></td>
+                    </tr>
+                    <tr>
+                        <td>Phase 5</td>
+                        <td>Dashboards et reporting</td>
+                        <td><div class="progress-bar"><div class="progress-bar-fill" style="width: 100%"></div></div> <span class="badge badge-success">Documentation ✅</span></td>
+                    </tr>
+                    <tr>
+                        <td>Phase 6</td>
+                        <td>Utilisateurs et droits</td>
+                        <td><div class="progress-bar"><div class="progress-bar-fill" style="width: 100%"></div></div> <span class="badge badge-success">Documentation ✅</span></td>
+                    </tr>
+                    <tr>
+                        <td>Phase 7</td>
+                        <td>Tests et validation</td>
+                        <td><div class="progress-bar"><div class="progress-bar-fill" style="width: 100%"></div></div> <span class="badge badge-success">Documentation ✅</span></td>
+                    </tr>
+                    <tr>
+                        <td>Phase 8</td>
+                        <td>Mise en production</td>
+                        <td><div class="progress-bar"><div class="progress-bar-fill" style="width: 0%"></div></div> <span class="badge badge-warning">À faire</span></td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- QUESTIONNAIRE -->
+            <div id="questionnaire" class="section">
+                <h1>Réponses au Questionnaire</h1>
+                
+                <h2>Instance Odoo</h2>
+                <table>
+                    <tr><th>Question</th><th>Réponse</th></tr>
+                    <tr><td>URL</td><td><code>https://ah-chou1.odoo.com/odoo</code></td></tr>
+                    <tr><td>Version</td><td>Odoo 19 Enterprise</td></tr>
+                    <tr><td>Compte admin</td><td>mathieu.loic.hoarau@gmail.com</td></tr>
+                </table>
+                
+                <h2>Paramétrage Société</h2>
+                <table>
+                    <tr><th>Question</th><th>Réponse</th></tr>
+                    <tr><td>Raison sociale</td><td>AH CHOU SARL</td></tr>
+                    <tr><td>Localisation fiscale</td><td>France - La Réunion (DOM)</td></tr>
+                    <tr><td>Devise</td><td>EUR (€)</td></tr>
+                    <tr><td>TVA</td><td>2.1%, 8.5%, 0% (régime DOM)</td></tr>
+                    <tr><td>Octroi de Mer</td><td>Non applicable</td></tr>
+                </table>
+                
+                <h2>Gestion des Stocks</h2>
+                <table>
+                    <tr><th>Question</th><th>Réponse</th></tr>
+                    <tr><td>Entrepôts</td><td>6 emplacements</td></tr>
+                    <tr><td>Valorisation</td><td>PRMP (Prix de Revient Moyen Pondéré)</td></tr>
+                    <tr><td>DLC/DLUO</td><td>Les deux selon produits</td></tr>
+                    <tr><td>Stock flottant</td><td>Oui, suivi par navire/conteneur</td></tr>
+                </table>
+                
+                <h2>Gestion des Achats</h2>
+                <table>
+                    <tr><th>Question</th><th>Réponse</th></tr>
+                    <tr><td>Workflow</td><td>Brouillon → Confirmé (simple)</td></tr>
+                    <tr><td>Réception</td><td>1 étape directe</td></tr>
+                    <tr><td>Transitaire</td><td>Champ sur commande</td></tr>
+                    <tr><td>Calcul PR</td><td>Automatique via module achats existant</td></tr>
+                </table>
+                
+                <h2>Gestion des Ventes</h2>
+                <table>
+                    <tr><th>Question</th><th>Réponse</th></tr>
+                    <tr><td>Flux</td><td>Commande → BL → Facture</td></tr>
+                    <tr><td>Livraison</td><td>2 étapes (Préparation → Expédition)</td></tr>
+                    <tr><td>Tarifs</td><td>6 niveaux (T1 à T6)</td></tr>
+                    <tr><td>Attribution tarif</td><td>Hiérarchique (Catégorie → Groupe → Enseigne → Typologie → Client)</td></tr>
+                    <tr><td>Tarif spécifique</td><td>Oui (client + produit)</td></tr>
+                    <tr><td>Remise</td><td>Selon produit (certains exclus)</td></tr>
+                    <tr><td>RFA</td><td>Automatique sur CA</td></tr>
+                    <tr><td>3xNet</td><td>Prix net fixe</td></tr>
+                    <tr><td>Promos</td><td>Périodiques (date à date)</td></tr>
+                </table>
+                
+                <h2>Dashboards</h2>
+                <table>
+                    <tr><th>Question</th><th>Réponse</th></tr>
+                    <tr><td>Priorité</td><td>Ventes, Achats, Stock - tous prioritaires</td></tr>
+                    <tr><td>Axes d'analyse</td><td>Client, Groupe, Catégorie, Enseigne, Typologie, Famille, Secteur</td></tr>
+                    <tr><td>Comparatifs</td><td>N vs N-1, période libre</td></tr>
+                    <tr><td>Format</td><td>Odoo natif</td></tr>
+                </table>
+                
+                <h2>Comptabilité</h2>
+                <table>
+                    <tr><th>Question</th><th>Réponse</th></tr>
+                    <tr><td>Intégration</td><td>Complète dans Odoo</td></tr>
+                    <tr><td>Plan comptable</td><td>910 comptes Cegid à reprendre</td></tr>
+                    <tr><td>Facturation</td><td>Groupée (plusieurs BL = 1 facture)</td></tr>
+                </table>
+                
+                <h2>Utilisateurs</h2>
+                <table>
+                    <tr><th>Question</th><th>Réponse</th></tr>
+                    <tr><td>Nombre</td><td>6 à 10</td></tr>
+                    <tr><td>Profils</td><td>Admin, Achats, Commercial, Logistique, Compta, Direction, Caissier</td></tr>
+                    <tr><td>Commerciaux</td><td>Attribution par client</td></tr>
+                </table>
+                
+                <h2>Intégration Module Achats</h2>
+                <table>
+                    <tr><th>Question</th><th>Réponse</th></tr>
+                    <tr><td>Mode</td><td>Coexistence via API</td></tr>
+                    <tr><td>Flux</td><td>App Achats = calculette, crée commandes dans Odoo</td></tr>
+                </table>
+            </div>
+            
+            <!-- SOCIETE -->
+            <div id="societe" class="section">
+                <h1>Paramétrage Société</h1>
+                
+                <div class="card">
+                    <div class="card-header">Informations légales</div>
+                    <table>
+                        <tr><th>Champ</th><th>Valeur</th><th>Chemin Odoo</th></tr>
+                        <tr><td>Nom société</td><td>AH CHOU SARL</td><td>Paramètres > Sociétés</td></tr>
+                        <tr><td>Adresse</td><td>97451 SAINT PIERRE CEDEX</td><td></td></tr>
+                        <tr><td>Pays</td><td>France</td><td></td></tr>
+                        <tr><td>Département</td><td>La Réunion (974)</td><td></td></tr>
+                        <tr><td>Devise</td><td>EUR (€)</td><td></td></tr>
+                        <tr><td>SIRET</td><td><span class="badge badge-warning">À compléter</span></td><td></td></tr>
+                    </table>
+                </div>
+                
+                <h2>Configuration technique</h2>
+                <div class="code">Paramètres > Paramètres généraux
+├── Société : AH CHOU SARL
+├── Langue par défaut : Français
+├── Fuseau horaire : Indian/Reunion (UTC+4)
+└── Format date : JJ/MM/AAAA</div>
+                
+                <h2>Actions à réaliser</h2>
+                <ul class="checklist">
+                    <li>Créer la société AH CHOU SARL</li>
+                    <li>Renseigner les informations légales complètes</li>
+                    <li>Configurer le fuseau horaire Indian/Reunion</li>
+                    <li>Activer la devise USD pour les achats</li>
+                    <li>Configurer le format de date français</li>
+                </ul>
+            </div>
+            
+            <!-- FISCAL -->
+            <div id="fiscal" class="section">
+                <h1>Localisation Fiscale - La Réunion (DOM)</h1>
+                
+                <div class="alert alert-info">
+                    Les DOM bénéficient de taux de TVA réduits par rapport à la métropole.
+                </div>
+                
+                <h2>Taux de TVA applicables</h2>
+                <table>
+                    <tr><th>Taux</th><th>Application</th><th>Nom Odoo</th></tr>
+                    <tr><td><strong>2.1%</strong></td><td>Produits alimentaires, presse</td><td>TVA 2.1% DOM</td></tr>
+                    <tr><td><strong>8.5%</strong></td><td>Taux intermédiaire (services, restauration)</td><td>TVA 8.5% DOM</td></tr>
+                    <tr><td><strong>0%</strong></td><td>Exonéré (produits première nécessité)</td><td>Exonéré</td></tr>
+                </table>
+                
+                <h2>Produits concernés par l'activité</h2>
+                <table>
+                    <tr><th>Catégorie</th><th>Taux applicable</th></tr>
+                    <tr><td>Produits surgelés alimentaires</td><td>2.1%</td></tr>
+                    <tr><td>Produits de la mer</td><td>2.1%</td></tr>
+                    <tr><td>Condiments</td><td>2.1%</td></tr>
+                    <tr><td>Snacking préparé</td><td>2.1% ou 8.5% selon transformation</td></tr>
+                </table>
+                
+                <h2>Taxes à créer dans Odoo</h2>
+                <div class="code">Comptabilité > Configuration > Taxes</div>
+                <table>
+                    <tr><th>Nom taxe</th><th>Type</th><th>Montant</th><th>Compte collecte</th></tr>
+                    <tr><td>TVA 2.1% DOM (ventes)</td><td>Vente</td><td>2.1%</td><td>44571</td></tr>
+                    <tr><td>TVA 2.1% DOM (achats)</td><td>Achat</td><td>2.1%</td><td>44566</td></tr>
+                    <tr><td>TVA 8.5% DOM (ventes)</td><td>Vente</td><td>8.5%</td><td>44571</td></tr>
+                    <tr><td>TVA 8.5% DOM (achats)</td><td>Achat</td><td>8.5%</td><td>44566</td></tr>
+                    <tr><td>Exonéré</td><td>Vente/Achat</td><td>0%</td><td>-</td></tr>
+                </table>
+                
+                <h2>Actions à réaliser</h2>
+                <ul class="checklist">
+                    <li>Installer la localisation française (l10n_fr)</li>
+                    <li>Créer les taxes DOM (2.1%, 8.5%, 0%)</li>
+                    <li>Créer les positions fiscales</li>
+                    <li>Assigner les taxes par défaut aux catégories de produits</li>
+                </ul>
+            </div>
+            
+            <!-- DEVISES -->
+            <div id="devises" class="section">
+                <h1>Gestion des Devises</h1>
+                
+                <h2>Configuration</h2>
+                <table>
+                    <tr><th>Devise</th><th>Usage</th><th>Configuration</th></tr>
+                    <tr><td><strong>EUR (€)</strong></td><td>Devise principale</td><td>Défaut société</td></tr>
+                    <tr><td><strong>USD ($)</strong></td><td>Achats fournisseurs internationaux</td><td>À activer</td></tr>
+                </table>
+                
+                <h2>Gestion des taux de change</h2>
+                <div class="code">Paramètres > Comptabilité > Devises
+☑ Multi-devises
+☑ Comptes de gain/perte de change automatiques</div>
+                
+                <h2>Flux achats en USD</h2>
+                <p>Le module Achats Harel gère la conversion USD → EUR avec :</p>
+                <table>
+                    <tr><th>Élément</th><th>Description</th></tr>
+                    <tr><td>Prix d'achat USD/kg</td><td>Prix fournisseur</td></tr>
+                    <tr><td>Prix d'achat USD/UVC</td><td>Prix par unité</td></tr>
+                    <tr><td>Parité EUR/USD</td><td>Taux de conversion</td></tr>
+                    <tr><td>Coef frais</td><td>Frais d'approche</td></tr>
+                    <tr><td>Coef total approche</td><td>Coefficient global</td></tr>
+                </table>
+                
+                <h3>Formule de calcul PR</h3>
+                <div class="code">PR (EUR) = Prix USD × Parité EUR/USD × Coef total approche</div>
+            </div>
+            
+            <!-- VENTES -->
+            <div id="ventes" class="section">
+                <h1>Module Ventes - Paramétrage</h1>
+                
+                <h2>Configuration générale</h2>
+                <div class="code">Ventes > Configuration > Paramètres</div>
+                <table>
+                    <tr><th>Paramètre</th><th>Valeur</th><th>Justification</th></tr>
+                    <tr><td>Devis</td><td>☐ Désactivé</td><td>Commande directe selon cahier des charges</td></tr>
+                    <tr><td>Unités de mesure</td><td>☑ Activé</td><td>Gestion cartons/UVC</td></tr>
+                    <tr><td>Listes de prix</td><td>☑ Activé</td><td>6 tarifs + spécifiques</td></tr>
+                    <tr><td>Remises</td><td>☑ Activé</td><td>Remise % par ligne</td></tr>
+                    <tr><td>Marges</td><td>☑ Activé</td><td>Calcul marge pour dashboards</td></tr>
+                </table>
+                
+                <h2>Workflow vente</h2>
+                <div class="diagram">┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  COMMANDE   │ ──► │ PRÉPARATION │ ──► │ EXPÉDITION  │ ──► │  FACTURE    │
+│   CLIENT    │     │    (BL)     │     │             │     │             │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+     │                    │                   │                   │
+     ▼                    ▼                   ▼                   ▼
+   Brouillon          À traiter          Livré              Validée
+   Confirmée          Prêt               Fait               Payée</div>
+                
+                <h2>Structure client (Hiérarchie)</h2>
+                <div class="diagram">GROUPE CLIENTS (GBH, SMDIS, CELLULE U, CAILLE, DISTRIMASCAREIGNES, IBL, TK, LOT)
+    └── CATÉGORIE (GMS, PLATE-FORME, GROSSISTE, CHR, DIVERS)
+        └── ENSEIGNE (AUCHAN, CARREFOUR, U, LECLERC, PROMOCASH...)
+            └── TYPOLOGIE (HYPER, SUPER, MARCHE, EXPRESS, CASH, AUTRES)
+                └── CLIENT (res.partner)</div>
+                
+                <h2>Champs personnalisés à créer sur res.partner</h2>
+                <table>
+                    <tr><th>Champ</th><th>Type</th><th>Description</th></tr>
+                    <tr><td>x_groupe_client</td><td>Selection</td><td>GBH, SMDIS, etc.</td></tr>
+                    <tr><td>x_enseigne</td><td>Selection</td><td>CARREFOUR, U, etc.</td></tr>
+                    <tr><td>x_typologie</td><td>Selection</td><td>HYPER, SUPER, etc.</td></tr>
+                    <tr><td>x_taux_remise</td><td>Float</td><td>Taux remise global %</td></tr>
+                    <tr><td>x_taux_rfa</td><td>Float</td><td>Taux RFA %</td></tr>
+                    <tr><td>x_commercial</td><td>Many2one</td><td>Commercial attitré</td></tr>
+                </table>
+                
+                <h2>Actions à réaliser</h2>
+                <ul class="checklist">
+                    <li>Installer le module Ventes</li>
+                    <li>Configurer les paramètres généraux</li>
+                    <li>Créer les champs personnalisés sur res.partner</li>
+                    <li>Créer les catégories client</li>
+                    <li>Configurer les équipes de vente</li>
+                    <li>Tester le workflow commande → BL → facture</li>
+                </ul>
+            </div>
+            
+            <!-- TARIFS -->
+            <div id="tarifs" class="section">
+                <h1>Gestion des Listes de Prix (Tarifs)</h1>
+                
+                <h2>Structure tarifaire</h2>
+                <p><strong>6 niveaux de tarifs</strong> (T1 à T6) plus des tarifs spécifiques.</p>
+                
+                <h3>Hiérarchie d'attribution</h3>
+                <div class="diagram">CATÉGORIE (GMS, CHR...) → Tarif par défaut
+    ↓ peut être surchargé par
+GROUPE CLIENT (GBH, SMDIS...) → Tarif groupe
+    ↓ peut être surchargé par
+ENSEIGNE (Carrefour, U...) → Tarif enseigne
+    ↓ peut être surchargé par
+TYPOLOGIE (Hyper, Super...) → Tarif typologie
+    ↓ peut être surchargé par
+CLIENT → Tarif spécifique</div>
+                
+                <h2>Création des listes de prix</h2>
+                <div class="code">Ventes > Produits > Listes de prix</div>
+                <table>
+                    <tr><th>Liste</th><th>Base</th><th>Usage</th></tr>
+                    <tr><td>Tarif Base</td><td>Prix de vente</td><td>Prix catalogue</td></tr>
+                    <tr><td>Tarif T1</td><td>Tarif Base</td><td>Grands comptes</td></tr>
+                    <tr><td>Tarif T2</td><td>Tarif Base</td><td>Moyens comptes</td></tr>
+                    <tr><td>Tarif T3</td><td>Tarif Base</td><td>Petits comptes</td></tr>
+                    <tr><td>Tarif T4</td><td>Tarif Base</td><td>Détail</td></tr>
+                    <tr><td>Tarif T5</td><td>Tarif Base</td><td>CHR</td></tr>
+                    <tr><td>Tarif T6</td><td>Tarif Base</td><td>Autre</td></tr>
+                </table>
+                
+                <h2>Tarifs spécifiques (Client + Produit)</h2>
+                <div class="alert alert-info">
+                    <strong>Cahier des charges :</strong> "Tarif Spécifique (ex : Client AVEC Tarif de base mais pour un ou plusieurs produits Prix Spécial)"
+                </div>
+                <p>Utiliser les <strong>règles de prix par produit</strong> dans la liste de prix du client.</p>
+            </div>
+            
+            <!-- PROMOS -->
+            <div id="promos" class="section">
+                <h1>Gestion des Promotions et 3xNet</h1>
+                
+                <h2>Types de prix spéciaux</h2>
+                <table>
+                    <tr><th>Type</th><th>Définition</th><th>Période</th></tr>
+                    <tr><td><strong>Promo</strong></td><td>Remise temporaire sur produit(s)</td><td>Date à date</td></tr>
+                    <tr><td><strong>3xNet</strong></td><td>Prix net fixe sans remise applicable</td><td>Permanent ou temporaire</td></tr>
+                </table>
+                
+                <h2>Configuration des promotions</h2>
+                <div class="code">Ventes > Configuration > Paramètres
+☑ Listes de prix avancées
+☑ Dates de validité sur les règles de prix</div>
+                
+                <h2>Exemple création promotion</h2>
+                <table>
+                    <tr><th>Champ</th><th>Valeur</th></tr>
+                    <tr><td>Nom</td><td>Promo Saisonnière - Poissons</td></tr>
+                    <tr><td>Devise</td><td>EUR</td></tr>
+                </table>
+                <h4>Règles de la promotion</h4>
+                <table>
+                    <tr><th>Produit</th><th>Remise</th><th>Date début</th><th>Date fin</th></tr>
+                    <tr><td>Bichique standard</td><td>-20%</td><td>Début période</td><td>Fin période</td></tr>
+                    <tr><td>Anchois vidé</td><td>-15%</td><td>Début période</td><td>Fin période</td></tr>
+                </table>
+                
+                <h2>RFA (Ristourne Fin d'Année)</h2>
+                <p>Remise calculée sur le CA annuel du client.</p>
+                <div class="code">Champ client: x_taux_rfa (Float %)
+Calcul: Action planifiée au 1er janvier</div>
+            </div>
+            
+            <!-- ACHATS -->
+            <div id="achats" class="section">
+                <h1>Module Achats - Paramétrage</h1>
+                
+                <h2>Configuration générale</h2>
+                <div class="code">Achats > Configuration > Paramètres</div>
+                <table>
+                    <tr><th>Paramètre</th><th>Valeur</th><th>Justification</th></tr>
+                    <tr><td>Approbation commandes</td><td>☐ Désactivé</td><td>Workflow simple</td></tr>
+                    <tr><td>Unités de mesure</td><td>☑ Activé</td><td>Cartons, UVC</td></tr>
+                    <tr><td>Contrôle factures</td><td>☑ Activé</td><td>Sur quantités reçues</td></tr>
+                </table>
+                
+                <h2>Workflow achat simplifié</h2>
+                <div class="diagram">┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   COMMANDE  │ ──► │  RÉCEPTION  │ ──► │   FACTURE   │
+│   FOURNISS. │     │   (1 étape) │     │  FOURNISS.  │
+└─────────────┘     └─────────────┘     └─────────────┘
+     │                    │                   │
+     ▼                    ▼                   ▼
+  Brouillon            Reçu               Validée
+  Confirmée            Fait               Payée</div>
+                
+                <h2>Structure fournisseur - Champs personnalisés</h2>
+                <table>
+                    <tr><th>Champ</th><th>Type</th><th>Source Excel</th></tr>
+                    <tr><td>x_code_fournisseur</td><td>Char</td><td>Code fournisseur</td></tr>
+                    <tr><td>x_groupe_fournisseur</td><td>Selection</td><td>Grp. Frs</td></tr>
+                    <tr><td>x_transitaire</td><td>Many2one</td><td>Transitaire</td></tr>
+                    <tr><td>x_nb_jours_dispo</td><td>Integer</td><td>Nb Jrs Dispo</td></tr>
+                </table>
+            </div>
+            
+            <!-- INTEGRATION -->
+            <div id="integration" class="section">
+                <h1>Intégration Module Achats Harel 4.0</h1>
+                
+                <div class="alert alert-info">
+                    Le module <strong>Achats Harel 4.0</strong> est une application web PWA qui fonctionne comme une "calculette" pour les achats internationaux.
+                </div>
+                
+                <h2>Architecture</h2>
+                <div class="diagram">┌─────────────────────────────────────────┐
+│           ODOO 19 ENTERPRISE            │
+│  ┌─────────────────────────────────┐   │
+│  │  Produits / Fournisseurs        │◄──┼─── Données maîtres
+│  │  Commandes d'achat              │◄──┼─── Création commandes
+│  └─────────────────────────────────┘   │
+└────────────────▲────────────────────────┘
+                 │ API XML-RPC
+┌────────────────┴────────────────────────┐
+│        MODULE ACHATS HAREL 4.0          │
+│  ┌─────────────────────────────────┐   │
+│  │  Récupère: produits, UoM, frs   │   │
+│  │  Calcule: PR en EUR             │   │
+│  │  Crée: commandes confirmées     │   │
+│  └─────────────────────────────────┘   │
+└─────────────────────────────────────────┘</div>
+                
+                <h2>Flux de données</h2>
+                <table>
+                    <tr><th>Direction</th><th>Données</th><th>Fréquence</th></tr>
+                    <tr><td>Odoo → App</td><td>Produits (id, nom, UoM, prix)</td><td>À la demande</td></tr>
+                    <tr><td>Odoo → App</td><td>Fournisseurs (id, nom)</td><td>À la demande</td></tr>
+                    <tr><td>App → Odoo</td><td>Commande d'achat confirmée</td><td>Après validation</td></tr>
+                </table>
+                
+                <h2>Calcul Prix de Revient</h2>
+                <div class="code">PR (EUR) = Prix USD × Parité EUR/USD × Coef total approche
+
+Exemple:
+Prix USD/UVC: 5.00
+Parité: 0.92
+Coef approche: 1.35
+
+PR EUR = 5.00 × 0.92 × 1.35 = 6.21 EUR</div>
+                
+                <h2>Configuration client AH CHOU</h2>
+                <table>
+                    <tr><th>Paramètre</th><th>Valeur</th></tr>
+                    <tr><td>odooUrl</td><td>https://ah-chou1.odoo.com</td></tr>
+                    <tr><td>odooDatabase</td><td>ah-chou1</td></tr>
+                    <tr><td>odooUsername</td><td>mathieu.loic.hoarau@gmail.com</td></tr>
+                    <tr><td>odooApiKey</td><td><span class="badge badge-warning">À générer</span></td></tr>
+                    <tr><td>dataSource</td><td>odoo</td></tr>
+                </table>
+            </div>
+            
+            <!-- STOCK -->
+            <div id="stock" class="section">
+                <h1>Module Stock - Paramétrage</h1>
+                
+                <h2>Configuration générale</h2>
+                <div class="code">Stock > Configuration > Paramètres</div>
+                <table>
+                    <tr><th>Paramètre</th><th>Valeur</th><th>Justification</th></tr>
+                    <tr><td>Multi-entrepôts</td><td>☑ Activé</td><td>6 emplacements</td></tr>
+                    <tr><td>Emplacements de stockage</td><td>☑ Activé</td><td>Gestion zones</td></tr>
+                    <tr><td>Numéros de série / lots</td><td>☑ Activé</td><td>Traçabilité</td></tr>
+                    <tr><td>Dates d'expiration</td><td>☑ Activé</td><td>DLC/DLUO</td></tr>
+                </table>
+                
+                <h2>Méthode de valorisation</h2>
+                <table>
+                    <tr><th>Champ</th><th>Valeur</th></tr>
+                    <tr><td>Méthode de coût</td><td><strong>Prix moyen (PRMP)</strong></td></tr>
+                    <tr><td>Valorisation</td><td>Automatique</td></tr>
+                </table>
+                
+                <h2>Structure des emplacements (6 zones)</h2>
+                <div class="diagram">Entrepôt AH CHOU (AHC)
+├── AHC/Input                    # Zone réception
+├── AHC/Stock                    # Vue stock principal
+│   ├── AHC/Stock/Zone-1         # Zone 1 (à nommer)
+│   ├── AHC/Stock/Zone-2         # Zone 2 (à nommer)
+│   ├── AHC/Stock/Zone-3         # Zone 3 (à nommer)
+│   ├── AHC/Stock/Zone-4         # Zone 4 (à nommer)
+│   ├── AHC/Stock/Zone-5         # Zone 5 (à nommer)
+│   └── AHC/Stock/Zone-6         # Zone 6 (à nommer)
+├── AHC/Output                   # Zone expédition
+└── AHC/Transit                  # Stock flottant (optionnel)</div>
+                
+                <div class="alert alert-warning">
+                    <strong>À compléter :</strong> Les noms exacts des 6 zones de stockage sont à confirmer.
+                </div>
+            </div>
+            
+            <!-- TRACABILITE -->
+            <div id="tracabilite" class="section">
+                <h1>Traçabilité - Lots et Dates d'Expiration</h1>
+                
+                <h2>Exigences cahier des charges</h2>
+                <ul>
+                    <li>Traçabilité par <strong>numéro de lot</strong></li>
+                    <li>Gestion des <strong>DLC</strong> (Date Limite de Consommation)</li>
+                    <li>Suivi par <strong>tranches de péremption</strong> : 1-3 mois, 4-6 mois, ... +24 mois</li>
+                    <li><strong>Zone de pêche</strong> et <strong>nom scientifique</strong> pour les produits de la mer</li>
+                </ul>
+                
+                <h2>Tranches de péremption</h2>
+                <table>
+                    <tr><th>Tranche</th><th>Critère</th></tr>
+                    <tr><td>1 à 3 mois</td><td>DLC ≤ 90 jours</td></tr>
+                    <tr><td>4 à 6 mois</td><td>90 < DLC ≤ 180 jours</td></tr>
+                    <tr><td>7 à 12 mois</td><td>180 < DLC ≤ 365 jours</td></tr>
+                    <tr><td>13 à 24 mois</td><td>365 < DLC ≤ 730 jours</td></tr>
+                    <tr><td>+24 mois</td><td>DLC > 730 jours</td></tr>
+                </table>
+                
+                <h2>Champs traçabilité produits de la mer</h2>
+                <table>
+                    <tr><th>Champ</th><th>Champ Odoo</th><th>Exemple</th></tr>
+                    <tr><td>Zone de pêche FAO</td><td>x_zone_peche</td><td>FAO51 - OCEAN INDIEN OUEST</td></tr>
+                    <tr><td>Nom scientifique</td><td>x_nom_scientifique</td><td>STOLEPHORUS COMMERSONII</td></tr>
+                    <tr><td>Origine</td><td>x_origine</td><td>INDE</td></tr>
+                </table>
+            </div>
+            
+            <!-- COMPTA -->
+            <div id="compta" class="section">
+                <h1>Module Comptabilité - Paramétrage</h1>
+                
+                <h2>Configuration initiale</h2>
+                <table>
+                    <tr><th>Paramètre</th><th>Valeur</th></tr>
+                    <tr><td>Localisation fiscale</td><td>France</td></tr>
+                    <tr><td>Exercice fiscal</td><td>01/01 - 31/12</td></tr>
+                    <tr><td>Devise</td><td>EUR</td></tr>
+                    <tr><td>Plan comptable</td><td>PCG France (personnalisé Cegid)</td></tr>
+                </table>
+                
+                <h2>Journaux comptables</h2>
+                <table>
+                    <tr><th>Code</th><th>Nom</th><th>Type</th></tr>
+                    <tr><td>VTE</td><td>Ventes</td><td>Ventes</td></tr>
+                    <tr><td>ACH</td><td>Achats</td><td>Achats</td></tr>
+                    <tr><td>BNK</td><td>Banque principale</td><td>Banque</td></tr>
+                    <tr><td>CAIS</td><td>Caisse</td><td>Espèces</td></tr>
+                    <tr><td>POS</td><td>Point de vente</td><td>Ventes</td></tr>
+                    <tr><td>OD</td><td>Opérations diverses</td><td>Divers</td></tr>
+                </table>
+                
+                <h2>Import Plan Comptable Cegid</h2>
+                <div class="alert alert-info">
+                    <strong>910 comptes</strong> à importer depuis Cegid Quadra
+                </div>
+                <p>Script d'import Python disponible dans <code>03_SCRIPTS_IMPORT/import_plan_comptable.py</code></p>
+            </div>
+            
+            <!-- POS -->
+            <div id="pos" class="section">
+                <h1>Module Point de Vente (POS)</h1>
+                
+                <h2>Configuration</h2>
+                <table>
+                    <tr><th>Paramètre</th><th>Valeur</th></tr>
+                    <tr><td>Nom</td><td>Caisse AH CHOU</td></tr>
+                    <tr><td>Société</td><td>AH CHOU SARL</td></tr>
+                    <tr><td>Entrepôt</td><td>Entrepôt AH CHOU</td></tr>
+                    <tr><td>Gestion des stocks</td><td>Temps réel</td></tr>
+                </table>
+                
+                <h2>Modes de paiement</h2>
+                <table>
+                    <tr><th>Mode</th><th>Activé</th></tr>
+                    <tr><td>Espèces</td><td>☑</td></tr>
+                    <tr><td>Carte bancaire</td><td>☑</td></tr>
+                    <tr><td>Chèque</td><td>☑</td></tr>
+                </table>
+            </div>
+            
+            <!-- CLIENTS -->
+            <div id="clients" class="section">
+                <h1>Structure des Données Clients</h1>
+                
+                <h2>Source</h2>
+                <table>
+                    <tr><th>Fichier</th><th>Feuille</th><th>Lignes</th></tr>
+                    <tr><td>Feuille de calcul sans titre (2).xlsx</td><td>trame client</td><td>~500</td></tr>
+                </table>
+                
+                <h2>Mapping des colonnes principales</h2>
+                <table>
+                    <tr><th>Colonne Excel</th><th>Champ Odoo</th><th>Exemple</th></tr>
+                    <tr><td>Code interne</td><td>ref</td><td>STELOT</td></tr>
+                    <tr><td>Nom Client</td><td>name</td><td>SOCIETE LOT</td></tr>
+                    <tr><td>Téléphone</td><td>phone</td><td>0262 30 35 13</td></tr>
+                    <tr><td>E-Mail</td><td>email</td><td>direction@coccimarket.re</td></tr>
+                    <tr><td>Nom Gr. clients</td><td>x_groupe_client</td><td>GMS</td></tr>
+                    <tr><td>Nom Enseigne</td><td>x_enseigne</td><td>COCCI MARKET</td></tr>
+                    <tr><td>Nom catégorie</td><td>category_id</td><td>MARCHE</td></tr>
+                    <tr><td>Plafond d'encours</td><td>credit_limit</td><td>1000.0</td></tr>
+                    <tr><td>Tx remise</td><td>x_taux_remise</td><td>0.0</td></tr>
+                    <tr><td>Siret</td><td>siret</td><td>440 728 509</td></tr>
+                </table>
+            </div>
+            
+            <!-- PRODUITS -->
+            <div id="produits" class="section">
+                <h1>Structure des Données Produits</h1>
+                
+                <h2>Source</h2>
+                <table>
+                    <tr><th>Fichier</th><th>Feuille</th><th>Lignes</th></tr>
+                    <tr><td>Feuille de calcul sans titre (2).xlsx</td><td>Trame articles</td><td>377</td></tr>
+                </table>
+                
+                <h2>Mapping des colonnes principales</h2>
+                <table>
+                    <tr><th>Colonne Excel</th><th>Champ Odoo</th><th>Exemple</th></tr>
+                    <tr><td>C. Puit</td><td>default_code</td><td>AIL000</td></tr>
+                    <tr><td>Ean 13</td><td>barcode</td><td>3456470901007</td></tr>
+                    <tr><td>Désignation</td><td>name</td><td>Ail congelé Vietnam 100g</td></tr>
+                    <tr><td>Poids net</td><td>weight</td><td>0.1</td></tr>
+                    <tr><td>PV HT</td><td>list_price</td><td>0.69</td></tr>
+                    <tr><td>PR HT</td><td>standard_price</td><td>0.476186</td></tr>
+                    <tr><td>Tx. TVA</td><td>taxes_id</td><td>2.1</td></tr>
+                    <tr><td>Coef. App.</td><td>x_coef_approche</td><td>1.353369</td></tr>
+                    <tr><td>Rayon</td><td>categ_id (niveau 1)</td><td>RAYONS DIVERS</td></tr>
+                    <tr><td>Nom GR</td><td>categ_id (niveau 2)</td><td>CONDIMENTS</td></tr>
+                    <tr><td>Nom SGR</td><td>categ_id (niveau 3)</td><td>LEGUME</td></tr>
+                </table>
+                
+                <h2>Structure catégories</h2>
+                <div class="diagram">Tous les produits
+├── Pêche (PE)
+│   ├── Crustacé (CRUS)
+│   ├── Poisson (POIS)
+│   └── Mollusque (MOLL)
+├── Condiment (CO)
+│   └── Légume (LEGU)
+├── Snacking Vapeur (SV)
+│   └── Nature (NATU)
+└── Snacking Friture (SF)
+    ├── Friture (FRIT)
+    └── Séché (SECH)</div>
+            </div>
+            
+            <!-- FOURNISSEURS -->
+            <div id="fournisseurs" class="section">
+                <h1>Structure des Données Fournisseurs</h1>
+                
+                <h2>Source</h2>
+                <table>
+                    <tr><th>Fichier</th><th>Feuille</th><th>Lignes</th></tr>
+                    <tr><td>Feuille de calcul sans titre (2).xlsx</td><td>TRAME FRS</td><td>999</td></tr>
+                </table>
+                
+                <h2>Mapping des colonnes principales</h2>
+                <table>
+                    <tr><th>Colonne Excel</th><th>Champ Odoo</th><th>Exemple</th></tr>
+                    <tr><td>Code fournisseur</td><td>ref</td><td>ADI000</td></tr>
+                    <tr><td>Nom fournisseur</td><td>name</td><td>Adilakshmhmi Exports</td></tr>
+                    <tr><td>Adresse</td><td>street</td><td>PLOT NR: APMC YARD...</td></tr>
+                    <tr><td>Grp. Frs</td><td>x_groupe_fournisseur</td><td>ASIE-INDE</td></tr>
+                    <tr><td>N° Cpte. Cpta.</td><td>property_account_payable_id</td><td>40100000</td></tr>
+                    <tr><td>Transitaire</td><td>x_is_transitaire</td><td>True/False</td></tr>
+                </table>
+                
+                <h2>Groupes fournisseurs</h2>
+                <table>
+                    <tr><th>Code</th><th>Valeur</th></tr>
+                    <tr><td>asie_inde</td><td>ASIE-INDE</td></tr>
+                    <tr><td>europe</td><td>EUROPE</td></tr>
+                    <tr><td>local</td><td>LOCAL</td></tr>
+                    <tr><td>afrique</td><td>AFRIQUE</td></tr>
+                    <tr><td>amerique</td><td>AMERIQUE</td></tr>
+                </table>
+            </div>
+            
+            <!-- SCRIPTS IMPORT -->
+            <div id="scripts" class="section">
+                <h1>Scripts d'Import</h1>
+                
+                <div class="alert alert-info">
+                    <strong>Statut:</strong> Scripts créés et prêts à l'emploi
+                </div>
+                
+                <h2>Fichiers créés</h2>
+                <table>
+                    <tr><th>Fichier</th><th>Description</th><th>Statut</th></tr>
+                    <tr>
+                        <td><code>config.py</code></td>
+                        <td>Configuration globale (URL Odoo, clé API, mappings)</td>
+                        <td><span class="badge badge-success">✅ Créé</span></td>
+                    </tr>
+                    <tr>
+                        <td><code>odoo_client.py</code></td>
+                        <td>Client XML-RPC pour communiquer avec Odoo</td>
+                        <td><span class="badge badge-success">✅ Créé</span></td>
+                    </tr>
+                    <tr>
+                        <td><code>import_clients.py</code></td>
+                        <td>Import des clients (~500 lignes)</td>
+                        <td><span class="badge badge-success">✅ Créé</span></td>
+                    </tr>
+                    <tr>
+                        <td><code>import_produits.py</code></td>
+                        <td>Import des produits (377 lignes)</td>
+                        <td><span class="badge badge-success">✅ Créé</span></td>
+                    </tr>
+                    <tr>
+                        <td><code>import_fournisseurs.py</code></td>
+                        <td>Import des fournisseurs (999 lignes)</td>
+                        <td><span class="badge badge-success">✅ Créé</span></td>
+                    </tr>
+                    <tr>
+                        <td><code>import_plan_comptable.py</code></td>
+                        <td>Import du plan comptable Cegid (910 comptes)</td>
+                        <td><span class="badge badge-success">✅ Créé</span></td>
+                    </tr>
+                    <tr>
+                        <td><code>run_all_imports.py</code></td>
+                        <td>Script principal avec menu interactif</td>
+                        <td><span class="badge badge-success">✅ Créé</span></td>
+                    </tr>
+                </table>
+                
+                <h2>Emplacement</h2>
+                <div class="code">
+docs/integration_odoo_ah_chou/03_DONNEES/03_SCRIPTS_IMPORT/
+├── config.py
+├── odoo_client.py
+├── import_clients.py
+├── import_produits.py
+├── import_fournisseurs.py
+├── import_plan_comptable.py
+├── run_all_imports.py
+└── README.md
+                </div>
+                
+                <h2>Utilisation</h2>
+                
+                <h3>Prérequis</h3>
+                <div class="code">
+# Installer openpyxl
+pip install openpyxl
+
+# Configurer la clé API dans config.py
+ODOO_CONFIG = {
+    'url': 'https://ah-chou1.odoo.com',
+    'database': 'ah-chou1',
+    'username': 'mathieu.loic.hoarau@gmail.com',
+    'api_key': 'VOTRE_CLE_API_ICI',
+}
+                </div>
+                
+                <h3>Lancement</h3>
+                <div class="code">
+# Mode interactif (recommandé)
+cd docs/integration_odoo_ah_chou/03_DONNEES/03_SCRIPTS_IMPORT
+python3 run_all_imports.py
+
+# Import individuel
+python3 import_clients.py
+                </div>
+                
+                <h3>Mode Dry-Run</h3>
+                <p>Par défaut, <code>DRY_RUN = True</code> dans config.py. Cela permet de simuler les imports sans écrire réellement dans Odoo.</p>
+                <div class="code">
+# Pour activer l'import réel:
+DRY_RUN = False
+                </div>
+                
+                <h2>Prérequis Odoo</h2>
+                <div class="alert alert-warning">
+                    <strong>Important:</strong> Avant de lancer les imports, les éléments suivants doivent être créés dans Odoo:
+                </div>
+                <ul class="checklist">
+                    <li>Champs personnalisés clients (x_groupe_client, x_enseigne, etc.)</li>
+                    <li>Champs personnalisés produits (x_zone_peche, x_nom_scientifique, etc.)</li>
+                    <li>Champs personnalisés fournisseurs (x_groupe_fournisseur, x_is_transitaire, etc.)</li>
+                    <li>Listes de prix (Tarif Base, T1 à T6)</li>
+                    <li>Taxes TVA DOM (2.1%, 8.5%, Exonéré)</li>
+                    <li>Conditions de paiement</li>
+                </ul>
+                
+                <h2>Ordre d'import recommandé</h2>
+                <ol>
+                    <li><strong>Plan comptable</strong> - Pour avoir les comptes disponibles</li>
+                    <li><strong>Clients</strong> - Crée automatiquement les catégories</li>
+                    <li><strong>Fournisseurs</strong> - Inclut les transitaires</li>
+                    <li><strong>Produits</strong> - Crée automatiquement les catégories</li>
+                </ol>
+            </div>
+            
+            <!-- DASH-VENTES -->
+            <div id="dash-ventes" class="section">
+                <h1>Dashboards Ventes</h1>
+                
+                <h2>Indicateurs demandés (Cahier des charges)</h2>
+                <table>
+                    <tr><th>Indicateur</th><th>Description</th></tr>
+                    <tr><td>Chiffre d'Affaires</td><td>CA HT</td></tr>
+                    <tr><td>Unités de Vente</td><td>Quantités vendues</td></tr>
+                    <tr><td>Volume KG</td><td>Poids total vendu</td></tr>
+                    <tr><td>Valeur Marge</td><td>CA - Coût</td></tr>
+                    <tr><td>Taux de Marque</td><td>Marge / CA × 100</td></tr>
+                </table>
+                
+                <h2>Colonnes détail</h2>
+                <table>
+                    <tr><th>Colonne</th><th>Description</th></tr>
+                    <tr><td>Total</td><td>Toutes ventes</td></tr>
+                    <tr><td>Promo</td><td>Ventes avec remise promo</td></tr>
+                    <tr><td>Hors Promo</td><td>Ventes sans promo</td></tr>
+                    <tr><td>3xNet</td><td>Ventes au prix net fixe</td></tr>
+                    <tr><td>Ristournable</td><td>Ventes éligibles RFA</td></tr>
+                </table>
+                
+                <h2>Axes d'analyse</h2>
+                <div class="grid">
+                    <div class="stat-card"><div class="label">Client</div></div>
+                    <div class="stat-card"><div class="label">Groupe Client</div></div>
+                    <div class="stat-card"><div class="label">Catégorie</div></div>
+                    <div class="stat-card"><div class="label">Enseigne</div></div>
+                    <div class="stat-card"><div class="label">Typologie</div></div>
+                    <div class="stat-card"><div class="label">Famille Produit</div></div>
+                    <div class="stat-card"><div class="label">Secteur</div></div>
+                    <div class="stat-card"><div class="label">Vendeur</div></div>
+                </div>
+                
+                <h2>Comparatifs</h2>
+                <ul>
+                    <li>N vs N-1 (Année en cours vs année précédente)</li>
+                    <li>Période libre (De date à date)</li>
+                    <li>Mensuel</li>
+                </ul>
+            </div>
+            
+            <!-- DASH-ACHATS -->
+            <div id="dash-achats" class="section">
+                <h1>Dashboards Achats</h1>
+                
+                <h2>Tableau Achat (Historique)</h2>
+                <table>
+                    <tr><th>Indicateur</th><th>Description</th></tr>
+                    <tr><td>Fournisseur</td><td>Nom fournisseur</td></tr>
+                    <tr><td>Code Produit</td><td>Référence</td></tr>
+                    <tr><td>Désignation</td><td>Nom produit</td></tr>
+                    <tr><td>Navire</td><td>Transport</td></tr>
+                    <tr><td>Date départ</td><td>Départ port</td></tr>
+                    <tr><td>Date arrivée</td><td>Arrivée port</td></tr>
+                    <tr><td>Prix achat USD</td><td>Prix unitaire USD</td></tr>
+                    <tr><td>Parité EUR/USD</td><td>Taux de change</td></tr>
+                    <tr><td>Coef approche</td><td>Coefficient global</td></tr>
+                </table>
+                
+                <h2>Stock Flottant</h2>
+                <table>
+                    <tr><th>Indicateur</th><th>Description</th></tr>
+                    <tr><td>Quantité UVC</td><td>Stock en transit</td></tr>
+                    <tr><td>Quantité cartons</td><td>Conversion</td></tr>
+                    <tr><td>Navire</td><td>Identifiant transport</td></tr>
+                    <tr><td>ETA</td><td>Date arrivée estimée</td></tr>
+                </table>
+            </div>
+            
+            <!-- DASH-STOCK -->
+            <div id="dash-stock" class="section">
+                <h1>Dashboards Stock</h1>
+                
+                <h2>Vue Stock</h2>
+                <table>
+                    <tr><th>Indicateur</th><th>Unité</th></tr>
+                    <tr><td>Quantité UVC</td><td>UVC</td></tr>
+                    <tr><td>Quantité cartons</td><td>Cartons</td></tr>
+                    <tr><td>Lieu de stockage</td><td>Zone 1-6</td></tr>
+                    <tr><td>Reste à livrer</td><td>UVC</td></tr>
+                    <tr><td>Flottant</td><td>UVC</td></tr>
+                    <tr><td>Périmés</td><td>UVC</td></tr>
+                    <tr><td>PRMP</td><td>EUR</td></tr>
+                </table>
+                
+                <h2>Tranches de péremption</h2>
+                <table>
+                    <tr><th>Tranche</th><th>Critère</th></tr>
+                    <tr><td style="background:#ffcccc;">1 à 3 mois</td><td>DLC ≤ 90 jours ⚠️</td></tr>
+                    <tr><td style="background:#fff3cd;">4 à 6 mois</td><td>90 < DLC ≤ 180 jours</td></tr>
+                    <tr><td style="background:#d4edda;">7 à 12 mois</td><td>180 < DLC ≤ 365 jours</td></tr>
+                    <tr><td style="background:#d4edda;">13 à 24 mois</td><td>365 < DLC ≤ 730 jours</td></tr>
+                    <tr><td style="background:#d4edda;">+24 mois</td><td>DLC > 730 jours</td></tr>
+                </table>
+            </div>
+            
+            <!-- PROFILS -->
+            <div id="profils" class="section">
+                <h1>Profils Utilisateurs</h1>
+                
+                <h2>Vue d'ensemble</h2>
+                <table>
+                    <tr><th>Nombre d'utilisateurs</th><td>6 à 10</td></tr>
+                    <tr><th>Profils identifiés</th><td>7</td></tr>
+                </table>
+                
+                <h2>Matrice des droits</h2>
+                <table>
+                    <tr>
+                        <th>Profil</th>
+                        <th>Ventes</th>
+                        <th>Achats</th>
+                        <th>Stock</th>
+                        <th>Compta</th>
+                        <th>POS</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Admin</strong></td>
+                        <td><span class="badge badge-success">Full</span></td>
+                        <td><span class="badge badge-success">Full</span></td>
+                        <td><span class="badge badge-success">Full</span></td>
+                        <td><span class="badge badge-success">Full</span></td>
+                        <td><span class="badge badge-success">Full</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Resp. Achats</strong></td>
+                        <td><span class="badge badge-info">Lecture</span></td>
+                        <td><span class="badge badge-success">Full</span></td>
+                        <td><span class="badge badge-primary">Utilisateur</span></td>
+                        <td><span class="badge badge-info">Lecture</span></td>
+                        <td><span class="badge badge-danger">Non</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Commercial</strong></td>
+                        <td><span class="badge badge-primary">Utilisateur</span></td>
+                        <td><span class="badge badge-danger">Non</span></td>
+                        <td><span class="badge badge-info">Lecture</span></td>
+                        <td><span class="badge badge-danger">Non</span></td>
+                        <td><span class="badge badge-danger">Non</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Logistique</strong></td>
+                        <td><span class="badge badge-danger">Non</span></td>
+                        <td><span class="badge badge-danger">Non</span></td>
+                        <td><span class="badge badge-success">Full</span></td>
+                        <td><span class="badge badge-danger">Non</span></td>
+                        <td><span class="badge badge-danger">Non</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Comptable</strong></td>
+                        <td><span class="badge badge-warning">Facturation</span></td>
+                        <td><span class="badge badge-warning">Facturation</span></td>
+                        <td><span class="badge badge-info">Lecture</span></td>
+                        <td><span class="badge badge-success">Full</span></td>
+                        <td><span class="badge badge-danger">Non</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Direction</strong></td>
+                        <td><span class="badge badge-info">Lecture</span></td>
+                        <td><span class="badge badge-info">Lecture</span></td>
+                        <td><span class="badge badge-info">Lecture</span></td>
+                        <td><span class="badge badge-info">Lecture</span></td>
+                        <td><span class="badge badge-info">Lecture</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Caissier</strong></td>
+                        <td><span class="badge badge-danger">Non</span></td>
+                        <td><span class="badge badge-danger">Non</span></td>
+                        <td><span class="badge badge-danger">Non</span></td>
+                        <td><span class="badge badge-danger">Non</span></td>
+                        <td><span class="badge badge-primary">Utilisateur</span></td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- DROITS -->
+            <div id="droits" class="section">
+                <h1>Configuration des Droits d'Accès</h1>
+                
+                <h2>Groupes Odoo natifs</h2>
+                <table>
+                    <tr><th>Module</th><th>Groupes</th></tr>
+                    <tr><td>Ventes</td><td>sales_team.group_sale_salesman, group_sale_manager</td></tr>
+                    <tr><td>Achats</td><td>purchase.group_purchase_user, group_purchase_manager</td></tr>
+                    <tr><td>Stock</td><td>stock.group_stock_user, group_stock_manager</td></tr>
+                    <tr><td>Comptabilité</td><td>account.group_account_user, group_account_manager</td></tr>
+                    <tr><td>POS</td><td>point_of_sale.group_pos_user, group_pos_manager</td></tr>
+                </table>
+                
+                <h2>Règles personnalisées à créer</h2>
+                <ul>
+                    <li>Commercial : Voir uniquement ses clients</li>
+                    <li>Commercial : Voir uniquement ses commandes</li>
+                    <li>Commercial : Masquer le prix d'achat (standard_price)</li>
+                    <li>Direction : Lecture seule sur tout</li>
+                </ul>
+            </div>
+            
+            <!-- TESTS -->
+            <div id="tests" class="section">
+                <h1>Scénarios de Test</h1>
+                
+                <h2>Module Ventes</h2>
+                <table>
+                    <tr><th>Code</th><th>Scénario</th></tr>
+                    <tr><td>TEST-VTE-001</td><td>Création commande client simple</td></tr>
+                    <tr><td>TEST-VTE-002</td><td>Tarif spécifique client/produit</td></tr>
+                    <tr><td>TEST-VTE-003</td><td>Promotion périodique</td></tr>
+                    <tr><td>TEST-VTE-004</td><td>Facturation groupée</td></tr>
+                    <tr><td>TEST-VTE-005</td><td>Blocage encours client</td></tr>
+                </table>
+                
+                <h2>Module Achats</h2>
+                <table>
+                    <tr><th>Code</th><th>Scénario</th></tr>
+                    <tr><td>TEST-ACH-001</td><td>Création commande fournisseur (Odoo direct)</td></tr>
+                    <tr><td>TEST-ACH-002</td><td>Création commande via App Achats</td></tr>
+                    <tr><td>TEST-ACH-003</td><td>Réception avec lot et DLC</td></tr>
+                </table>
+                
+                <h2>Module Stock</h2>
+                <table>
+                    <tr><th>Code</th><th>Scénario</th></tr>
+                    <tr><td>TEST-STK-001</td><td>Valorisation PRMP</td></tr>
+                    <tr><td>TEST-STK-002</td><td>Alerte DLC</td></tr>
+                    <tr><td>TEST-STK-003</td><td>Préparation 2 étapes</td></tr>
+                    <tr><td>TEST-STK-004</td><td>Tranches de péremption</td></tr>
+                </table>
+                
+                <h2>Intégration</h2>
+                <table>
+                    <tr><th>Code</th><th>Scénario</th></tr>
+                    <tr><td>TEST-INT-001</td><td>Synchronisation produits App ↔ Odoo</td></tr>
+                    <tr><td>TEST-INT-002</td><td>Création commande complète via App</td></tr>
+                </table>
+            </div>
+            
+            <!-- CHECKLIST -->
+            <div id="checklist" class="section">
+                <h1>Checklist de Validation</h1>
+                
+                <h2>Phase 1 : Paramétrage général</h2>
+                <ul class="checklist">
+                    <li>Raison sociale AH CHOU SARL créée</li>
+                    <li>Adresse complète renseignée</li>
+                    <li>Taxes TVA DOM créées (2.1%, 8.5%, 0%)</li>
+                    <li>Plan comptable importé</li>
+                </ul>
+                
+                <h2>Phase 2 : Modules</h2>
+                <ul class="checklist">
+                    <li>Module Ventes installé et configuré</li>
+                    <li>Listes de prix créées (T1-T6)</li>
+                    <li>Module Achats installé et configuré</li>
+                    <li>Intégration App Achats testée</li>
+                    <li>Module Stock installé et configuré</li>
+                    <li>6 emplacements créés</li>
+                    <li>Module Comptabilité installé et configuré</li>
+                    <li>Module POS installé et configuré</li>
+                </ul>
+                
+                <h2>Phase 3 : Données</h2>
+                <ul class="checklist">
+                    <li>Clients importés (~500)</li>
+                    <li>Produits importés (377)</li>
+                    <li>Fournisseurs importés (999)</li>
+                    <li>Plan comptable importé (910)</li>
+                </ul>
+                
+                <h2>Phase 4 : Dashboards</h2>
+                <ul class="checklist">
+                    <li>Dashboard Ventes fonctionnel</li>
+                    <li>Dashboard Achats fonctionnel</li>
+                    <li>Dashboard Stock fonctionnel</li>
+                </ul>
+                
+                <h2>Phase 5 : Utilisateurs</h2>
+                <ul class="checklist">
+                    <li>Profils créés</li>
+                    <li>Droits configurés</li>
+                    <li>Utilisateurs créés</li>
+                </ul>
+                
+                <h2>Phase 6 : Tests</h2>
+                <ul class="checklist">
+                    <li>Tous les scénarios de test validés</li>
+                </ul>
+                
+                <h2>Phase 7 : Mise en production</h2>
+                <ul class="checklist">
+                    <li>Données de test nettoyées</li>
+                    <li>Données réelles importées</li>
+                    <li>Formation réalisée</li>
+                    <li>Go-live</li>
+                </ul>
+            </div>
+            
+            <!-- PARAMETRAGE BLOC 1 -->
+            <div id="param-bloc1" class="section">
+                <h1>📋 BLOC 1: Paramétrage Général</h1>
+                
+                <div class="alert alert-info">
+                    <strong>Instance:</strong> https://ah-chou1.odoo.com | <strong>Version:</strong> Odoo 19 Enterprise
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">📊 Progression Bloc 1 - VALIDÉ</div>
+                    <div class="grid">
+                        <div class="stat-card" style="border-left-color: var(--success);"><div class="value">✅</div><div class="label">Bloc 1 VALIDÉ</div></div>
+                        <div class="stat-card" style="border-left-color: var(--success);"><div class="value">6/6</div><div class="label">Sections complètes</div></div>
+                    </div>
+                </div>
+                
+                <h2>1.1 - Configuration Société</h2>
+                <div class="card">
+                    <p><strong>Chemin:</strong> Paramètres > Utilisateurs & Sociétés > Sociétés</p>
+                    <table>
+                        <tr><th>Champ</th><th>Valeur</th><th>Statut</th></tr>
+                        <tr><td>Nom de la société</td><td>SOCIETE DE GERANCE DU LIBRE SERVICE AH CHOU</td><td><span class="badge badge-success">✅ OK</span></td></tr>
+                        <tr><td>Adresse</td><td>80 CHEMIN MAXIME RIVIERE</td><td><span class="badge badge-success">✅ OK</span></td></tr>
+                        <tr><td>Code postal / Ville</td><td>97410 SAINT-PIERRE</td><td><span class="badge badge-success">✅ OK</span></td></tr>
+                        <tr><td>Pays</td><td>France</td><td><span class="badge badge-success">✅ OK</span></td></tr>
+                        <tr><td>Devise principale</td><td>EUR (€)</td><td><span class="badge badge-success">✅ OK</span></td></tr>
+                        <tr><td>TVA intracommunautaire</td><td>FR13315984161</td><td><span class="badge badge-success">✅ OK</span></td></tr>
+                        <tr><td>ID Société</td><td>33417522101010</td><td><span class="badge badge-success">✅ OK</span></td></tr>
+                    </table>
+                    <div style="margin-top:15px; background:#2d2d2d; padding:10px; border-radius:8px;">
+                        <p style="margin:0 0 10px 0; font-family:monospace; font-size:0.85rem; color:#00d4aa;">📍 https://ah-chou1.odoo.com/odoo/settings/companies</p>
+                        <img src="screenshots/bloc1/01_societe.png" alt="Configuration Société" style="max-width:100%; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    </div>
+                </div>
+                
+                <h2>1.2 - Localisation Fiscale DOM</h2>
+                <div class="card">
+                    <div class="alert alert-warning">
+                        <strong>Important:</strong> La Réunion (DOM) a des taux de TVA spécifiques différents de la métropole.
+                    </div>
+                    <p><strong>Chemin:</strong> Comptabilité > Configuration > Taxes</p>
+                    <table>
+                        <tr><th>Nom Taxe</th><th>Taux</th><th>Type</th><th>ID Odoo</th><th>Statut</th></tr>
+                        <tr><td>TVA 2.1% DOM (Ventes)</td><td>2.1%</td><td>Vente</td><td>5</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>TVA 2.1% DOM (Achats)</td><td>2.1%</td><td>Achat</td><td>6</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>TVA 8.5% DOM (Ventes)</td><td>8.5%</td><td>Vente</td><td>7</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>TVA 8.5% DOM (Achats)</td><td>8.5%</td><td>Achat</td><td>8</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>0% Exports (Vente)</td><td>0%</td><td>Vente</td><td>-</td><td><span class="badge badge-success">✅ Existant</span></td></tr>
+                        <tr><td>0% Imports (Achat)</td><td>0%</td><td>Achat</td><td>-</td><td><span class="badge badge-success">✅ Existant</span></td></tr>
+                    </table>
+                    <div style="margin-top:15px; background:#2d2d2d; padding:10px; border-radius:8px;">
+                        <p style="margin:0 0 10px 0; font-family:monospace; font-size:0.85rem; color:#00d4aa;">📍 https://ah-chou1.odoo.com/odoo/accounting/taxes</p>
+                        <img src="screenshots/bloc1/02_taxes.png" alt="Taxes TVA DOM" style="max-width:100%; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    </div>
+                    <div class="alert alert-success" style="margin-top:10px;">
+                        <strong>✅ Validé:</strong> Taxes 15% désactivées, TVA DOM 2.1% et 8.5% actives (Ventes + Achats)
+                    </div>
+                </div>
+                
+                <h2>1.3 - Configuration Devises</h2>
+                <div class="card">
+                    <p><strong>Chemin:</strong> Comptabilité > Configuration > Devises</p>
+                    <table>
+                        <tr><th>Devise</th><th>Symbole</th><th>Active</th><th>Taux (vs EUR)</th><th>Statut</th></tr>
+                        <tr><td>Euro</td><td>€</td><td>✅ Oui</td><td>1.0000</td><td><span class="badge badge-success">✅ OK</span></td></tr>
+                        <tr><td>Dollar US</td><td>$</td><td>❌ Non</td><td>-</td><td><span class="badge badge-warning">⚠️ Non disponible (instance trial)</span></td></tr>
+                    </table>
+                    <div class="alert alert-info">
+                        <strong>Note:</strong> L'application Achats Harel calcule le prix de revient et transmet directement à Odoo le taux USD utilisé ainsi que le montant en devises. Odoo n'effectue pas de recalcul - les champs sont alimentés par l'app.
+                    </div>
+                    <div style="margin-top:15px; background:#2d2d2d; padding:10px; border-radius:8px;">
+                        <p style="margin:0 0 10px 0; font-family:monospace; font-size:0.85rem; color:#00d4aa;">📍 https://ah-chou1.odoo.com/odoo/accounting/currencies</p>
+                        <img src="screenshots/bloc1/03_devises.png" alt="Devises" style="max-width:100%; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    </div>
+                </div>
+                
+                <h2>1.4 - Activation des Modules</h2>
+                <div class="card">
+                    <p><strong>Chemin:</strong> Applications</p>
+                    <table>
+                        <tr><th>Module</th><th>Nom technique</th><th>Requis</th><th>Statut</th></tr>
+                        <tr><td>Ventes</td><td>sale_management</td><td>✅</td><td><span class="badge badge-success">✅ Installé</span></td></tr>
+                        <tr><td>Achats</td><td>purchase</td><td>✅</td><td><span class="badge badge-success">✅ Installé</span></td></tr>
+                        <tr><td>Inventaire</td><td>stock</td><td>✅</td><td><span class="badge badge-success">✅ Installé</span></td></tr>
+                        <tr><td>Comptabilité</td><td>account_accountant</td><td>✅</td><td><span class="badge badge-success">✅ Installé</span></td></tr>
+                        <tr><td>Point de Vente</td><td>point_of_sale</td><td>❌ Non requis</td><td><span class="badge badge-info">Non installé (pas nécessaire)</span></td></tr>
+                        <tr><td>Traçabilité par lots</td><td>stock_lot</td><td>✅</td><td><span class="badge badge-info">Inclus dans stock</span></td></tr>
+                        <tr><td>Dates d'expiration</td><td>product_expiry</td><td>✅</td><td><span class="badge badge-warning">⚠️ À installer manuellement</span></td></tr>
+                    </table>
+                    <div style="margin-top:15px; background:#2d2d2d; padding:10px; border-radius:8px;">
+                        <p style="margin:0 0 10px 0; font-family:monospace; font-size:0.85rem; color:#00d4aa;">📍 https://ah-chou1.odoo.com/odoo/apps/modules</p>
+                        <img src="screenshots/bloc1/06_modules.png" alt="Applications installées" style="max-width:100%; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    </div>
+                </div>
+                
+                <h2>1.5 - Listes de Prix</h2>
+                <div class="card">
+                    <p><strong>Chemin:</strong> Ventes > Configuration > Listes de prix</p>
+                    <table>
+                        <tr><th>Nom</th><th>Devise</th><th>Statut</th></tr>
+                        <tr><td>Tarif Base</td><td>EUR</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>Tarif T1</td><td>EUR</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>Tarif T2</td><td>EUR</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>Tarif T3</td><td>EUR</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>Tarif T4</td><td>EUR</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>Tarif T5</td><td>EUR</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>Tarif T6</td><td>EUR</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>Default</td><td>EUR</td><td><span class="badge badge-info">Par défaut Odoo</span></td></tr>
+                    </table>
+                    <div style="margin-top:15px; background:#2d2d2d; padding:10px; border-radius:8px;">
+                        <p style="margin:0 0 10px 0; font-family:monospace; font-size:0.85rem; color:#00d4aa;">📍 https://ah-chou1.odoo.com/odoo/product-pricelist</p>
+                        <img src="screenshots/bloc1/04_listes_prix.png" alt="Listes de prix" style="max-width:100%; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    </div>
+                </div>
+                
+                <h2>1.6 - Conditions de Paiement</h2>
+                <div class="card">
+                    <p><strong>Chemin:</strong> Comptabilité > Configuration > Conditions de paiement</p>
+                    <table>
+                        <tr><th>Nom</th><th>Description</th><th>Statut</th></tr>
+                        <tr><td>Comptant</td><td>Paiement immédiat</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>15 jours</td><td>15 jours fin de mois</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>30 jours</td><td>30 jours fin de mois</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>60 jours</td><td>60 jours fin de mois</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                    </table>
+                    <div style="margin-top:15px; background:#2d2d2d; padding:10px; border-radius:8px;">
+                        <p style="margin:0 0 10px 0; font-family:monospace; font-size:0.85rem; color:#00d4aa;">📍 https://ah-chou1.odoo.com/odoo/account-payment-term</p>
+                        <img src="screenshots/bloc1/05_conditions_paiement.png" alt="Conditions de paiement" style="max-width:100%; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PARAMETRAGE BLOC 2 -->
+            <div id="param-bloc2" class="section">
+                <h1>📋 BLOC 2: Champs Personnalisés</h1>
+                
+                <div class="card">
+                    <div class="card-header">📊 Progression Bloc 2 - VALIDÉ</div>
+                    <div class="grid">
+                        <div class="stat-card" style="border-left-color: var(--success);"><div class="value">✅</div><div class="label">Bloc 2 VALIDÉ</div></div>
+                        <div class="stat-card" style="border-left-color: var(--success);"><div class="value">41</div><div class="label">Champs créés</div></div>
+                    </div>
+                </div>
+                
+                <h2>2.1 - Champs Clients (res.partner)</h2>
+                <div class="card">
+                    <p><strong>Chemin:</strong> Paramètres > Technique > Modèles > res.partner > Champs</p>
+                    <p><strong>Total:</strong> 17 champs personnalisés créés</p>
+                    <table>
+                        <tr><th>Nom technique</th><th>Libellé</th><th>Type</th><th>ID Odoo</th><th>Statut</th></tr>
+                        <tr><td>x_groupe_client</td><td>Groupe Client</td><td>Selection</td><td>22336</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_enseigne</td><td>Enseigne</td><td>Selection</td><td>22339</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_typologie</td><td>Typologie</td><td>Selection</td><td>22342</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_blocage</td><td>Blocage</td><td>Selection</td><td>22345</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_taux_remise</td><td>Taux de remise (%)</td><td>Float</td><td>22348</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_taux_rfa</td><td>Taux RFA (%)</td><td>Float</td><td>22351</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_compte_comptable</td><td>N° Compte comptable</td><td>Char</td><td>22354</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_responsable_1</td><td>Responsable 1</td><td>Char</td><td>22357</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_responsable_2</td><td>Responsable 2</td><td>Char</td><td>22360</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_resp_compta</td><td>Responsable comptabilité</td><td>Char</td><td>22363</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_tel_compta</td><td>Tél. comptabilité</td><td>Char</td><td>22366</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_email_compta</td><td>Email comptabilité</td><td>Char</td><td>22369</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_groupe_facturation</td><td>Groupe facturation</td><td>Char</td><td>22372</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_groupe_fournisseur</td><td>Groupe fournisseur</td><td>Selection</td><td>22375</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_is_transitaire</td><td>Est transitaire</td><td>Boolean</td><td>22378</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_delai_livraison</td><td>Délai livraison (jours)</td><td>Integer</td><td>22381</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_incoterm</td><td>Incoterm</td><td>Char</td><td>22384</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                    </table>
+                </div>
+                
+                <h2>2.2 - Champs Produits (product.template)</h2>
+                <div class="card">
+                    <p><strong>Chemin:</strong> Paramètres > Technique > Modèles > product.template > Champs</p>
+                    <p><strong>Total:</strong> 24 champs personnalisés créés</p>
+                    <table>
+                        <tr><th>Nom technique</th><th>Libellé</th><th>Type</th><th>ID Odoo</th><th>Statut</th></tr>
+                        <tr><td>x_code_interne</td><td>Code interne</td><td>Char</td><td>22387</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_nom_long</td><td>Nom long</td><td>Char</td><td>22390</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_zone_peche</td><td>Zone de pêche</td><td>Char</td><td>22393</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_nom_scientifique</td><td>Nom scientifique</td><td>Char</td><td>22396</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_origine</td><td>Origine</td><td>Char</td><td>22399</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_marque</td><td>Marque</td><td>Char</td><td>22402</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_segment</td><td>Segment</td><td>Char</td><td>22405</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_gencod</td><td>Gencod (EAN)</td><td>Char</td><td>22408</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_contenu</td><td>Contenu</td><td>Float</td><td>22411</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_conditionnement</td><td>Conditionnement</td><td>Float</td><td>22414</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_pcb</td><td>PCB</td><td>Float</td><td>22417</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_poids_brut</td><td>Poids brut (kg)</td><td>Float</td><td>22420</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_coef_approche</td><td>Coefficient approche</td><td>Float</td><td>22423</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_tarif_t1_ht</td><td>Tarif T1 HT</td><td>Float</td><td>22426</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_tarif_t2_ht</td><td>Tarif T2 HT</td><td>Float</td><td>22429</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_tarif_t3_ht</td><td>Tarif T3 HT</td><td>Float</td><td>22432</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_tarif_t4_ht</td><td>Tarif T4 HT</td><td>Float</td><td>22435</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_tarif_t5_ht</td><td>Tarif T5 HT</td><td>Float</td><td>22438</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_tarif_t6_ht</td><td>Tarif T6 HT</td><td>Float</td><td>22441</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_pv_ttc</td><td>Prix vente TTC</td><td>Float</td><td>22444</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_prmup</td><td>PRMUP</td><td>Float</td><td>22447</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_prix_achat_usd</td><td>Prix achat USD</td><td>Float</td><td>22450</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_prix_revient</td><td>Prix de revient</td><td>Float</td><td>22453</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_taux_usd</td><td>Taux USD utilisé</td><td>Float</td><td>22456</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                    </table>
+                </div>
+                
+                <h2>2.3 - Champs Fournisseurs (res.partner)</h2>
+                <div class="card">
+                    <p><strong>Note:</strong> Ces champs sont sur le même modèle res.partner que les clients (distingués par le flag supplier)</p>
+                    <table>
+                        <tr><th>Nom technique</th><th>Libellé</th><th>Type</th><th>ID Odoo</th><th>Statut</th></tr>
+                        <tr><td>x_groupe_fournisseur</td><td>Groupe fournisseur</td><td>Selection</td><td>22375</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_is_transitaire</td><td>Est transitaire</td><td>Boolean</td><td>22378</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_delai_livraison</td><td>Délai livraison (jours)</td><td>Integer</td><td>22381</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_incoterm</td><td>Incoterm</td><td>Char</td><td>22384</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_conditions_achat</td><td>Conditions d'achat</td><td>Text</td><td>22459</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_numero_client_chez_frs</td><td>N° client chez fournisseur</td><td>Char</td><td>22462</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>x_compte_auxiliaire</td><td>Compte auxiliaire</td><td>Char</td><td>22465</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- PARAMETRAGE BLOC 3 -->
+            <div id="param-bloc3" class="section">
+                <h1>📋 BLOC 3: Listes de Prix & Conditions</h1>
+                
+                <div class="card">
+                    <div class="card-header">📊 Progression Bloc 3 - VALIDÉ</div>
+                    <div class="grid">
+                        <div class="stat-card" style="border-left-color: var(--success);"><div class="value">✅</div><div class="label">Bloc 3 VALIDÉ</div></div>
+                        <div class="stat-card" style="border-left-color: var(--success);"><div class="value">7</div><div class="label">Listes tarifaires</div></div>
+                    </div>
+                </div>
+                
+                <h2>3.1 - Logique de tarification</h2>
+                <div class="card">
+                    <div class="alert alert-info">
+                        <strong>Principe :</strong> Prix de vente = Prix d'achat (coût) × (1 + Marge%)
+                    </div>
+                    <p><strong>Flux de données :</strong></p>
+                    <ol>
+                        <li>L'application <strong>Achats Harel</strong> crée une commande fournisseur dans Odoo avec le prix d'achat</li>
+                        <li>À la <strong>réception</strong> de la marchandise, Odoo met à jour automatiquement le <code>standard_price</code> (coût)</li>
+                        <li>Les <strong>listes de prix</strong> calculent automatiquement le prix de vente en appliquant la marge</li>
+                        <li>Chaque <strong>client</strong> est associé à une liste de prix (via le champ <code>property_product_pricelist</code>)</li>
+                    </ol>
+                </div>
+                
+                <h2>3.2 - Listes de Prix</h2>
+                <div class="card">
+                    <p><strong>Chemin:</strong> Ventes > Configuration > Listes de prix — <a href="https://ah-chou1.odoo.com/odoo/product-pricelist" target="_blank" style="color:var(--primary);">🔗 Ouvrir dans Odoo</a></p>
+                    <table>
+                        <tr><th>ID</th><th>Nom</th><th>Base</th><th>Marge</th><th>Exemple (coût 10€)</th><th>Statut</th></tr>
+                        <tr><td>2</td><td>Prix Catalogue</td><td>Coût</td><td>+40%</td><td>→ 14.00€</td><td><span class="badge badge-success">✅ Configuré</span></td></tr>
+                        <tr><td>3</td><td>Tarif Hypermarchés</td><td>Coût</td><td>+35%</td><td>→ 13.50€</td><td><span class="badge badge-success">✅ Configuré</span></td></tr>
+                        <tr><td>4</td><td>Tarif Supermarchés</td><td>Coût</td><td>+30%</td><td>→ 13.00€</td><td><span class="badge badge-success">✅ Configuré</span></td></tr>
+                        <tr><td>5</td><td>Tarif Grossistes</td><td>Coût</td><td>+25%</td><td>→ 12.50€</td><td><span class="badge badge-success">✅ Configuré</span></td></tr>
+                        <tr><td>6</td><td>Tarif Plateformes</td><td>Coût</td><td>+20%</td><td>→ 12.00€</td><td><span class="badge badge-success">✅ Configuré</span></td></tr>
+                        <tr><td>7</td><td>Tarif CHR</td><td>Coût</td><td>+15%</td><td>→ 11.50€</td><td><span class="badge badge-success">✅ Configuré</span></td></tr>
+                        <tr><td>8</td><td>Tarif Partenaires</td><td>Coût</td><td>+10%</td><td>→ 11.00€</td><td><span class="badge badge-success">✅ Configuré</span></td></tr>
+                    </table>
+                    <div class="alert alert-warning" style="margin-top:15px;">
+                        <strong>Note technique :</strong> Les règles utilisent <code>base='standard_price'</code> et <code>price_discount=-X%</code> (négatif = majoration)
+                    </div>
+                    <div style="margin-top:15px; background:#2d2d2d; padding:10px; border-radius:8px;">
+                        <p style="margin:0 0 10px 0; font-family:monospace; font-size:0.85rem; color:#00d4aa;">📍 https://ah-chou1.odoo.com/odoo/product-pricelist</p>
+                        <img src="screenshots/bloc3/01_listes_prix.png" alt="Listes de prix" style="max-width:100%; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    </div>
+                    <div style="margin-top:15px; background:#2d2d2d; padding:10px; border-radius:8px;">
+                        <p style="margin:0 0 10px 0; font-family:monospace; font-size:0.85rem; color:#00d4aa;">📍 https://ah-chou1.odoo.com/odoo/product-pricelist/2</p>
+                        <p style="margin:0 0 10px 0;"><strong>Exemple de règle - Prix Catalogue (+40% sur coût)</strong></p>
+                        <img src="screenshots/bloc3/02_regle_prix_catalogue.png" alt="Règle Prix Catalogue" style="max-width:100%; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    </div>
+                </div>
+                
+                <h2>3.3 - Conditions de Paiement</h2>
+                <div class="card">
+                    <p><strong>Chemin:</strong> Comptabilité > Configuration > Conditions de paiement — <a href="https://ah-chou1.odoo.com/odoo/account-payment-term" target="_blank" style="color:var(--primary);">🔗 Ouvrir dans Odoo</a></p>
+                    <table>
+                        <tr><th>ID</th><th>Nom</th><th>Délai</th><th>Statut</th></tr>
+                        <tr><td>11</td><td>Comptant</td><td>100% immédiat</td><td><span class="badge badge-success">✅ OK</span></td></tr>
+                        <tr><td>12</td><td>15 jours</td><td>100% à 15 jours</td><td><span class="badge badge-success">✅ Corrigé</span></td></tr>
+                        <tr><td>13</td><td>30 jours</td><td>100% à 30 jours</td><td><span class="badge badge-success">✅ Corrigé</span></td></tr>
+                        <tr><td>14</td><td>60 jours</td><td>100% à 60 jours</td><td><span class="badge badge-success">✅ Corrigé</span></td></tr>
+                    </table>
+                    <div style="margin-top:15px; background:#2d2d2d; padding:10px; border-radius:8px;">
+                        <p style="margin:0 0 10px 0; font-family:monospace; font-size:0.85rem; color:#00d4aa;">📍 https://ah-chou1.odoo.com/odoo/account-payment-term</p>
+                        <p style="margin:0; font-style:italic; color:#888;">Voir capture Bloc 1 - section 1.6</p>
+                    </div>
+                </div>
+                
+                <h2>3.4 - Champs utilisés</h2>
+                <div class="card">
+                    <table>
+                        <tr><th>Champ</th><th>Modèle</th><th>Usage</th></tr>
+                        <tr><td><code>standard_price</code></td><td>product.product</td><td>Coût standard (mis à jour auto à la réception)</td></tr>
+                        <tr><td><code>x_prix_revient</code></td><td>product.template</td><td>Prix de revient calculé (avec frais approche) - optionnel</td></tr>
+                        <tr><td><code>x_prix_achat_usd</code></td><td>product.template</td><td>Prix d'achat en USD</td></tr>
+                        <tr><td><code>x_taux_usd</code></td><td>product.template</td><td>Taux USD utilisé pour le calcul</td></tr>
+                        <tr><td><code>property_product_pricelist</code></td><td>res.partner</td><td>Liste de prix du client</td></tr>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- PARAMETRAGE BLOC 4 -->
+            <div id="param-bloc4" class="section">
+                <h1>📋 BLOC 4: Catégories & Tags</h1>
+                
+                <div class="card">
+                    <div class="card-header">📊 Progression Bloc 4 - VALIDÉ</div>
+                    <div class="grid">
+                        <div class="stat-card" style="border-left-color: var(--success);"><div class="value">✅</div><div class="label">Bloc 4 CRÉÉ</div></div>
+                        <div class="stat-card" style="border-left-color: var(--success);"><div class="value">7</div><div class="label">Catégories produits</div></div>
+                        <div class="stat-card" style="border-left-color: var(--success);"><div class="value">34</div><div class="label">Tags partenaires</div></div>
+                    </div>
+                </div>
+                
+                <h2>4.1 - Tags Groupes Clients</h2>
+                <div class="card">
+                    <p><strong>Chemin:</strong> Contacts > Configuration > Étiquettes de contact — <a href="https://ah-chou1.odoo.com/odoo/res-partner-category" target="_blank" style="color:var(--primary);">🔗 Ouvrir dans Odoo</a></p>
+                    <table>
+                        <tr><th>ID</th><th>Nom</th><th>Couleur</th><th>Statut</th></tr>
+                        <tr><td>1</td><td>Groupe: CHR</td><td>🟠 Orange</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>2</td><td>Groupe: GMS</td><td>🟠 Orange</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>3</td><td>Groupe: GROSSISTE</td><td>🟠 Orange</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>4</td><td>Groupe: DIVERS</td><td>🟠 Orange</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                    </table>
+                    <div style="margin-top:15px; background:#2d2d2d; padding:10px; border-radius:8px;">
+                        <p style="margin:0 0 10px 0; font-family:monospace; font-size:0.85rem; color:#00d4aa;">📍 https://ah-chou1.odoo.com/odoo/res-partner-category</p>
+                        <img src="screenshots/bloc4/01_tags_groupes_clients.png" alt="Tags Groupes Clients" style="max-width:100%; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    </div>
+                </div>
+                
+                <h2>4.2 - Tags Enseignes Clients</h2>
+                <div class="card">
+                    <p><strong>Total:</strong> 19 enseignes créées</p>
+                    <table>
+                        <tr><th>ID</th><th>Nom</th><th>Couleur</th><th>Statut</th></tr>
+                        <tr><td>5</td><td>Enseigne: AUCHAN</td><td>🔵 Bleu</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>6</td><td>Enseigne: CARREFOUR</td><td>🔵 Bleu</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>7</td><td>Enseigne: LECLERC</td><td>🔵 Bleu</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>8</td><td>Enseigne: LEADER PRICE</td><td>🔵 Bleu</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>9</td><td>Enseigne: VINDEMIA</td><td>🔵 Bleu</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>10</td><td>Enseigne: GROUPEMENT U</td><td>🔵 Bleu</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>11</td><td>Enseigne: RUN MARKET</td><td>🔵 Bleu</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>12</td><td>Enseigne: COCCI MARKET</td><td>🔵 Bleu</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>13</td><td>Enseigne: INDEPENDANT</td><td>🔵 Bleu</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>14</td><td>Enseigne: COLLECTIVITE</td><td>🔵 Bleu</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>15</td><td>Enseigne: REVENDEUR</td><td>🔵 Bleu</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>16</td><td>Enseigne: DIVERS</td><td>🔵 Bleu</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>17</td><td>Enseigne: FASCOM</td><td>🔵 Bleu</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>18</td><td>Enseigne: INTERMARK</td><td>🔵 Bleu</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>19</td><td>Enseigne: VIVAL</td><td>🔵 Bleu</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>20</td><td>Enseigne: ZEN</td><td>🔵 Bleu</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>21</td><td>Enseigne: MISTER SURGELE</td><td>🔵 Bleu</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>22</td><td>Enseigne: GEL OI</td><td>🔵 Bleu</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>23</td><td>Enseigne: VIC DELICE</td><td>🔵 Bleu</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                    </table>
+                    <div style="margin-top:15px; background:#2d2d2d; padding:10px; border-radius:8px;">
+                        <p style="margin:0 0 10px 0; font-family:monospace; font-size:0.85rem; color:#00d4aa;">📍 https://ah-chou1.odoo.com/odoo/res-partner-category</p>
+                        <img src="screenshots/bloc4/02_tags_enseignes.png" alt="Tags Enseignes" style="max-width:100%; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    </div>
+                </div>
+                
+                <h2>4.3 - Tags Groupes Fournisseurs</h2>
+                <div class="card">
+                    <p><strong>Total:</strong> 11 groupes fournisseurs créés</p>
+                    <table>
+                        <tr><th>ID</th><th>Nom</th><th>Couleur</th><th>Statut</th></tr>
+                        <tr><td>24</td><td>Fournisseur: AMERIQUE</td><td>🟢 Vert</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>25</td><td>Fournisseur: ASIE</td><td>🟢 Vert</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>26</td><td>Fournisseur: EPICES</td><td>🟢 Vert</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>27</td><td>Fournisseur: FRANCE</td><td>🟢 Vert</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>28</td><td>Fournisseur: FRAIS LOCAL</td><td>🟢 Vert</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>29</td><td>Fournisseur: GROSSISTE FRANCE</td><td>🟢 Vert</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>30</td><td>Fournisseur: MADAGASCAR</td><td>🟢 Vert</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>31</td><td>Fournisseur: OCEAN INDIEN</td><td>🟢 Vert</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>32</td><td>Fournisseur: PACKAGING</td><td>🟢 Vert</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>33</td><td>Fournisseur: SERVICE</td><td>🟢 Vert</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>34</td><td>Fournisseur: TRANSITAIRE</td><td>🟢 Vert</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                    </table>
+                    <div style="margin-top:15px; background:#2d2d2d; padding:10px; border-radius:8px;">
+                        <p style="margin:0 0 10px 0; font-family:monospace; font-size:0.85rem; color:#00d4aa;">📍 https://ah-chou1.odoo.com/odoo/res-partner-category</p>
+                        <img src="screenshots/bloc4/03_tags_fournisseurs.png" alt="Tags Fournisseurs" style="max-width:100%; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    </div>
+                </div>
+                
+                <h2>4.4 - Catégories Produits (Segments)</h2>
+                <div class="card">
+                    <p><strong>Chemin:</strong> Inventaire > Configuration > Catégories de produits — <a href="https://ah-chou1.odoo.com/odoo/product-category" target="_blank" style="color:var(--primary);">🔗 Ouvrir dans Odoo</a></p>
+                    <table>
+                        <tr><th>ID</th><th>Nom complet</th><th>Statut</th></tr>
+                        <tr><td>4</td><td>GEL OI</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>5</td><td>GEL OI / APERO & SNACKING</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>6</td><td>GEL OI / PRODUITS MARINS</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>7</td><td>GEL OI / PLATS PREPARES</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>8</td><td>GEL OI / TRAITEUR</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>9</td><td>GEL OI / SURGELES</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>10</td><td>GEL OI / VIANDES</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                    </table>
+                    <div class="diagram" style="margin-top:15px;">
+📁 GEL OI (ID: 4)
+├── 📦 APERO & SNACKING (ID: 5)
+├── 📦 PRODUITS MARINS (ID: 6)
+├── 📦 PLATS PREPARES (ID: 7)
+├── 📦 TRAITEUR (ID: 8)
+├── 📦 SURGELES (ID: 9)
+└── 📦 VIANDES (ID: 10)</div>
+                    <div style="margin-top:15px; background:#2d2d2d; padding:10px; border-radius:8px;">
+                        <p style="margin:0 0 10px 0; font-family:monospace; font-size:0.85rem; color:#00d4aa;">📍 https://ah-chou1.odoo.com/odoo/product-category</p>
+                        <img src="screenshots/bloc4/04_categories_produits.png" alt="Catégories Produits" style="max-width:100%; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    </div>
+                </div>
+                
+                <h2>4.5 - Origines Produits</h2>
+                <div class="card">
+                    <p><strong>Note:</strong> Les origines sont gérées via le champ personnalisé <code>x_origine</code> (char) sur <code>product.template</code></p>
+                    <table>
+                        <tr><th>Valeurs possibles</th></tr>
+                        <tr><td>AFRIQUE, AMERIQUE DU SUD, ASIE, EUROPE, FRANCE, FRANCE MÉTROPOLE, MADAGASCAR, OCEAN INDIEN, REUNION, VIETNAM</td></tr>
+                    </table>
+                    <div class="alert alert-info" style="margin-top:10px;">
+                        <strong>Info:</strong> Ces valeurs seront renseignées lors de l'import des produits via le champ <code>x_origine</code>
+                    </div>
+                </div>
+                
+                <h2>4.6 - Captures d'écran</h2>
+                <div class="card">
+                    <table>
+                        <tr><th>Capture</th><th>Fichier</th><th>Statut</th></tr>
+                        <tr><td>Tags Groupes Clients</td><td><code>screenshots/bloc4/01_tags_groupes_clients.png</code></td><td><span class="badge badge-success">✅ Capturé</span></td></tr>
+                        <tr><td>Tags Enseignes</td><td><code>screenshots/bloc4/02_tags_enseignes.png</code></td><td><span class="badge badge-success">✅ Capturé</span></td></tr>
+                        <tr><td>Tags Fournisseurs</td><td><code>screenshots/bloc4/03_tags_fournisseurs.png</code></td><td><span class="badge badge-success">✅ Capturé</span></td></tr>
+                        <tr><td>Catégories Produits</td><td><code>screenshots/bloc4/04_categories_produits.png</code></td><td><span class="badge badge-success">✅ Capturé</span></td></tr>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- PARAMETRAGE BLOC 5 -->
+            <div id="param-bloc5" class="section">
+                <h1>📋 BLOC 5: Entrepôts & Stock</h1>
+                
+                <div class="card">
+                    <div class="card-header">📊 Progression Bloc 5 - VALIDÉ</div>
+                    <div class="grid">
+                        <div class="stat-card" style="border-left-color: var(--success);"><div class="value">✅</div><div class="label">Bloc 5 CRÉÉ</div></div>
+                        <div class="stat-card" style="border-left-color: var(--success);"><div class="value">15</div><div class="label">Emplacements</div></div>
+                        <div class="stat-card" style="border-left-color: var(--primary);"><div class="value">🚢</div><div class="label">Transit maritime</div></div>
+                        <div class="stat-card" style="border-left-color: var(--primary);"><div class="value">🏭</div><div class="label">Stock Logistisud</div></div>
+                        <div class="stat-card" style="border-left-color: var(--success);"><div class="value">✅</div><div class="label">FEFO actif</div></div>
+                    </div>
+                </div>
+                
+                <h2>5.1 - Entrepôt Principal</h2>
+                <div class="card">
+                    <p><strong>Chemin:</strong> Inventaire > Configuration > Entrepôts — <a href="https://ah-chou1.odoo.com/odoo/stock-warehouse" target="_blank" style="color:var(--primary);">🔗 Ouvrir dans Odoo</a></p>
+                    <table>
+                        <tr><th>ID</th><th>Nom</th><th>Code</th><th>Réception</th><th>Livraison</th><th>Statut</th></tr>
+                        <tr><td>1</td><td>AH CHOU</td><td>WH</td><td>1 étape</td><td>1 étape</td><td><span class="badge badge-success">✅ Configuré</span></td></tr>
+                    </table>
+                </div>
+                
+                <h2>5.2 - Vue d'ensemble : Où sont mes marchandises ?</h2>
+                <div class="card">
+                    <div class="alert alert-info">
+                        <strong>🎯 Principe :</strong> Chaque emplacement représente un lieu physique réel. Le stock est toujours visible et localisable.
+                    </div>
+                    <p><strong>Chemin:</strong> Inventaire > Configuration > Emplacements — <a href="https://ah-chou1.odoo.com/odoo/stock-location" target="_blank" style="color:var(--primary);">🔗 Ouvrir dans Odoo</a></p>
+                    <div class="diagram">
+📁 WH (Entrepôt AH CHOU - Saint-Pierre)
+│
+├── 🚢 TRANSIT MARITIME ────────────────────────── Marchandises en cours d'acheminement
+│   ├── 🚢 EN MER                → Conteneur sur le bateau
+│   ├── ⚓ PORT ARRIVEE          → Arrivé au port, en attente déchargement
+│   └── 📋 DEDOUANEMENT          → En cours de dédouanement
+│
+├── 🏭 LOGISTISUD ──────────────────────────────── Stock déporté (prestataire externe)
+│   ├── ❄️ CONGELATEUR           → Surgelés chez Logistisud
+│   └── 🥶 REFRIGERE             → Frais chez Logistisud
+│
+├── 📥 RECEPTION ───────────────────────────────── Quai de réception AH CHOU
+├── 📤 EXPEDITION ──────────────────────────────── Quai d'expédition AH CHOU
+│
+└── 📦 Stock ───────────────────────────────────── Stock principal AH CHOU
+    ├── ❄️ CONGELATEUR-1 [FIFO]  → Chambre froide principale (-18°C)
+    ├── ❄️ CONGELATEUR-2 [FIFO]  → Chambre froide secondaire (-18°C)
+    ├── ❄️ CONGELATEUR-3 [FIFO]  → Chambre froide tertiaire (-18°C)
+    ├── 🥶 REFRIGERE [FIFO]      → Zone réfrigérée (+2°C à +8°C)
+    ├── 🛒 PICKING               → Zone préparation commandes
+    └── ⚠️ QUARANTAINE           → Produits en attente contrôle qualité</div>
+                </div>
+                
+                <h2>5.3 - Guide d'utilisation par zone</h2>
+                <div class="card">
+                    <h3 style="color:#4fc3f7; margin-top:0;">🚢 TRANSIT MARITIME - "Mes marchandises sont où ?"</h3>
+                    <table>
+                        <tr><th>Zone</th><th>Quand l'utiliser ?</th><th>Action déclencheur</th></tr>
+                        <tr>
+                            <td><strong>EN MER</strong></td>
+                            <td>Commande fournisseur confirmée, conteneur parti du port d'origine</td>
+                            <td>Transfert automatique à la validation de la commande d'achat</td>
+                        </tr>
+                        <tr>
+                            <td><strong>PORT ARRIVEE</strong></td>
+                            <td>Le bateau est arrivé, conteneur en attente de déchargement</td>
+                            <td>Transfert manuel quand notification d'arrivée reçue</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DEDOUANEMENT</strong></td>
+                            <td>Documents douane en cours de traitement</td>
+                            <td>Transfert manuel pendant la procédure douanière</td>
+                        </tr>
+                    </table>
+                    <div class="alert alert-warning" style="margin-top:10px;">
+                        💡 <strong>Astuce :</strong> En filtrant par "TRANSIT MARITIME", vous voyez instantanément toutes les marchandises en cours d'acheminement et leur étape.
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3 style="color:#81c784; margin-top:0;">🏭 LOGISTISUD - Stock déporté</h3>
+                    <table>
+                        <tr><th>Zone</th><th>Description</th><th>Particularité</th></tr>
+                        <tr>
+                            <td><strong>LOGISTISUD/CONGELATEUR</strong></td>
+                            <td>Surgelés stockés chez le prestataire Logistisud</td>
+                            <td>Stock visible dans Odoo mais physiquement externe</td>
+                        </tr>
+                        <tr>
+                            <td><strong>LOGISTISUD/REFRIGERE</strong></td>
+                            <td>Produits frais stockés chez Logistisud</td>
+                            <td>Transfert vers AH CHOU nécessaire avant livraison client</td>
+                        </tr>
+                    </table>
+                    <div class="alert alert-info" style="margin-top:10px;">
+                        📊 <strong>Visibilité :</strong> Le stock Logistisud apparaît dans le stock total mais est distingué géographiquement.
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3 style="color:#ffb74d; margin-top:0;">📦 STOCK AH CHOU - Entrepôt principal</h3>
+                    <table>
+                        <tr><th>Zone</th><th>Fonction</th><th>Stratégie</th></tr>
+                        <tr>
+                            <td><strong>RECEPTION</strong></td>
+                            <td>Zone de déchargement, contrôle à l'arrivée</td>
+                            <td>Zone tampon temporaire</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CONGELATEUR-1/2/3</strong></td>
+                            <td>Stockage longue durée surgelés (-18°C)</td>
+                            <td>FIFO → FEFO (après module)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>REFRIGERE</strong></td>
+                            <td>Stockage produits frais (+2°C à +8°C)</td>
+                            <td>FIFO → FEFO (après module)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>PICKING</strong></td>
+                            <td>Zone de préparation des commandes clients</td>
+                            <td>Stock minimal, réappro depuis congélateurs</td>
+                        </tr>
+                        <tr>
+                            <td><strong>QUARANTAINE</strong></td>
+                            <td>Produits bloqués (qualité, litige, retour)</td>
+                            <td>Non vendable jusqu'à validation</td>
+                        </tr>
+                        <tr>
+                            <td><strong>EXPEDITION</strong></td>
+                            <td>Commandes prêtes à partir</td>
+                            <td>Zone tampon avant chargement camion</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <h2>5.4 - Tableau récapitulatif des emplacements</h2>
+                <div class="card">
+                    <table>
+                        <tr><th>ID</th><th>Emplacement</th><th>Type</th><th>Stratégie</th><th>Statut</th></tr>
+                        <tr style="background:#1a3a4a;"><td colspan="5"><strong>🚢 TRANSIT MARITIME</strong></td></tr>
+                        <tr><td>21</td><td>WH/TRANSIT MARITIME</td><td>Transit</td><td>-</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>22</td><td>WH/TRANSIT MARITIME/EN MER</td><td>Transit</td><td>-</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>23</td><td>WH/TRANSIT MARITIME/PORT ARRIVEE</td><td>Transit</td><td>-</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>24</td><td>WH/TRANSIT MARITIME/DEDOUANEMENT</td><td>Transit</td><td>-</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr style="background:#1a4a1a;"><td colspan="5"><strong>🏭 STOCK DÉPORTÉ</strong></td></tr>
+                        <tr><td>25</td><td>WH/LOGISTISUD</td><td>Interne</td><td>FEFO ✅</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>26</td><td>WH/LOGISTISUD/CONGELATEUR</td><td>Interne</td><td>FEFO ✅</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>27</td><td>WH/LOGISTISUD/REFRIGERE</td><td>Interne</td><td>FEFO ✅</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr style="background:#4a3a1a;"><td colspan="5"><strong>📦 STOCK AH CHOU</strong></td></tr>
+                        <tr><td>19</td><td>WH/RECEPTION</td><td>Interne</td><td>-</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>20</td><td>WH/EXPEDITION</td><td>Interne</td><td>-</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>13</td><td>WH/Stock/CONGELATEUR-1</td><td>Interne</td><td>FEFO ✅</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>14</td><td>WH/Stock/CONGELATEUR-2</td><td>Interne</td><td>FEFO ✅</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>15</td><td>WH/Stock/CONGELATEUR-3</td><td>Interne</td><td>FEFO ✅</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>16</td><td>WH/Stock/REFRIGERE</td><td>Interne</td><td>FEFO ✅</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>17</td><td>WH/Stock/PICKING</td><td>Interne</td><td>-</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                        <tr><td>18</td><td>WH/Stock/QUARANTAINE</td><td>Interne</td><td>-</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                    </table>
+                    <div style="margin-top:15px; background:#2d2d2d; padding:10px; border-radius:8px;">
+                        <p style="margin:0 0 10px 0; font-family:monospace; font-size:0.85rem; color:#00d4aa;">📍 https://ah-chou1.odoo.com/odoo/stock-location</p>
+                        <img src="screenshots/bloc5/01_emplacements.png" alt="Emplacements" style="max-width:100%; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    </div>
+                </div>
+                
+                <h2>5.3 - Stratégies de Retrait</h2>
+                <div class="card">
+                    <div class="alert alert-info">
+                        <strong>Principe :</strong> La stratégie de retrait détermine l'ordre de sortie des produits du stock.
+                    </div>
+                    <table>
+                        <tr><th>Stratégie</th><th>Description</th><th>Usage recommandé</th></tr>
+                        <tr><td><strong>FIFO</strong></td><td>First In First Out - Premier entré, premier sorti</td><td>✅ Configuré (en attendant FEFO)</td></tr>
+                        <tr><td><strong>FEFO</strong></td><td>First Expired First Out - Premier expiré, premier sorti</td><td>🔴 <strong>RECOMMANDÉ pour surgelés</strong></td></tr>
+                        <tr><td>LIFO</td><td>Last In First Out - Dernier entré, premier sorti</td><td>Non recommandé alimentaire</td></tr>
+                        <tr><td>Closest</td><td>Emplacement le plus proche</td><td>Optimisation picking</td></tr>
+                    </table>
+                    <div class="alert alert-warning" style="margin-top:15px;">
+                        ⚠️ <strong>FEFO non disponible :</strong> Le module <code>Products Expiration Date</code> doit être installé pour activer FEFO.
+                    </div>
+                </div>
+                
+                <h2>5.4 - Configuration FEFO ✅</h2>
+                <div class="card">
+                    <div class="alert alert-success">
+                        ✅ <strong>FEFO CONFIGURÉ</strong> - First Expiry First Out activé sur toutes les zones de stockage alimentaire
+                    </div>
+                    <table>
+                        <tr><th>#</th><th>Action</th><th>Statut</th></tr>
+                        <tr>
+                            <td>1</td>
+                            <td><strong>Module "Products Expiration Date"</strong><br><small>Dates DLC/DLUO et stratégie FEFO</small></td>
+                            <td><span class="badge badge-success">✅ Installé</span></td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td><strong>Stratégie FEFO sur les congélateurs</strong><br><small>CONGELATEUR-1, 2, 3 + REFRIGERE</small></td>
+                            <td><span class="badge badge-success">✅ Configuré</span></td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td><strong>Stratégie FEFO sur Logistisud</strong><br><small>Stock déporté aussi en FEFO</small></td>
+                            <td><span class="badge badge-success">✅ Configuré</span></td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td><strong>Traçabilité par lots</strong><br><small>Inventaire > Paramètres > Traçabilité</small></td>
+                            <td><span class="badge badge-warning">⚠️ À vérifier</span></td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <h2>5.5 - Guide FEFO : Comment ça marche concrètement ?</h2>
+                <div class="card">
+                    <div class="alert alert-info">
+                        <strong>🎯 FEFO = First Expiry First Out</strong><br>
+                        "Premier à expirer = Premier à sortir" - La stratégie optimale pour les produits périssables
+                    </div>
+                    
+                    <h3 style="color:#4fc3f7; margin-top:20px;">📥 1. À la RÉCEPTION des marchandises</h3>
+                    <table>
+                        <tr><th>Étape</th><th>Action utilisateur</th><th>Ce que fait Odoo</th></tr>
+                        <tr>
+                            <td>1</td>
+                            <td>Valider la réception</td>
+                            <td>Demande de créer/sélectionner un <strong>numéro de lot</strong></td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Créer le lot (ex: LOT-AAAA-MM-JJ-001)</td>
+                            <td>Affiche les champs de dates d'expiration</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>Saisir la <strong>Date d'expiration</strong> (DLC/DLUO)</td>
+                            <td>Enregistre la date sur le lot</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>Ranger dans le congélateur</td>
+                            <td>Stock disponible avec date d'expiration connue</td>
+                        </tr>
+                    </table>
+                    <div class="alert alert-warning" style="margin-top:10px;">
+                        💡 <strong>Astuce :</strong> Utilisez un format de lot incluant la date de réception pour faciliter le suivi (ex: <code>LOT-AAAA-MM-JJ-XXX</code>)
+                    </div>
+                    
+                    <h3 style="color:#81c784; margin-top:25px;">📤 2. À la PRÉPARATION de commande (picking)</h3>
+                    <table>
+                        <tr><th>Situation</th><th>Ce que fait FEFO automatiquement</th></tr>
+                        <tr>
+                            <td>Client commande 10 cartons de crevettes</td>
+                            <td>Odoo propose <strong>automatiquement</strong> les lots dont la date d'expiration est la plus proche</td>
+                        </tr>
+                        <tr>
+                            <td>Plusieurs lots disponibles</td>
+                            <td>Tri par date d'expiration croissante (le plus proche en premier)</td>
+                        </tr>
+                        <tr>
+                            <td>Stock insuffisant sur un lot</td>
+                            <td>Complète avec le lot suivant (toujours par ordre d'expiration)</td>
+                        </tr>
+                    </table>
+                    
+                    <div class="diagram" style="margin-top:15px;">
+📋 Exemple concret :
+
+Stock CONGELATEUR-1 - Crevettes 1kg :
+┌─────────────────────┬────────────┬──────────────┐
+│ Lot                 │ Quantité   │ Expiration   │
+├─────────────────────┼────────────┼──────────────┤
+│ LOT-001             │ 50 cartons │ Expire en 1er│ ← FEFO prend celui-ci en 1er
+│ LOT-002             │ 80 cartons │ Expire en 2ème│ ← puis celui-ci
+│ LOT-003             │ 100 cartons│ Expire en 3ème│ ← puis celui-ci
+└─────────────────────┴────────────┴──────────────┘
+
+Commande client : 70 cartons
+
+FEFO sélectionne automatiquement :
+  → 50 cartons du LOT-2025-11-15-001 (expire le plus tôt)
+  → 20 cartons du LOT-2025-12-20-002 (complément)
+                    </div>
+                    
+                    <h3 style="color:#ffb74d; margin-top:25px;">⚠️ 3. ALERTES de péremption</h3>
+                    <table>
+                        <tr><th>Champ</th><th>Description</th><th>Usage</th></tr>
+                        <tr>
+                            <td><strong>Date d'expiration</strong></td>
+                            <td>Date limite de consommation (DLC)</td>
+                            <td>Produit non vendable après cette date</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Date d'alerte</strong></td>
+                            <td>X jours avant expiration</td>
+                            <td>Notification pour action (promo, déstockage)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Date limite d'utilisation</strong></td>
+                            <td>DLUO (Date Limite d'Utilisation Optimale)</td>
+                            <td>Qualité optimale avant cette date</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Date de retrait</strong></td>
+                            <td>Date où retirer des rayons/vente</td>
+                            <td>Quelques jours avant expiration</td>
+                        </tr>
+                    </table>
+                    
+                    <h3 style="color:#ef5350; margin-top:25px;">🔍 4. Où VOIR les dates d'expiration ?</h3>
+                    <table>
+                        <tr><th>Besoin</th><th>Chemin dans Odoo</th></tr>
+                        <tr>
+                            <td>Voir tous les lots d'un produit</td>
+                            <td>Fiche produit → Onglet <strong>Inventaire</strong> → <strong>Lots/Numéros de série</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Produits proches expiration</td>
+                            <td><strong>Inventaire</strong> → <strong>Rapports</strong> → <strong>Dates d'expiration</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Historique d'un lot</td>
+                            <td><strong>Inventaire</strong> → <strong>Produits</strong> → <strong>Lots/N° série</strong> → Cliquer sur le lot</td>
+                        </tr>
+                        <tr>
+                            <td>Stock par lot et emplacement</td>
+                            <td><strong>Inventaire</strong> → <strong>Rapports</strong> → <strong>Stock actuel</strong> → Grouper par Lot</td>
+                        </tr>
+                    </table>
+                    
+                    <div class="alert alert-success" style="margin-top:20px;">
+                        ✅ <strong>Avantages FEFO pour GEL OI :</strong>
+                        <ul style="margin:10px 0 0 0;">
+                            <li>🥶 <strong>Zéro perte</strong> - Les produits les plus proches de l'expiration partent en premier</li>
+                            <li>📋 <strong>Conformité HACCP</strong> - Traçabilité complète exigée par la réglementation alimentaire</li>
+                            <li>⚡ <strong>Automatique</strong> - Pas besoin de chercher manuellement les bons lots</li>
+                            <li>📊 <strong>Visibilité</strong> - Alertes avant expiration pour agir (promos, transferts)</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <h2>5.6 - Flux de Stock : Parcours des marchandises</h2>
+                <div class="card">
+                    <h3 style="color:#4fc3f7; margin-top:0;">🚢 FLUX IMPORT - Commande fournisseur étranger</h3>
+                    <div class="diagram">
+📝 Commande achat validée
+    ↓
+🚢 TRANSIT MARITIME/EN MER ←────── Départ du port d'origine
+    ↓ (notification arrivée)
+⚓ TRANSIT MARITIME/PORT ARRIVEE ── Arrivée au port de La Réunion
+    ↓
+📋 TRANSIT MARITIME/DEDOUANEMENT ── Documents douane
+    ↓ (mainlevée obtenue)
+📥 RECEPTION ─────────────────────── Contrôle visuel, température, état
+    ↓
+    ├── ⚠️ QUARANTAINE (si problème détecté)
+    │       ↓ (après validation)
+    │       ↓
+    └── ❄️ CONGELATEUR-1/2/3 ou 🥶 REFRIGERE (rangement final)</div>
+                    <div class="alert alert-info" style="margin-top:15px;">
+                        💡 <strong>Avantage :</strong> À tout moment, vous savez exactement où est votre marchandise : en mer, au port, en dédouanement, ou en stock.
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3 style="color:#81c784; margin-top:0;">🏭 FLUX LOGISTISUD - Stock déporté</h3>
+                    <div class="diagram">
+📥 RECEPTION (arrivée directe chez Logistisud)
+    ↓
+🏭 LOGISTISUD/CONGELATEUR ou REFRIGERE ── Stockage externe
+    ↓ (commande client nécessitant ce stock)
+📦 Transfert vers AH CHOU ────────────── Rapatriement
+    ↓
+❄️ CONGELATEUR ou 🛒 PICKING ──────────── Préparation</div>
+                    <div class="alert alert-warning" style="margin-top:15px;">
+                        📊 <strong>Comptabilité stock :</strong> Le stock Logistisud est comptabilisé dans votre stock total mais vous pouvez filtrer pour voir uniquement le stock "sur site AH CHOU".
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3 style="color:#ffb74d; margin-top:0;">📦 FLUX LIVRAISON - Commande client</h3>
+                    <div class="diagram">
+📋 Commande client confirmée
+    ↓
+❄️ CONGELATEUR-1/2/3 ─────────────── Sélection FIFO/FEFO automatique
+    ↓                                (lots les plus anciens/proches expiration)
+🛒 PICKING ───────────────────────── Préparation commande (picking list)
+    ↓
+📤 EXPEDITION ────────────────────── Contrôle final, étiquetage
+    ↓
+🚚 → Client ──────────────────────── Bon de livraison signé</div>
+                </div>
+                
+                <div class="card">
+                    <h3 style="color:#ef5350; margin-top:0;">⚠️ FLUX QUARANTAINE - Gestion des anomalies</h3>
+                    <div class="diagram">
+📥 Produit reçu avec problème détecté (température, emballage, DLC courte)
+    ↓
+⚠️ QUARANTAINE ───────────────────── Blocage temporaire
+    ↓
+    ├── ✅ Produit OK après contrôle → Transfert vers CONGELATEUR
+    ├── 🔄 Retour fournisseur ──────→ Transfert vers Vendors (retour)
+    └── ❌ Destruction ─────────────→ Transfert vers Inventory Loss</div>
+                </div>
+                
+                <h2>5.6 - Paramètres Produits Surgelés</h2>
+                <div class="card">
+                    <p>Configuration recommandée pour chaque produit surgelé :</p>
+                    <table>
+                        <tr><th>Paramètre</th><th>Valeur</th><th>Champ Odoo</th></tr>
+                        <tr><td>Type de produit</td><td>Article stockable</td><td><code>detailed_type = 'product'</code></td></tr>
+                        <tr><td>Suivi</td><td>Par lots</td><td><code>tracking = 'lot'</code></td></tr>
+                        <tr><td>Délai d'expiration</td><td>Selon produit (ex: 365 jours)</td><td><code>expiration_time</code></td></tr>
+                        <tr><td>Délai d'alerte</td><td>30 jours avant expiration</td><td><code>alert_time</code></td></tr>
+                        <tr><td>Date limite de consommation</td><td>Selon produit</td><td><code>use_time</code></td></tr>
+                    </table>
+                    <div class="alert alert-info" style="margin-top:15px;">
+                        <strong>Note :</strong> Ces champs apparaîtront après installation du module "Products Expiration Date"
+                    </div>
+                </div>
+                
+                <h2>5.8 - Comment l'utilisateur s'y retrouve ?</h2>
+                <div class="card">
+                    <h3 style="color:#4fc3f7; margin-top:0;">🔍 Consulter le stock par emplacement</h3>
+                    <table>
+                        <tr><th>Question</th><th>Action dans Odoo</th></tr>
+                        <tr>
+                            <td>"Qu'est-ce que j'ai en transit maritime ?"</td>
+                            <td>Inventaire > Rapports > Stock actuel > Filtrer par <code>TRANSIT MARITIME</code></td>
+                        </tr>
+                        <tr>
+                            <td>"Quel stock est chez Logistisud ?"</td>
+                            <td>Inventaire > Rapports > Stock actuel > Filtrer par <code>LOGISTISUD</code></td>
+                        </tr>
+                        <tr>
+                            <td>"Combien de X dans le congélateur 1 ?"</td>
+                            <td>Fiche produit > Onglet Stock > Voir par emplacement</td>
+                        </tr>
+                        <tr>
+                            <td>"Quels produits arrivent bientôt ?"</td>
+                            <td>Inventaire > Rapports > Stock prévisionnel</td>
+                        </tr>
+                    </table>
+                    
+                    <h3 style="color:#81c784; margin-top:20px;">📊 Rapports utiles</h3>
+                    <table>
+                        <tr><th>Rapport</th><th>Utilité</th><th>Chemin</th></tr>
+                        <tr>
+                            <td>Stock actuel</td>
+                            <td>Voir le stock par produit et emplacement</td>
+                            <td>Inventaire > Rapports > Stock actuel</td>
+                        </tr>
+                        <tr>
+                            <td>Historique des transferts</td>
+                            <td>Tracer les mouvements d'un produit</td>
+                            <td>Inventaire > Rapports > Historique des mouvements</td>
+                        </tr>
+                        <tr>
+                            <td>Valorisation</td>
+                            <td>Valeur du stock par emplacement</td>
+                            <td>Inventaire > Rapports > Valorisation</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <h2>5.9 - URLs pour captures d'écran</h2>
+                <div class="card">
+                    <table>
+                        <tr><th>Capture</th><th>URL</th><th>Fichier</th></tr>
+                        <tr><td>Liste des emplacements (vue arbre)</td><td><a href="https://ah-chou1.odoo.com/odoo/stock-location" target="_blank">🔗 Ouvrir</a></td><td><code>screenshots/bloc5/01_emplacements.png</code></td></tr>
+                        <tr><td>Configuration entrepôt AH CHOU</td><td><a href="https://ah-chou1.odoo.com/odoo/stock-warehouse/1" target="_blank">🔗 Ouvrir</a></td><td><code>screenshots/bloc5/02_entrepot.png</code></td></tr>
+                        <tr><td>Zone Transit Maritime</td><td><a href="https://ah-chou1.odoo.com/odoo/stock-location/21" target="_blank">🔗 Ouvrir</a></td><td><code>screenshots/bloc5/03_transit.png</code></td></tr>
+                        <tr><td>Zone Logistisud</td><td><a href="https://ah-chou1.odoo.com/odoo/stock-location/25" target="_blank">🔗 Ouvrir</a></td><td><code>screenshots/bloc5/04_logistisud.png</code></td></tr>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- PARAMETRAGE BLOC 6 -->
+            <div id="param-bloc6" class="section">
+                <h1>📋 BLOC 6: Import des Données</h1>
+                
+                <div class="card">
+                    <div class="card-header">📊 Progression Bloc 6 - VALIDÉ</div>
+                    <div class="grid">
+                        <div class="stat-card" style="border-left-color: var(--success);"><div class="value">✅</div><div class="label">Bloc 6 TERMINÉ</div></div>
+                        <div class="stat-card" style="border-left-color: var(--success);"><div class="value">76</div><div class="label">Fournisseurs</div></div>
+                        <div class="stat-card" style="border-left-color: var(--success);"><div class="value">231</div><div class="label">Clients</div></div>
+                        <div class="stat-card" style="border-left-color: var(--warning);"><div class="value">299</div><div class="label">Produits</div></div>
+                    </div>
+                </div>
+                
+                <h2>6.1 - Résumé de l'Import</h2>
+                <div class="card">
+                    <p>Import réalisé via l'API XML-RPC Odoo.</p>
+                    
+                    <h3 style="margin-top:20px;">📁 Fichiers sources</h3>
+                    <table>
+                        <tr><th>Type</th><th>Fichier Excel</th><th>Onglet</th><th>Lignes</th></tr>
+                        <tr><td>Fournisseurs</td><td><code>9-Liste des fournisseurs.xlsx</code></td><td>Fournisseur</td><td>76</td></tr>
+                        <tr><td>Clients</td><td><code>Feuille de calcul sans titre (3).xlsx</code></td><td>CLIENT</td><td>231</td></tr>
+                        <tr><td>Produits</td><td><code>7-Liste des Produits.xlsx</code></td><td>A</td><td>377</td></tr>
+                    </table>
+                    
+                    <h3 style="margin-top:20px;">📊 Résultat de l'import</h3>
+                    <table>
+                        <tr><th>Type</th><th>Créés</th><th>Mis à jour</th><th>Erreurs</th><th>Total traité</th></tr>
+                        <tr style="background:#d4edda;"><td><strong>Fournisseurs</strong></td><td>56</td><td>20</td><td style="color:var(--success);">0</td><td>76</td></tr>
+                        <tr style="background:#d4edda;"><td><strong>Clients</strong></td><td>210</td><td>21</td><td style="color:var(--success);">0</td><td>231</td></tr>
+                        <tr style="background:#fff3cd;"><td><strong>Produits</strong></td><td>279</td><td>20</td><td style="color:var(--warning);">78</td><td>377</td></tr>
+                        <tr style="font-weight:bold; background:#e9ecef;"><td>TOTAL</td><td>545</td><td>61</td><td>78</td><td>684</td></tr>
+                    </table>
+                </div>
+                
+                <h2>6.2 - Problématique Métier : Codes-barres Dupliqués</h2>
+                <div class="card" style="border-left: 4px solid var(--warning);">
+                    <h3 style="color:var(--warning); margin-top:0;">⚠️ 78 produits non importés</h3>
+                    <p>Odoo n'accepte pas les codes-barres (EAN13) en doublon. Chaque code-barre doit être <strong>unique</strong> dans la base.</p>
+                    
+                    <h4 style="margin-top:20px;">Causes identifiées dans les données</h4>
+                    <table>
+                        <tr><th>Situation</th><th>Exemple</th><th>Impact</th></tr>
+                        <tr>
+                            <td><strong>Même produit, origines différentes</strong></td>
+                            <td>
+                                <code>[204931] Tranches de Rouge Vielle Inde</code><br>
+                                <code>[204948] Tranches de Rouge Vielle Vietnam</code><br>
+                                → Même EAN: <code>3456470204931</code>
+                            </td>
+                            <td>Le 2ème produit est rejeté</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Produit vendu au kg (sans EAN propre)</strong></td>
+                            <td>
+                                <code>[203570] Vivaneau Madras Inde kg</code><br>
+                                <code>[376] Vivaneau hublot Vietnam kg</code><br>
+                                → EAN générique: <code>0200300000000</code>
+                            </td>
+                            <td>Tous sauf le premier sont rejetés</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Erreur de saisie historique</strong></td>
+                            <td>Copier-coller d'un EAN existant lors de la création</td>
+                            <td>Collision imprévue</td>
+                        </tr>
+                    </table>
+                    
+                    <h4 style="margin-top:20px;">📋 Pourquoi c'est important pour le métier</h4>
+                    <div style="background:#fff8e1; padding:15px; border-radius:5px; margin:10px 0;">
+                        <p><strong>À la caisse / en scan :</strong> Si deux produits ont le même code-barre, le scanner ne peut pas distinguer lequel vous vendez. Le mauvais produit (et donc le mauvais prix) peut être facturé.</p>
+                        <p style="margin-top:10px;"><strong>En inventaire :</strong> Les mouvements de stock seront imputés au mauvais produit, faussant les quantités réelles.</p>
+                        <p style="margin-top:10px;"><strong>En traçabilité :</strong> Impossible de retracer un lot spécifique si plusieurs produits partagent le même code.</p>
+                    </div>
+                </div>
+                
+                <h2>6.3 - Solution Retenue : Variantes de Produit</h2>
+                <div class="card" style="border-left: 4px solid var(--success);">
+                    <h3 style="color:var(--success); margin-top:0;">✅ Attribut "Origine" créé dans Odoo</h3>
+                    <p>Un attribut de variante a été configuré pour gérer les différentes origines d'un même produit.</p>
+                    
+                    <table style="margin-top:15px;">
+                        <tr><th>Attribut</th><th>ID Odoo</th><th>Type d'affichage</th><th>Création variante</th></tr>
+                        <tr><td><strong>Origine</strong></td><td>9</td><td>Boutons radio</td><td>Toujours</td></tr>
+                    </table>
+                    
+                    <h4 style="margin-top:20px;">Valeurs disponibles</h4>
+                    <table>
+                        <tr><th>ID</th><th>Valeur</th><th>Produits concernés</th></tr>
+                        <tr><td>1</td><td>Inde</td><td>~115 produits</td></tr>
+                        <tr><td>2</td><td>Vietnam</td><td>~175 produits</td></tr>
+                        <tr><td>3</td><td>Indonésie</td><td>~18 produits</td></tr>
+                        <tr><td>4</td><td>Chine</td><td>-</td></tr>
+                        <tr><td>5</td><td>Thaïlande</td><td>-</td></tr>
+                        <tr><td>6</td><td>Madagascar</td><td>-</td></tr>
+                        <tr><td>7</td><td>La Réunion</td><td>-</td></tr>
+                        <tr><td>8</td><td>France</td><td>~1 produit</td></tr>
+                        <tr><td>9</td><td>Autre</td><td>-</td></tr>
+                    </table>
+                    
+                    <h4 style="margin-top:20px;">Comment ça fonctionne</h4>
+                    <div style="background:#e8f5e9; padding:15px; border-radius:5px; margin:10px 0;">
+                        <p><strong>Exemple : Carri de thon</strong></p>
+                        <ul style="margin:10px 0 10px 20px;">
+                            <li><strong>Produit parent :</strong> "Carri de thon 400g PNE 360g"</li>
+                            <li><strong>Variante 1 :</strong> Origine = Inde → Code [203066]</li>
+                            <li><strong>Variante 2 :</strong> Origine = Indonésie → Code [203065]</li>
+                            <li><strong>Variante 3 :</strong> Origine = Vietnam → Code [203064]</li>
+                        </ul>
+                        <p style="margin-top:10px;">Chaque variante a son propre stock, prix d'achat, et peut avoir un code-barre distinct.</p>
+                    </div>
+                    
+                    <p><a href="https://ah-chou1.odoo.com/odoo/product-attribute" target="_blank" style="color:var(--primary);">🔗 Voir les attributs dans Odoo</a></p>
+                </div>
+                
+                <h2>6.4 - Analyse des 60 EAN en Doublon</h2>
+                <div class="card">
+                    <p><strong>138 produits</strong> partagent <strong>60 codes-barres</strong> (2 à 4 produits par EAN).</p>
+                    
+                    <h4 style="margin-top:15px;">Exemples de doublons à convertir en variantes</h4>
+                    <div style="max-height:400px; overflow-y:auto; background:#f8f9fa; padding:15px; border-radius:5px; font-size:0.9rem;">
+                        <table style="width:100%;">
+                            <tr><th>EAN</th><th>Nb</th><th>Produits (candidats variantes)</th></tr>
+                            <tr>
+                                <td><code>3456470204191</code></td>
+                                <td>4</td>
+                                <td>
+                                    Q Crev Trop Dev 16/20 : Indicus, Monoceros, Vannamei, Camaron
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><code>3456470203163</code></td>
+                                <td>3</td>
+                                <td>
+                                    Carri de marlin : <strong>Inde</strong>, <strong>Indonésie</strong>, <strong>Vietnam</strong>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><code>3456470203064</code></td>
+                                <td>3</td>
+                                <td>
+                                    Carri de thon : <strong>Inde</strong>, <strong>Indonésie</strong>, <strong>Vietnam</strong>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><code>3456470204351</code></td>
+                                <td>3</td>
+                                <td>
+                                    Crev déco 13/15 : <strong>Inde (300g)</strong>, <strong>Inde (400g)</strong>, <strong>Vietnam</strong>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><code>3456470203422</code></td>
+                                <td>3</td>
+                                <td>
+                                    Escalope de Thon : <strong>Inde</strong>, <strong>Indonésie</strong>, <strong>Vietnam</strong>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><code>3456470203798</code></td>
+                                <td>3</td>
+                                <td>
+                                    Escalope de marlin : <strong>Inde</strong>, <strong>Indonésie</strong>, <strong>Vietnam</strong>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><code>0200031000000</code></td>
+                                <td>3</td>
+                                <td>
+                                    Carri BULK 10kg : daurade, marlin, thon (EAN générique)
+                                </td>
+                            </tr>
+                        </table>
+                        <p style="margin-top:10px; color:var(--gray);">... et 53 autres groupes de doublons</p>
+                    </div>
+                </div>
+                
+                <h2>6.5 - Procédure de Création des Variantes</h2>
+                <div class="card">
+                    <h4>Méthode manuelle dans Odoo</h4>
+                    <ol style="margin:10px 0 10px 20px;">
+                        <li><strong>Ouvrir le produit parent</strong> (celui qui a été importé avec succès)</li>
+                        <li>Aller dans l'onglet <strong>"Attributs & Variantes"</strong></li>
+                        <li>Cliquer sur <strong>"Ajouter une ligne"</strong></li>
+                        <li>Sélectionner l'attribut <strong>"Origine"</strong></li>
+                        <li>Cocher les valeurs : Inde, Vietnam, Indonésie...</li>
+                        <li>Odoo crée automatiquement les variantes</li>
+                        <li>Sur chaque variante, renseigner le code-barre spécifique</li>
+                    </ol>
+                    
+                    <h4 style="margin-top:20px;">Chemin dans Odoo</h4>
+                    <p><code>Ventes > Produits > [Sélectionner produit] > Onglet "Attributs & Variantes"</code></p>
+                    
+                    <div style="background:#fff3e0; padding:15px; border-radius:5px; margin-top:15px;">
+                        <p><strong>⚠️ Important :</strong> Pour les produits avec EAN générique (<code>0200XXXXXXXXX</code>), il est recommandé de :</p>
+                        <ul style="margin:10px 0 10px 20px;">
+                            <li>Soit créer des codes-barres internes uniques</li>
+                            <li>Soit laisser sans code-barre et utiliser la référence interne</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <h2>6.6 - Scripts d'Import</h2>
+                <div class="card">
+                    <p><strong>Chemin :</strong> <code>03_DONNEES/03_SCRIPTS_IMPORT/</code></p>
+                    <table>
+                        <tr><th>Script</th><th>Fonction</th></tr>
+                        <tr><td><code>import_odoo.py</code></td><td>Import principal (fournisseurs, clients, produits)</td></tr>
+                        <tr><td><code>mapping_import.py</code></td><td>Mapping Excel → Odoo (colonnes, champs personnalisés)</td></tr>
+                    </table>
+                    
+                    <h4 style="margin-top:15px;">Utilisation</h4>
+                    <pre style="background:#2d2d2d; color:#f8f8f2; padding:15px; border-radius:5px; overflow-x:auto;">
+# Import avec limite (test)
+python3 import_odoo.py --type fournisseurs --limit 10
+
+# Import complet
+python3 import_odoo.py --type fournisseurs
+python3 import_odoo.py --type clients
+python3 import_odoo.py --type produits
+
+# Dry-run (simulation sans écriture)
+python3 import_odoo.py --type produits --dry-run</pre>
+                </div>
+                
+                <h2>6.7 - Vérification dans Odoo</h2>
+                <div class="card">
+                    <table>
+                        <tr><th>Vérification</th><th>URL</th></tr>
+                        <tr><td>Liste des fournisseurs</td><td><a href="https://ah-chou1.odoo.com/odoo/res-partner?domain=[['supplier_rank','>',0]]" target="_blank">🔗 Ouvrir dans Odoo</a></td></tr>
+                        <tr><td>Liste des clients</td><td><a href="https://ah-chou1.odoo.com/odoo/res-partner?domain=[['customer_rank','>',0]]" target="_blank">🔗 Ouvrir dans Odoo</a></td></tr>
+                        <tr><td>Liste des produits</td><td><a href="https://ah-chou1.odoo.com/odoo/product-template" target="_blank">🔗 Ouvrir dans Odoo</a></td></tr>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        function showSection(id) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            // Show selected section
+            document.getElementById(id).classList.add('active');
+            // Update nav
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            event.target.classList.add('active');
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+    </script>
+</body>
+</html>

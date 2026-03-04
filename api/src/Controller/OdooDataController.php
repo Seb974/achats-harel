@@ -353,6 +353,203 @@ class OdooDataController extends AbstractController
         }
     }
 
+    // =========================================================================
+    // ENDPOINTS TRANSIT / STOCK
+    // =========================================================================
+
+    /**
+     * Récupère les emplacements de stock
+     */
+    #[Route('/stock-locations', name: 'get_stock_locations', methods: ['GET'])]
+    public function getStockLocations(): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $locations = $this->odooService->getStockLocations();
+
+            return $this->json([
+                'locations' => $locations,
+                'count' => count($locations),
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Failed to fetch stock locations', ['error' => $e->getMessage()]);
+            return $this->json([
+                'error' => 'Erreur lors de la récupération des emplacements',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Crée un transfert de stock interne
+     *
+     * Body JSON: { "location_src_id": 22, "location_dest_id": 23, "products": [...], "origin": "HAREL-42" }
+     */
+    #[Route('/stock-transfer', name: 'create_stock_transfer', methods: ['POST'])]
+    public function createStockTransfer(Request $request): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $data = json_decode($request->getContent(), true);
+
+            if (empty($data['location_src_id']) || empty($data['location_dest_id'])) {
+                return $this->json(['error' => 'location_src_id et location_dest_id sont requis'], 400);
+            }
+
+            if (empty($data['products']) || !is_array($data['products'])) {
+                return $this->json(['error' => 'products doit être un tableau non vide'], 400);
+            }
+
+            $result = $this->odooService->createStockTransfer(
+                (int) $data['location_src_id'],
+                (int) $data['location_dest_id'],
+                $data['products'],
+                $data['origin'] ?? ''
+            );
+
+            $this->logger->info('Stock transfer created', $result);
+
+            return $this->json($result, 201);
+        } catch (\Throwable $e) {
+            $this->logger->error('Failed to create stock transfer', ['error' => $e->getMessage()]);
+            return $this->json([
+                'error' => 'Erreur lors du transfert de stock',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Met à jour les prix des lignes d'un bon de commande Odoo
+     *
+     * Body JSON: { "lines": [{"product_id": 1, "price_unit": 2.50}, ...] }
+     */
+    #[Route('/purchase-order/{id}/lines', name: 'update_purchase_order_lines', methods: ['PUT'])]
+    public function updatePurchaseOrderLines(int $id, Request $request): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $data = json_decode($request->getContent(), true);
+
+            if (empty($data['lines']) || !is_array($data['lines'])) {
+                return $this->json(['error' => 'lines doit être un tableau non vide'], 400);
+            }
+
+            $this->odooService->updatePurchaseOrderLines($id, $data['lines']);
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Prix mis à jour',
+                'order_id' => $id,
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Failed to update PO lines', ['id' => $id, 'error' => $e->getMessage()]);
+            return $this->json([
+                'error' => 'Erreur lors de la mise à jour des prix',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Récupère les pickings liés à un PO
+     */
+    #[Route('/purchase-order/{id}/pickings', name: 'get_purchase_order_pickings', methods: ['GET'])]
+    public function getPurchaseOrderPickings(int $id): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $order = $this->odooService->read('purchase.order', [$id], ['name', 'origin']);
+            $origin = $order[0]['name'] ?? '';
+
+            $pickings = $this->odooService->getStockPickingsByOrigin($origin);
+
+            return $this->json([
+                'pickings' => $pickings,
+                'count' => count($pickings),
+                'purchase_order_name' => $origin,
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Failed to fetch PO pickings', ['id' => $id, 'error' => $e->getMessage()]);
+            return $this->json([
+                'error' => 'Erreur lors de la récupération des réceptions',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Récupère l'état d'un picking (pour vérification de réception)
+     */
+    #[Route('/picking/{id}/state', name: 'get_picking_state', methods: ['GET'])]
+    public function getPickingState(int $id): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $state = $this->odooService->getStockPickingState($id);
+
+            return $this->json($state);
+        } catch (\Throwable $e) {
+            $this->logger->error('Failed to fetch picking state', ['id' => $id, 'error' => $e->getMessage()]);
+            return $this->json([
+                'error' => 'Erreur lors de la vérification du picking',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Annule un bon de commande dans Odoo
+     */
+    #[Route('/purchase-order/{id}/cancel', name: 'cancel_purchase_order', methods: ['POST'])]
+    public function cancelPurchaseOrder(int $id): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $this->odooService->cancelPurchaseOrder($id);
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Commande annulée',
+                'order_id' => $id,
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Failed to cancel PO', ['id' => $id, 'error' => $e->getMessage()]);
+            return $this->json([
+                'error' => 'Erreur lors de l\'annulation',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // =========================================================================
+    // ENDPOINTS DONNÉES DE RÉFÉRENCE
+    // =========================================================================
+
     /**
      * Récupère les catégories de produits
      */

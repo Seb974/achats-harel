@@ -616,6 +616,185 @@ class OdooApiService
     }
 
     // =========================================================================
+    // MÉTHODES TRANSIT / STOCK
+    // =========================================================================
+
+    /**
+     * Récupère les emplacements de stock
+     */
+    public function getStockLocations(): array
+    {
+        return $this->searchRead(
+            'stock.location',
+            [['usage', 'in', ['internal', 'transit']]],
+            ['id', 'name', 'complete_name', 'usage', 'active']
+        );
+    }
+
+    /**
+     * Crée et valide un transfert de stock interne entre deux emplacements
+     *
+     * @param int $locationSrcId Emplacement source
+     * @param int $locationDestId Emplacement destination
+     * @param array $products Produits à transférer [['product_id' => int, 'qty' => float], ...]
+     * @param string $origin Référence d'origine (ex: "HAREL-42")
+     */
+    public function createStockTransfer(int $locationSrcId, int $locationDestId, array $products, string $origin = ''): array
+    {
+        $pickingTypeId = $this->getInternalPickingTypeId();
+
+        $picking = $this->create('stock.picking', [
+            'picking_type_id' => $pickingTypeId,
+            'location_id' => $locationSrcId,
+            'location_dest_id' => $locationDestId,
+            'origin' => $origin,
+            'scheduled_date' => date('Y-m-d H:i:s'),
+        ]);
+
+        foreach ($products as $p) {
+            $this->create('stock.move', [
+                'picking_id' => $picking,
+                'product_id' => $p['product_id'],
+                'product_uom_qty' => $p['qty'],
+                'location_id' => $locationSrcId,
+                'location_dest_id' => $locationDestId,
+                'name' => $origin,
+            ]);
+        }
+
+        // Confirmer et valider automatiquement
+        $this->execute('stock.picking', 'action_confirm', [[$picking]]);
+        $this->execute('stock.picking', 'button_validate', [[$picking]]);
+
+        $result = $this->read('stock.picking', [$picking], ['id', 'name', 'state', 'origin']);
+
+        return [
+            'success' => true,
+            'picking_id' => $picking,
+            'picking_name' => $result[0]['name'] ?? '',
+            'state' => $result[0]['state'] ?? '',
+        ];
+    }
+
+    /**
+     * Annule un bon de commande dans Odoo
+     */
+    public function cancelPurchaseOrder(int $orderId): bool
+    {
+        return $this->execute('purchase.order', 'button_cancel', [[$orderId]]);
+    }
+
+    /**
+     * Met à jour les prix des lignes d'un bon de commande existant
+     *
+     * @param int $orderId ID du PO
+     * @param array $lines [['line_id' => int, 'price_unit' => float], ...] ou [['product_id' => int, 'price_unit' => float], ...]
+     */
+    public function updatePurchaseOrderLines(int $orderId, array $lines): bool
+    {
+        $orderLines = $this->searchRead(
+            'purchase.order.line',
+            [['order_id', '=', $orderId]],
+            ['id', 'product_id', 'price_unit']
+        );
+
+        foreach ($lines as $update) {
+            $targetLine = null;
+
+            if (!empty($update['line_id'])) {
+                $targetLine = array_filter($orderLines, fn($l) => $l['id'] === $update['line_id']);
+                $targetLine = reset($targetLine) ?: null;
+            } elseif (!empty($update['product_id'])) {
+                $productId = $update['product_id'];
+                $targetLine = array_filter($orderLines, function ($l) use ($productId) {
+                    $lpId = is_array($l['product_id']) ? $l['product_id'][0] : $l['product_id'];
+                    return $lpId === $productId;
+                });
+                $targetLine = reset($targetLine) ?: null;
+            }
+
+            if ($targetLine) {
+                $this->write('purchase.order.line', [$targetLine['id']], [
+                    'price_unit' => $update['price_unit'],
+                ]);
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Récupère les stock.picking liés à un PO via son champ origin
+     */
+    public function getStockPickingsByOrigin(string $origin): array
+    {
+        return $this->searchRead(
+            'stock.picking',
+            [['origin', 'ilike', $origin]],
+            ['id', 'name', 'state', 'origin', 'scheduled_date', 'date_done', 'picking_type_id', 'location_id', 'location_dest_id']
+        );
+    }
+
+    /**
+     * Récupère l'état d'un picking et ses mouvements
+     */
+    public function getStockPickingState(int $pickingId): array
+    {
+        $picking = $this->read('stock.picking', [$pickingId], [
+            'id', 'name', 'state', 'origin', 'date_done',
+            'move_ids', 'backorder_id'
+        ]);
+
+        if (empty($picking)) {
+            return ['found' => false];
+        }
+
+        $p = $picking[0];
+        $moves = [];
+        if (!empty($p['move_ids'])) {
+            $moves = $this->read('stock.move', $p['move_ids'], [
+                'id', 'product_id', 'product_uom_qty', 'quantity', 'state'
+            ]);
+        }
+
+        return [
+            'found' => true,
+            'id' => $p['id'],
+            'name' => $p['name'],
+            'state' => $p['state'],
+            'date_done' => $p['date_done'] ?? null,
+            'has_backorder' => !empty($p['backorder_id']),
+            'backorder_id' => is_array($p['backorder_id']) ? $p['backorder_id'][0] : $p['backorder_id'],
+            'moves' => array_map(fn($m) => [
+                'product_id' => is_array($m['product_id']) ? $m['product_id'][0] : $m['product_id'],
+                'product_name' => is_array($m['product_id']) ? $m['product_id'][1] : '',
+                'qty_expected' => $m['product_uom_qty'] ?? 0,
+                'qty_done' => $m['quantity'] ?? 0,
+                'state' => $m['state'] ?? '',
+            ], $moves),
+        ];
+    }
+
+    /**
+     * Récupère l'ID du type de picking interne
+     */
+    private function getInternalPickingTypeId(): int
+    {
+        $types = $this->searchRead(
+            'stock.picking.type',
+            [['code', '=', 'internal']],
+            ['id'],
+            1
+        );
+
+        if (empty($types)) {
+            throw new \RuntimeException('Aucun type de picking interne trouvé dans Odoo');
+        }
+
+        return $types[0]['id'];
+    }
+
+    // =========================================================================
     // MÉTHODES UTILITAIRES PRIVÉES
     // =========================================================================
 

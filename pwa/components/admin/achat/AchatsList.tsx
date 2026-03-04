@@ -2,12 +2,15 @@ import { Datagrid, List, TextField, CreateButton, ExportButton, TopToolbar, Edit
 import { formatNumber, getShipStyle, isDefined, toLocalDateString } from "../../../app/lib/utils";
 import { type PagedCollection } from "../../../types/collection";
 import { useSessionContext } from "../SessionContextProvider";
-import { useMediaQuery, Theme, Chip, Button, Box } from '@mui/material';
+import { useMediaQuery, Theme, Chip, Button, Box, ToggleButtonGroup, ToggleButton } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import ViewListIcon from '@mui/icons-material/ViewList';
+import ViewKanbanIcon from '@mui/icons-material/ViewKanban';
 import { type Contact } from "../../../types/Contact";
 import { colors } from "../../../app/lib/colors";
 import { type NextPage } from "next";
 import { useEffect, useState } from "react";
+import { AchatsKanban } from "./AchatsKanban";
 
 export interface Props {
   data: PagedCollection<Contact> | null;
@@ -15,11 +18,21 @@ export interface Props {
   page: number;
 }
 
-const ListActions = ({ showMore, setShowMore, isSmall }) => {
+const ListActions = ({ showMore, setShowMore, isSmall, viewMode, setViewMode }) => {
   const { session } = useSessionContext();
   const user = session?.user;
   return (
     <TopToolbar>
+        <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={(_, v) => v && setViewMode(v)}
+            size="small"
+            sx={{ mr: 1 }}
+        >
+            <ToggleButton value="list"><ViewListIcon fontSize="small" /></ToggleButton>
+            <ToggleButton value="kanban"><ViewKanbanIcon fontSize="small" /></ToggleButton>
+        </ToggleButtonGroup>
         <CustomFilterButton showMore={showMore} setShowMore={setShowMore} isSmall={isSmall}/>
         { user?.roles?.find(r => r === "admin") && <CreateButton/> } 
         <ExportButton/>
@@ -132,6 +145,7 @@ export const AchatsList: NextPage<Props> = ({ data, hubURL, page }) => {
   
   const [showMore, setShowMore] = useState(false);
   const [filters, setFilters] = useState(defaultFilters);
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
 
   const getChipMode = status => {
     const selectedColor = colors.find(c => c.id === (status?.color ?? '#9ca3af'));
@@ -142,21 +156,24 @@ export const AchatsList: NextPage<Props> = ({ data, hubURL, page }) => {
   return (
     <List 
       resource="achats" 
-      actions={<ListActions isSmall={isSmall} showMore={showMore} setShowMore={setShowMore}/>}
+      actions={<ListActions isSmall={isSmall} showMore={showMore} setShowMore={setShowMore} viewMode={viewMode} setViewMode={setViewMode}/>}
       filters={<CustomFilterBar showMore={showMore} isSmall={isSmall}/>}
       // @ts-ignore
       filterValues={filters}
       filterDefaultValues={defaultFilters}
       disableSyncWithLocation
+      perPage={viewMode === 'kanban' ? 100 : 25}
     >
-        { isSmall ? 
+        { viewMode === 'kanban' ? (
+            <AchatsKanban />
+        ) : isSmall ? (
             <SimpleList
               primaryText={ record => record.supplier  }
               secondaryText={ record => <><span className="text-xs text-gray-500">{ `Le ${(new Date(record.date)).toLocaleDateString()} - ` }</span>{ `${ (record.totalHT ?? 0).toFixed(2) + (record.targetCurrency ?? '') }`}</>}  
               tertiaryText={ record => <><span className="ml-1">{ getChipMode(record.status) }</span></>}
               linkType="show"
             /> 
-            :
+        ) : (
             <Datagrid expand={<ItemsExpansion/>} sx={{ '& .RaDatagrid-headerCell': {backgroundColor: '#ededed', fontWeight: "lighter"}}}>
                 <DateField source="date" label="Date d'achat" sortable={false} />
                 <TextField source="supplier" label="Fournisseur" sortable={ false }/>
@@ -176,7 +193,7 @@ export const AchatsList: NextPage<Props> = ({ data, hubURL, page }) => {
                     <EditButton />
                 </p>
             </Datagrid>
-        }
+        )}
     </List>
   );
 }

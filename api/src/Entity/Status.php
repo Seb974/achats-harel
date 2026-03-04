@@ -17,6 +17,7 @@ use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
 
 #[ORM\Entity(repositoryClass: StatusRepository::class)]
+#[ORM\UniqueConstraint(name: 'UNIQ_STATUS_CODE', columns: ['code'])]
 #[ApiResource(
     operations: [
         new GetCollection(
@@ -61,6 +62,10 @@ class Status
     #[ORM\Column(length: 50, nullable: true)]
     #[Groups(groups: ['Status:write', 'Status:read', 'Achat:read', 'Item:read'])]
     private ?string $color = null;
+
+    #[ORM\Column(nullable: true)]
+    #[Groups(groups: ['Status:write', 'Status:read', 'Achat:read'])]
+    private ?int $odooLocationId = null;
 
     public function getId(): ?int
     {
@@ -111,6 +116,18 @@ class Status
     public function setColor(?string $color): static
     {
         $this->color = $color;
+
+        return $this;
+    }
+
+    public function getOdooLocationId(): ?int
+    {
+        return $this->odooLocationId;
+    }
+
+    public function setOdooLocationId(?int $odooLocationId): static
+    {
+        $this->odooLocationId = $odooLocationId;
 
         return $this;
     }

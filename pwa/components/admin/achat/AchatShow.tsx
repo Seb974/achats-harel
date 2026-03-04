@@ -1,17 +1,108 @@
-import { Show, TextField, NumberField, TopToolbar, ListButton, DateField, ArrayField, Datagrid, EditButton, FunctionField, FileField, ReferenceArrayField, TabbedShowLayout } from 'react-admin';
+import { Show, TextField, NumberField, TopToolbar, ListButton, DateField, ArrayField, Datagrid, EditButton, FunctionField, FileField, ReferenceArrayField, TabbedShowLayout, useRecordContext, useNotify, useRefresh, useUpdate } from 'react-admin';
 import { formatNumber, getShipStyle, isDefined } from '../../../app/lib/utils';
 import { clientWithCoeffCalculation, clientWithTaxes } from '../../../app/lib/client';
 import { ItemsAnalytics } from "./ItemsAnalytics";
 import { SendToOdooButton } from "./SendToOdooButton";
 import { colors } from '../../../app/lib/colors';
 import { useClient } from '../ClientProvider';
-import { Chip, Theme, Typography, useMediaQuery } from '@mui/material';
+import { Box, Button, Chip, Theme, Tooltip, Typography, useMediaQuery } from '@mui/material';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { useState } from 'react';
+import { useOdoo } from '../../../hooks/useOdoo';
+
+const OdooLinkButton = () => {
+    const record = useRecordContext();
+    if (!record?.odooPurchaseOrderId) return null;
+
+    const odooUrl = `https://ah-chou1.odoo.com/odoo/purchase/${record.odooPurchaseOrderId}`;
+
+    return (
+        <Tooltip title={`Ouvrir ${record.odooPurchaseOrderName || 'PO'} dans Odoo`}>
+            <Button
+                size="small"
+                startIcon={<OpenInNewIcon />}
+                onClick={() => window.open(odooUrl, '_blank')}
+                color="info"
+            >
+                {record.odooPurchaseOrderName || 'Odoo'}
+            </Button>
+        </Tooltip>
+    );
+};
+
+const CheckReceptionButton = () => {
+    const record = useRecordContext();
+    const notify = useNotify();
+    const refresh = useRefresh();
+    const [update] = useUpdate();
+    const { getPurchaseOrderPickings } = useOdoo();
+    const [checking, setChecking] = useState(false);
+
+    if (!record?.odooPurchaseOrderId || record?.status?.code !== 'A_RECEPTIONNER') return null;
+
+    const handleCheck = async () => {
+        setChecking(true);
+        try {
+            const pickings = await getPurchaseOrderPickings(record.odooPurchaseOrderId);
+            const receptions = pickings.filter(
+                (p: any) => p.picking_type_id?.[1]?.includes('Réception') || p.picking_type_id?.[1]?.includes('Receipt')
+            );
+
+            if (receptions.length === 0) {
+                notify('Aucune réception trouvée dans Odoo', { type: 'warning' });
+                return;
+            }
+
+            const allDone = receptions.every((p: any) => p.state === 'done');
+
+            if (allDone) {
+                // @ts-ignore
+                const statusesResp = await fetch('/statuses?code=RECU');
+                const statusesData = await statusesResp.json();
+                const recuStatus = statusesData?.['hydra:member']?.[0];
+
+                if (recuStatus) {
+                    await update('achats', {
+                        id: record.id,
+                        data: { status: recuStatus['@id'] },
+                        previousData: record,
+                    });
+                    notify('Réception complète — statut passé à REÇU', { type: 'success' });
+                    refresh();
+                }
+            } else {
+                const doneCount = receptions.filter((p: any) => p.state === 'done').length;
+                notify(`Réception en cours (${doneCount}/${receptions.length}). Finalisez dans Odoo.`, { type: 'info' });
+            }
+        } catch (e: any) {
+            notify(e.message || 'Erreur vérification', { type: 'error' });
+        } finally {
+            setChecking(false);
+        }
+    };
+
+    return (
+        <Button
+            size="small"
+            variant="outlined"
+            color="success"
+            startIcon={<CheckCircleIcon />}
+            onClick={handleCheck}
+            disabled={checking}
+        >
+            {checking ? 'Vérification...' : 'Vérifier réception'}
+        </Button>
+    );
+};
 
 const HarelShowActions = () => (
     <TopToolbar>
         <ListButton />
         <EditButton />
         <SendToOdooButton />
+        <OdooLinkButton />
+        <CheckReceptionButton />
     </TopToolbar>
 );
 
@@ -79,6 +170,21 @@ export const AchatShow = () => {
                     { (!clientWithTaxes(client) && (client?.hasCoeffApp ?? true) && !(client?.hasCoeffCalculation ?? true)) && <NumberField source="coeffApp" label="Coefficient d'approche" options={{ style: 'decimal' }}/> }
                     <FileField source="documents" src="contentUrl" title="description" target="_blank" label="Documents associés"/>
                     <TextField source="comment" label="Commentaire(s)"/>
+                    <FunctionField
+                        label="Commande Odoo"
+                        render={(record: any) => record?.odooPurchaseOrderName ? (
+                            <Box display="flex" alignItems="center" gap={1}>
+                                <Chip
+                                    label={record.odooPurchaseOrderName}
+                                    color="primary"
+                                    size="small"
+                                    onClick={() => window.open(`https://ah-chou1.odoo.com/odoo/purchase/${record.odooPurchaseOrderId}`, '_blank')}
+                                    icon={<OpenInNewIcon />}
+                                    clickable
+                                />
+                            </Box>
+                        ) : <Typography variant="caption" color="text.secondary">Non liée</Typography>}
+                    />
                 </TabbedShowLayout.Tab>
                 { clientWithCoeffCalculation(client) && 
                     <TabbedShowLayout.Tab label={ client?.coeffCalculationPartName ?? "Coûts d'approche" }>
