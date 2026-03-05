@@ -140,21 +140,39 @@ interface UseOdooReturn {
     checkPickingState: (pickingId: number) => Promise<PickingState>;
     syncTransitStatus: (achat: any, fromStatus: any, toStatus: any) => Promise<StockTransferResult | null>;
     getStockAtLocation: (locationId: number) => Promise<StockAtLocationResult>;
+    getMovementHistory: (locationId: number) => Promise<MovementHistoryItem[]>;
+    postPOMessage: (orderId: number, body: string) => Promise<void>;
+}
+
+interface StockAtLocationProduct {
+    product_id: number;
+    product_name: string;
+    quantity: number;
+    entered: number;
+    exited: number;
+    since: string | null;
 }
 
 interface StockAtLocationResult {
     location_id: number;
     location_name: string;
-    products: {
-        quant_id: number;
-        product_id: number;
-        product_name: string;
-        quantity: number;
-        reserved: number;
-    }[];
+    location_usage?: string;
+    products: StockAtLocationProduct[];
     total_products: number;
     total_quantity: number;
     error?: string;
+}
+
+interface MovementHistoryItem {
+    product_id: number;
+    product_name: string;
+    quantity: number;
+    date: string | null;
+    origin: string;
+    picking: string;
+    direction: 'in' | 'out';
+    from: string;
+    to: string;
 }
 
 /**
@@ -815,6 +833,31 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         }
     }, [session]);
 
+    const getMovementHistory = useCallback(async (locationId: number): Promise<MovementHistoryItem[]> => {
+        try {
+            const response = await fetch(`${ENTRYPOINT}/odoo/movement-history/${locationId}`, {
+                headers: authHeaders(),
+            });
+            const result = await response.json();
+            if (!response.ok) return [];
+            return result.movements ?? [];
+        } catch {
+            return [];
+        }
+    }, [session]);
+
+    const postPOMessage = useCallback(async (orderId: number, body: string): Promise<void> => {
+        try {
+            await fetch(`${ENTRYPOINT}/odoo/purchase-order/${orderId}/message`, {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({ body }),
+            });
+        } catch {
+            // Non-blocking
+        }
+    }, [session]);
+
     return {
         loading,
         error,
@@ -836,6 +879,8 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         checkPickingState,
         syncTransitStatus,
         getStockAtLocation,
+        getMovementHistory,
+        postPOMessage,
     };
 };
 

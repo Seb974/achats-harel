@@ -574,10 +574,10 @@ class OdooDataController extends AbstractController
     }
 
     /**
-     * Récupère les pickings liés à un emplacement
+     * Historique des mouvements pour un emplacement
      */
-    #[Route('/pickings-by-location/{locationId}', name: 'pickings_by_location', methods: ['GET'])]
-    public function getPickingsByLocation(int $locationId): JsonResponse
+    #[Route('/movement-history/{locationId}', name: 'movement_history', methods: ['GET'])]
+    public function getMovementHistory(int $locationId): JsonResponse
     {
         try {
             $config = $this->configureOdoo();
@@ -585,20 +585,54 @@ class OdooDataController extends AbstractController
                 return $config;
             }
 
-            $pickings = $this->odooService->getPickingsByLocation($locationId);
+            $history = $this->odooService->getMovementHistory($locationId);
 
             return $this->json([
-                'pickings' => $pickings,
-                'count' => count($pickings),
+                'movements' => $history,
+                'count' => count($history),
                 'location_id' => $locationId,
             ]);
         } catch (\Throwable $e) {
-            $this->logger->error('Failed to fetch pickings by location', [
+            $this->logger->error('Failed to fetch movement history', [
                 'locationId' => $locationId,
                 'error' => $e->getMessage(),
             ]);
             return $this->json([
-                'error' => 'Erreur lors de la récupération des transferts',
+                'error' => 'Erreur lors de la récupération de l\'historique',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Poste un message sur le chatter d'un PO
+     */
+    #[Route('/purchase-order/{id}/message', name: 'post_purchase_order_message', methods: ['POST'])]
+    public function postPurchaseOrderMessage(int $id, Request $request): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $data = json_decode($request->getContent(), true);
+            $body = $data['body'] ?? '';
+
+            if (empty($body)) {
+                return $this->json(['error' => 'body est requis'], 400);
+            }
+
+            $this->odooService->postPurchaseOrderMessage($id, $body);
+
+            return $this->json(['success' => true]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Failed to post PO message', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+            return $this->json([
+                'error' => 'Erreur lors de l\'envoi du message',
                 'message' => $e->getMessage(),
             ], 500);
         }

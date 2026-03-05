@@ -799,30 +799,70 @@ class OdooApiService
     }
 
     /**
-     * Récupère le stock présent dans un emplacement Odoo via stock.quant
+     * Calcule le stock logique dans un emplacement transit via stock.move
+     *
+     * Les locations de type `transit` n'ont pas de stock.quant.
+     * On calcule : moves entrants (dest=loc, done) - moves sortants (src=loc, done)
      */
     public function getStockAtLocation(int $locationId): array
     {
-        $quants = $this->searchRead(
-            'stock.quant',
-            [['location_id', '=', $locationId], ['quantity', '>', 0]],
-            ['id', 'product_id', 'quantity', 'reserved_quantity', 'location_id']
+        $location = $this->read('stock.location', [$locationId], ['id', 'name', 'complete_name', 'usage']);
+        $locationName = $location[0]['complete_name'] ?? $location[0]['name'] ?? "Location #$locationId";
+        $usage = $location[0]['usage'] ?? 'unknown';
+
+        $inMoves = $this->searchRead(
+            'stock.move',
+            [['location_dest_id', '=', $locationId], ['state', '=', 'done']],
+            ['product_id', 'quantity', 'date']
         );
 
-        $location = $this->read('stock.location', [$locationId], ['id', 'name', 'complete_name']);
-        $locationName = $location[0]['complete_name'] ?? $location[0]['name'] ?? "Location #$locationId";
+        $outMoves = $this->searchRead(
+            'stock.move',
+            [['location_id', '=', $locationId], ['state', '=', 'done']],
+            ['product_id', 'quantity']
+        );
 
-        $products = array_map(fn($q) => [
-            'quant_id' => $q['id'],
-            'product_id' => is_array($q['product_id']) ? $q['product_id'][0] : $q['product_id'],
-            'product_name' => is_array($q['product_id']) ? $q['product_id'][1] : '',
-            'quantity' => $q['quantity'] ?? 0,
-            'reserved' => $q['reserved_quantity'] ?? 0,
-        ], $quants);
+        $stock = [];
+        foreach ($inMoves as $m) {
+            $pid = is_array($m['product_id']) ? $m['product_id'][0] : $m['product_id'];
+            $pname = is_array($m['product_id']) ? $m['product_id'][1] : '';
+            if (!isset($stock[$pid])) {
+                $stock[$pid] = ['product_id' => $pid, 'product_name' => $pname, 'in' => 0, 'out' => 0, 'last_in' => null];
+            }
+            $stock[$pid]['in'] += $m['quantity'] ?? 0;
+            $date = $m['date'] ?? null;
+            if ($date && (!$stock[$pid]['last_in'] || $date > $stock[$pid]['last_in'])) {
+                $stock[$pid]['last_in'] = $date;
+            }
+        }
+        foreach ($outMoves as $m) {
+            $pid = is_array($m['product_id']) ? $m['product_id'][0] : $m['product_id'];
+            $pname = is_array($m['product_id']) ? $m['product_id'][1] : '';
+            if (!isset($stock[$pid])) {
+                $stock[$pid] = ['product_id' => $pid, 'product_name' => $pname, 'in' => 0, 'out' => 0, 'last_in' => null];
+            }
+            $stock[$pid]['out'] += $m['quantity'] ?? 0;
+        }
+
+        $products = [];
+        foreach ($stock as $s) {
+            $balance = $s['in'] - $s['out'];
+            if ($balance > 0) {
+                $products[] = [
+                    'product_id' => $s['product_id'],
+                    'product_name' => $s['product_name'],
+                    'quantity' => $balance,
+                    'entered' => $s['in'],
+                    'exited' => $s['out'],
+                    'since' => $s['last_in'],
+                ];
+            }
+        }
 
         return [
             'location_id' => $locationId,
             'location_name' => $locationName,
+            'location_usage' => $usage,
             'products' => $products,
             'total_products' => count($products),
             'total_quantity' => array_sum(array_column($products, 'quantity')),
@@ -830,17 +870,50 @@ class OdooApiService
     }
 
     /**
-     * Récupère les stock.picking liés à un emplacement (source ou destination)
+     * Récupère l'historique des mouvements pour un emplacement
      */
-    public function getPickingsByLocation(int $locationId, int $limit = 20): array
+    public function getMovementHistory(int $locationId, int $limit = 50): array
     {
-        return $this->searchRead(
-            'stock.picking',
-            [['|', ['location_id', '=', $locationId], ['location_dest_id', '=', $locationId]]],
-            ['id', 'name', 'state', 'origin', 'scheduled_date', 'date_done',
-             'picking_type_id', 'location_id', 'location_dest_id'],
+        $moves = $this->searchRead(
+            'stock.move',
+            [['|', ['location_id', '=', $locationId], ['location_dest_id', '=', $locationId]], ['state', '=', 'done']],
+            ['product_id', 'quantity', 'date', 'origin', 'location_id', 'location_dest_id', 'picking_id'],
             $limit
         );
+
+        return array_map(function ($m) use ($locationId) {
+            $isIncoming = (is_array($m['location_dest_id']) ? $m['location_dest_id'][0] : $m['location_dest_id']) === $locationId;
+            return [
+                'product_id' => is_array($m['product_id']) ? $m['product_id'][0] : $m['product_id'],
+                'product_name' => is_array($m['product_id']) ? $m['product_id'][1] : '',
+                'quantity' => $m['quantity'] ?? 0,
+                'date' => $m['date'] ?? null,
+                'origin' => $m['origin'] ?? '',
+                'picking' => is_array($m['picking_id']) ? $m['picking_id'][1] : '',
+                'direction' => $isIncoming ? 'in' : 'out',
+                'from' => is_array($m['location_id']) ? $m['location_id'][1] : '',
+                'to' => is_array($m['location_dest_id']) ? $m['location_dest_id'][1] : '',
+            ];
+        }, $moves);
+    }
+
+    /**
+     * Poste un message dans le chatter d'un bon de commande Odoo
+     */
+    public function postPurchaseOrderMessage(int $orderId, string $body): void
+    {
+        try {
+            $this->execute('purchase.order', 'message_post', [[$orderId]], [
+                'body' => $body,
+                'message_type' => 'comment',
+                'subtype_xmlid' => 'mail.mt_note',
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->warning('Failed to post message on PO', [
+                'order_id' => $orderId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
