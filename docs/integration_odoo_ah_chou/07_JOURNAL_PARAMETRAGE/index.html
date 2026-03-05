@@ -658,6 +658,33 @@ Snacking Friture
                     </div>
                 </div>
                 
+                <div class="action expanded" id="action-5-1b">
+                    <div class="action-header" onclick="toggleAction('action-5-1b')">
+                        <div class="action-title">
+                            <span class="badge badge-done">✅</span>
+                            <strong>5.1b - Migration emplacements transit → internal (05/03/2026)</strong>
+                        </div>
+                        <span>Odoo XML-RPC + App DB</span>
+                    </div>
+                    <div class="action-content">
+                        <p><strong>Raison :</strong> Les emplacements de type <code>transit</code> ne maintiennent pas de <code>stock.quant</code> dans Odoo, rendant le stock invisible dans les rapports natifs (Inventaire → État des stocks). Changement nécessaire pour la visibilité du transit.</p>
+                        <table>
+                            <tr><th>Emplacement</th><th>ID</th><th>Ancien type</th><th>Nouveau type</th></tr>
+                            <tr><td>WH/TRANSIT MARITIME/DEPART</td><td>28</td><td>transit</td><td><strong>internal</strong></td></tr>
+                            <tr><td>WH/TRANSIT MARITIME/EN MER</td><td>22</td><td>transit</td><td><strong>internal</strong></td></tr>
+                            <tr><td>WH/TRANSIT MARITIME/PORT ARRIVEE</td><td>23</td><td>transit</td><td><strong>internal</strong></td></tr>
+                            <tr><td>WH/TRANSIT MARITIME/DEDOUANEMENT</td><td>24</td><td>transit</td><td><strong>internal</strong></td></tr>
+                        </table>
+                        <p style="margin-top:10px;"><strong>Impact code :</strong></p>
+                        <ul>
+                            <li><code>getStockAtLocation()</code> → utilise <code>stock.quant</code> au lieu de <code>stock.move</code></li>
+                            <li><code>getStockCountsBatch()</code> → utilise <code>stock.quant</code> au lieu de <code>stock.move</code></li>
+                            <li>Rapports stock Kanban : colonnes Quantité/Réservé/Disponible</li>
+                            <li>Nouvel endpoint <code>POST /odoo/purchase-order/{id}/validate-receipt</code></li>
+                        </ul>
+                    </div>
+                </div>
+                
                 <div class="action" id="action-5-2">
                     <div class="action-header" onclick="toggleAction('action-5-2')">
                         <div class="action-title">

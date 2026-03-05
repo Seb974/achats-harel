@@ -509,7 +509,10 @@
                 <div class="nav-section">
                 <div class="nav-section-title">Guides Utilisateur</div>
                 <a class="nav-item" onclick="showSection('guide-flux-achat')">📖 Flux Achat → Stock</a>
+                <a class="nav-item" onclick="showSection('guide-flux-vente')">📖 Flux Vente → Produits &amp; Fournisseurs</a>
+                <a class="nav-item" onclick="showSection('guide-flux-stock-tracabilite')">📖 Stock → Traçabilité</a>
                 <a class="nav-item" onclick="showSection('guide-config-transit')">⚙️ Config. Transit Maritime</a>
+                <a class="nav-item" onclick="showSection('guide-api-sync')">🔄 API Synchronisation Odoo</a>
                 <a class="nav-item" onclick="showSection('plan-implementation')">🚀 Plan Implémentation Kanban</a>
             </div>
             
@@ -3376,12 +3379,13 @@ python3 import_odoo.py --type produits --dry-run</pre>
                     </div>
 
                     <div style="background:#f8f9fa; padding:15px; border-radius:8px; margin-top:15px;">
-                        <strong>📍 Emplacements Odoo réels (ah-chou1.odoo.com) :</strong>
+                        <strong>📍 Emplacements Odoo réels (ah-chou1.odoo.com) — tous de type <code>internal</code> :</strong>
                         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:10px; margin-top:10px;">
-                            <div style="padding:8px; background:#e3f2fd; border-radius:5px; font-size:0.85rem;"><code>WH/TRANSIT MARITIME/EN MER</code> (id=22)</div>
-                            <div style="padding:8px; background:#e3f2fd; border-radius:5px; font-size:0.85rem;"><code>WH/TRANSIT MARITIME/PORT ARRIVEE</code> (id=23)</div>
-                            <div style="padding:8px; background:#e3f2fd; border-radius:5px; font-size:0.85rem;"><code>WH/TRANSIT MARITIME/DEDOUANEMENT</code> (id=24)</div>
-                            <div style="padding:8px; background:#fff3cd; border-radius:5px; font-size:0.85rem;"><code>WH/RECEPTION</code> (id=19)</div>
+                            <div style="padding:8px; background:#e7f1ff; border-radius:5px; font-size:0.85rem;"><code>WH/TRANSIT MARITIME/DEPART</code> (id=28, type=internal)</div>
+                            <div style="padding:8px; background:#e3f2fd; border-radius:5px; font-size:0.85rem;"><code>WH/TRANSIT MARITIME/EN MER</code> (id=22, type=internal)</div>
+                            <div style="padding:8px; background:#e3f2fd; border-radius:5px; font-size:0.85rem;"><code>WH/TRANSIT MARITIME/PORT ARRIVEE</code> (id=23, type=internal)</div>
+                            <div style="padding:8px; background:#e3f2fd; border-radius:5px; font-size:0.85rem;"><code>WH/TRANSIT MARITIME/DEDOUANEMENT</code> (id=24, type=internal)</div>
+                            <div style="padding:8px; background:#fff3cd; border-radius:5px; font-size:0.85rem;"><code>WH/RECEPTION</code> (id=19, type=internal)</div>
                             <div style="padding:8px; background:#d4edda; border-radius:5px; font-size:0.85rem;"><code>WH/Stock</code> (id=5) ou <code>WH/LOGISTISUD</code> (id=25)</div>
                         </div>
                     </div>
@@ -3442,7 +3446,7 @@ python3 import_odoo.py --type produits --dry-run</pre>
                         <tr>
                             <td><span class="badge" style="background:#0d6efd; color:white;">ENVOYÉ</span> → <span class="badge" style="background:#0077b6; color:white;">EN MER</span></td>
                             <td>Drag vers En mer</td>
-                            <td>Transfert interne <code>Vendors(1) → EN MER(22)</code>, auto-validé</td>
+                            <td>Transfert interne <code>DEPART(28) → EN MER(22)</code>, auto-validé</td>
                         </tr>
                         <tr>
                             <td><span class="badge" style="background:#0077b6; color:white;">EN MER</span> → <span class="badge" style="background:#ffc107; color:#212529;">AU PORT</span></td>
@@ -3461,12 +3465,12 @@ python3 import_odoo.py --type produits --dry-run</pre>
                         </tr>
                         <tr style="background:#fff3cd;">
                             <td><span class="badge" style="background:#6f42c1; color:white;">A RÉCEPTIONNER</span> → <span class="badge" style="background:#28a745; color:white;">REÇU</span></td>
-                            <td><strong>Pas de drag.</strong> Bouton «&nbsp;Vérifier réception Odoo&nbsp;»</td>
-                            <td>L'utilisateur valide dans Odoo (lots, DLUO, emplacement). L'app vérifie que tous les pickings sont <code>done</code>.</td>
+                            <td><strong>Pas de drag.</strong> Bouton «&nbsp;Valider réception&nbsp;»</td>
+                            <td>Appelle <code>POST /odoo/purchase-order/{id}/validate-receipt</code> : positionne les quantités sur le picking de réception, confirme et valide automatiquement. Le <code>receipt_status</code> du PO passe à <code>full</code>. Message posté dans le chatter Odoo.</td>
                         </tr>
                     </table>
-                    <div style="background:#fff3cd; border:1px solid #ffc107; padding:15px; border-radius:8px; margin-top:15px;">
-                        <strong>⚠️ Important :</strong> La dernière transition (A RÉCEPTIONNER → REÇU) n'utilise <strong>pas le drag &amp; drop</strong>. L'utilisateur doit d'abord valider la réception dans Odoo (lots, DLUO, emplacement de stockage), puis cliquer sur le bouton de vérification dans l'app.
+                    <div style="background:#d4edda; border:1px solid #28a745; padding:15px; border-radius:8px; margin-top:15px;">
+                        <strong>✅ Validation de réception :</strong> La dernière transition (A RÉCEPTIONNER → REÇU) n'utilise <strong>pas le drag &amp; drop</strong>. L'utilisateur clique sur le bouton «&nbsp;Valider réception&nbsp;» qui appelle l'API <code>POST /odoo/purchase-order/{id}/validate-receipt</code>. L'API positionne automatiquement les quantités attendues sur le picking de réception, confirme et valide le picking. Le <code>receipt_status</code> du PO passe à <code>full</code> (Entièrement reçu).
                     </div>
                 </div>
 
@@ -3527,7 +3531,7 @@ python3 import_odoo.py --type produits --dry-run</pre>
                         </tr>
                         <tr>
                             <td><span class="badge" style="background:#0077b6; color:white;">EN MER</span> → <span class="badge" style="background:#0d6efd; color:white;">ENVOYÉ</span></td>
-                            <td>Transfert inverse <code>EN MER(22) → Vendors(1)</code></td>
+                            <td>Transfert inverse <code>EN MER(22) → DEPART(28)</code></td>
                         </tr>
                         <tr>
                             <td><span class="badge" style="background:#ffc107; color:#212529;">AU PORT</span> → <span class="badge" style="background:#0077b6; color:white;">EN MER</span></td>
@@ -3680,6 +3684,813 @@ python3 import_odoo.py --type produits --dry-run</pre>
             </div>
             
             <!-- ================================================================== -->
+            <!-- GUIDE FONCTIONNEL : FLUX STOCK → TRAÇABILITÉ                      -->
+            <!-- ================================================================== -->
+            <div id="guide-flux-stock-tracabilite" class="section">
+                <h1>📖 Guide Fonctionnel : Stock → Traçabilité</h1>
+                
+                <div class="card">
+                    <div class="card-header">🎯 Objectif de ce guide</div>
+                    <p>Ce guide décrit le <strong>flux de traçabilité</strong> depuis la réception des marchandises (statut REÇU) jusqu'au suivi complet des lots, dates d'expiration et conformité réglementaire. Il prend le relais du flux <strong>Achat → Stock</strong> et couvre la gestion post-réception.</p>
+                    <div style="background:#e8f5e9; border:1px solid #28a745; padding:15px; border-radius:8px; margin-top:15px;">
+                        <strong>Prérequis :</strong> Le flux <strong>Achat → Stock</strong> doit être opérationnel. La réception Odoo (picking) doit être validée avec saisie des lots et DLC.
+                    </div>
+                </div>
+
+                <!-- VUE D'ENSEMBLE DU FLUX -->
+                <h2>1. Vue d'ensemble — Pipeline Traçabilité</h2>
+                <div class="card">
+                    <div class="card-header">🔄 Le flux post-réception (Traçabilité &amp; Lots)</div>
+                    
+                    <div style="overflow-x:auto; padding:20px 0;">
+                        <div style="display:flex; gap:8px; min-width:800px;">
+                            <div style="flex:1; background:#28a745; color:white; padding:12px; border-radius:8px; text-align:center;">
+                                <div style="font-size:1.3rem;">✅</div>
+                                <div style="font-weight:bold; font-size:0.85rem;">RÉCEPTION</div>
+                                <div style="font-size:0.7rem; opacity:0.8; margin-top:4px;">Picking Odoo validé</div>
+                            </div>
+                            <div style="display:flex; align-items:center; color:#ccc;">→</div>
+                            <div style="flex:1; background:#6f42c1; color:white; padding:12px; border-radius:8px; text-align:center;">
+                                <div style="font-size:1.3rem;">🏷️</div>
+                                <div style="font-weight:bold; font-size:0.85rem;">LOTS / DLC</div>
+                                <div style="font-size:0.7rem; opacity:0.8; margin-top:4px;">Attribution lot + dates</div>
+                            </div>
+                            <div style="display:flex; align-items:center; color:#ccc;">→</div>
+                            <div style="flex:1; background:#0077b6; color:white; padding:12px; border-radius:8px; text-align:center;">
+                                <div style="font-size:1.3rem;">📊</div>
+                                <div style="font-weight:bold; font-size:0.85rem;">STOCK PAR LOT</div>
+                                <div style="font-size:0.7rem; opacity:0.8; margin-top:4px;">Consultation / Recherche</div>
+                            </div>
+                            <div style="display:flex; align-items:center; color:#ccc;">→</div>
+                            <div style="flex:1; background:#fd7e14; color:white; padding:12px; border-radius:8px; text-align:center;">
+                                <div style="font-size:1.3rem;">⏰</div>
+                                <div style="font-weight:bold; font-size:0.85rem;">ALERTES DLC</div>
+                                <div style="font-size:0.7rem; opacity:0.8; margin-top:4px;">Produits proches expiration</div>
+                            </div>
+                            <div style="display:flex; align-items:center; color:#ccc;">→</div>
+                            <div style="flex:1; background:#dc3545; color:white; padding:12px; border-radius:8px; text-align:center;">
+                                <div style="font-size:1.3rem;">📋</div>
+                                <div style="font-weight:bold; font-size:0.85rem;">DASHBOARD</div>
+                                <div style="font-size:0.7rem; opacity:0.8; margin-top:4px;">Tranches de péremption</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background:#f8f9fa; padding:15px; border-radius:8px; margin-top:15px;">
+                        <strong>📍 Modèles Odoo concernés :</strong>
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:10px; margin-top:10px;">
+                            <div style="padding:8px; background:#f3e5f5; border-radius:5px; font-size:0.85rem;"><code>stock.lot</code> — Numéros de lot</div>
+                            <div style="padding:8px; background:#e3f2fd; border-radius:5px; font-size:0.85rem;"><code>stock.quant</code> — Quantités par lot/emplacement</div>
+                            <div style="padding:8px; background:#fff3cd; border-radius:5px; font-size:0.85rem;"><code>product.product</code> — Produits (tracking=lot)</div>
+                            <div style="padding:8px; background:#d4edda; border-radius:5px; font-size:0.85rem;"><code>stock.move.line</code> — Lignes de mouvement détaillées</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ÉTAT ACTUEL & DIAGNOSTIC -->
+                <h2>2. Diagnostic — État actuel</h2>
+                <div class="card">
+                    <div class="card-header">📋 Ce qui est en place vs ce qui reste à faire</div>
+                    
+                    <h4 style="margin-top:15px; color:var(--success);">Implémenté (Flux Achat → Stock)</h4>
+                    <table>
+                        <tr><th style="width:40%;">Fonctionnalité</th><th>Couche</th><th>Statut</th></tr>
+                        <tr><td>Kanban 7 colonnes + transit Odoo</td><td>PWA + API</td><td><span class="badge badge-success">✅ OK</span></td></tr>
+                        <tr><td>Transferts internes entre emplacements</td><td>API (OdooApiService)</td><td><span class="badge badge-success">✅ OK</span></td></tr>
+                        <tr><td>Vérification état picking (réception)</td><td>API + PWA</td><td><span class="badge badge-success">✅ OK</span></td></tr>
+                        <tr><td>Stock par emplacement via <code>stock.quant</code> (locations internal)</td><td>API + PWA</td><td><span class="badge badge-success">✅ OK</span></td></tr>
+                        <tr><td>Compteurs stock batch via <code>stock.quant</code></td><td>API + PWA</td><td><span class="badge badge-success">✅ OK</span></td></tr>
+                        <tr><td>Historique mouvements par emplacement</td><td>API + PWA</td><td><span class="badge badge-success">✅ OK</span></td></tr>
+                        <tr><td>Validation réception PO (<code>receipt_status → full</code>)</td><td>API + PWA</td><td><span class="badge badge-success">✅ OK</span></td></tr>
+                        <tr><td>Emplacements Odoo (RECEPTION, CONGELATEUR, LOGISTISUD)</td><td>Odoo</td><td><span class="badge badge-success">✅ Créés</span></td></tr>
+                    </table>
+
+                    <h4 style="margin-top:20px; color:var(--warning);">À vérifier (paramétrage Odoo)</h4>
+                    <table>
+                        <tr><th style="width:40%;">Paramètre</th><th>Chemin Odoo</th><th>Statut</th></tr>
+                        <tr><td>Traçabilité par lots activée</td><td>Stock → Configuration → Paramètres</td><td><span class="badge badge-warning">⚠️ À vérifier</span></td></tr>
+                        <tr><td>Dates d'expiration activées</td><td>Stock → Configuration → Paramètres</td><td><span class="badge badge-warning">⚠️ À vérifier</span></td></tr>
+                        <tr><td>Produits configurés "Suivi par lot"</td><td>Chaque fiche produit → Onglet Stock</td><td><span class="badge badge-warning">⚠️ À vérifier</span></td></tr>
+                        <tr><td>Stratégie FEFO sur congélateurs</td><td>Emplacements → Stratégie d'enlèvement</td><td><span class="badge badge-warning">⚠️ À vérifier</span></td></tr>
+                        <tr><td>Champs x_zone_peche, x_nom_scientifique</td><td>Studio → Champs personnalisés</td><td><span class="badge badge-warning">⚠️ À créer</span></td></tr>
+                    </table>
+
+                    <h4 style="margin-top:20px; color:var(--danger);">À développer (App Achats Harel)</h4>
+                    <table>
+                        <tr><th style="width:40%;">Fonctionnalité</th><th>Couche</th><th>Statut</th></tr>
+                        <tr><td>Endpoints API pour <code>stock.lot</code></td><td>Backend (Symfony)</td><td><span class="badge badge-danger">❌ À créer</span></td></tr>
+                        <tr><td>Endpoint lots par produit</td><td>Backend (Symfony)</td><td><span class="badge badge-danger">❌ À créer</span></td></tr>
+                        <tr><td>Endpoint alertes DLC (lots proches expiration)</td><td>Backend (Symfony)</td><td><span class="badge badge-danger">❌ À créer</span></td></tr>
+                        <tr><td>Endpoint dashboard tranches péremption</td><td>Backend (Symfony)</td><td><span class="badge badge-danger">❌ À créer</span></td></tr>
+                        <tr><td>Hook <code>useOdoo</code> : fonctions traçabilité</td><td>Frontend (React)</td><td><span class="badge badge-danger">❌ À ajouter</span></td></tr>
+                        <tr><td>Page consultation lots / stock par lot</td><td>Frontend (React)</td><td><span class="badge badge-danger">❌ À créer</span></td></tr>
+                        <tr><td>Dashboard tranches de péremption</td><td>Frontend (React)</td><td><span class="badge badge-danger">❌ À créer</span></td></tr>
+                        <tr><td>Alertes DLC dans l'interface</td><td>Frontend (React)</td><td><span class="badge badge-danger">❌ À créer</span></td></tr>
+                    </table>
+                </div>
+
+                <!-- ARCHITECTURE TECHNIQUE -->
+                <h2>3. Architecture technique — Endpoints API nécessaires</h2>
+                <div class="card">
+                    <div class="card-header">🔧 Nouveaux endpoints à créer dans OdooDataController</div>
+                    <table>
+                        <tr><th>Méthode</th><th>Route</th><th>Description</th><th>Modèle Odoo</th></tr>
+                        <tr>
+                            <td><span class="badge badge-success">GET</span></td>
+                            <td><code>/odoo/lots</code></td>
+                            <td>Liste tous les lots avec DLC, quantité, produit</td>
+                            <td><code>stock.lot</code></td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-success">GET</span></td>
+                            <td><code>/odoo/lots/{id}</code></td>
+                            <td>Détail d'un lot (quantités par emplacement)</td>
+                            <td><code>stock.lot</code> + <code>stock.quant</code></td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-success">GET</span></td>
+                            <td><code>/odoo/product/{id}/lots</code></td>
+                            <td>Lots d'un produit avec stock par lot</td>
+                            <td><code>stock.lot</code> + <code>stock.quant</code></td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-success">GET</span></td>
+                            <td><code>/odoo/lots/expiring</code></td>
+                            <td>Lots proches de l'expiration (alertes DLC)</td>
+                            <td><code>stock.lot</code></td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-success">GET</span></td>
+                            <td><code>/odoo/lots/expiry-brackets</code></td>
+                            <td>Stock par tranche de péremption (dashboard)</td>
+                            <td><code>stock.lot</code> + <code>stock.quant</code></td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-success">GET</span></td>
+                            <td><code>/odoo/lots/{id}/traceability</code></td>
+                            <td>Traçabilité complète d'un lot (mouvements)</td>
+                            <td><code>stock.move.line</code></td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">📐 Structures de données (réponses API)</div>
+                    
+                    <h4 style="margin-top:15px;">GET /odoo/lots</h4>
+                    <div style="background:#1a1a2e; padding:15px; border-radius:8px; overflow-x:auto;">
+                        <pre style="margin:0; color:#e0e0e0; font-size:0.8rem;">{
+  <span style="color:#a6e22e;">"lots"</span>: [
+    {
+      <span style="color:#a6e22e;">"id"</span>: <span style="color:#ae81ff;">1</span>,
+      <span style="color:#a6e22e;">"name"</span>: <span style="color:#e6db74;">"LOT2026-001"</span>,
+      <span style="color:#a6e22e;">"product_id"</span>: <span style="color:#ae81ff;">42</span>,
+      <span style="color:#a6e22e;">"product_name"</span>: <span style="color:#e6db74;">"Bichique 225g"</span>,
+      <span style="color:#a6e22e;">"quantity"</span>: <span style="color:#ae81ff;">500</span>,
+      <span style="color:#a6e22e;">"expiration_date"</span>: <span style="color:#e6db74;">"2027-02-01"</span>,
+      <span style="color:#a6e22e;">"use_date"</span>: <span style="color:#e6db74;">"2027-01-15"</span>,
+      <span style="color:#a6e22e;">"alert_date"</span>: <span style="color:#e6db74;">"2027-01-02"</span>,
+      <span style="color:#a6e22e;">"removal_date"</span>: <span style="color:#e6db74;">"2026-12-15"</span>,
+      <span style="color:#a6e22e;">"expiry_bracket"</span>: <span style="color:#e6db74;">"7-12 mois"</span>,
+      <span style="color:#a6e22e;">"days_until_expiry"</span>: <span style="color:#ae81ff;">332</span>
+    }
+  ],
+  <span style="color:#a6e22e;">"count"</span>: <span style="color:#ae81ff;">1</span>
+}</pre>
+                    </div>
+
+                    <h4 style="margin-top:20px;">GET /odoo/lots/expiry-brackets</h4>
+                    <div style="background:#1a1a2e; padding:15px; border-radius:8px; overflow-x:auto;">
+                        <pre style="margin:0; color:#e0e0e0; font-size:0.8rem;">{
+  <span style="color:#a6e22e;">"brackets"</span>: {
+    <span style="color:#a6e22e;">"1-3 mois"</span>:   { <span style="color:#a6e22e;">"lots"</span>: <span style="color:#ae81ff;">5</span>,  <span style="color:#a6e22e;">"total_qty"</span>: <span style="color:#ae81ff;">1200</span>,  <span style="color:#a6e22e;">"products"</span>: <span style="color:#ae81ff;">3</span>  },
+    <span style="color:#a6e22e;">"4-6 mois"</span>:   { <span style="color:#a6e22e;">"lots"</span>: <span style="color:#ae81ff;">12</span>, <span style="color:#a6e22e;">"total_qty"</span>: <span style="color:#ae81ff;">4500</span>,  <span style="color:#a6e22e;">"products"</span>: <span style="color:#ae81ff;">8</span>  },
+    <span style="color:#a6e22e;">"7-12 mois"</span>:  { <span style="color:#a6e22e;">"lots"</span>: <span style="color:#ae81ff;">25</span>, <span style="color:#a6e22e;">"total_qty"</span>: <span style="color:#ae81ff;">12000</span>, <span style="color:#a6e22e;">"products"</span>: <span style="color:#ae81ff;">15</span> },
+    <span style="color:#a6e22e;">"13-24 mois"</span>: { <span style="color:#a6e22e;">"lots"</span>: <span style="color:#ae81ff;">18</span>, <span style="color:#a6e22e;">"total_qty"</span>: <span style="color:#ae81ff;">8000</span>,  <span style="color:#a6e22e;">"products"</span>: <span style="color:#ae81ff;">10</span> },
+    <span style="color:#a6e22e;">"+24 mois"</span>:   { <span style="color:#a6e22e;">"lots"</span>: <span style="color:#ae81ff;">8</span>,  <span style="color:#a6e22e;">"total_qty"</span>: <span style="color:#ae81ff;">3500</span>,  <span style="color:#a6e22e;">"products"</span>: <span style="color:#ae81ff;">5</span>  }
+  },
+  <span style="color:#a6e22e;">"total_lots"</span>: <span style="color:#ae81ff;">68</span>,
+  <span style="color:#a6e22e;">"total_quantity"</span>: <span style="color:#ae81ff;">29200</span>
+}</pre>
+                    </div>
+                </div>
+
+                <!-- DÉTAIL DES FONCTIONNALITÉS -->
+                <h2>4. Détail des fonctionnalités à développer</h2>
+                
+                <div class="card">
+                    <div class="card-header">🏷️ 4.1 — Gestion des lots (stock.lot)</div>
+                    <p>Le lot est créé <strong>dans Odoo lors de la réception</strong> (picking). L'app Achats Harel doit pouvoir <strong>consulter</strong> les lots existants.</p>
+                    
+                    <h4 style="margin-top:15px;">Cycle de vie d'un lot</h4>
+                    <div style="display:flex; gap:6px; overflow-x:auto; padding:15px 0; align-items:flex-start;">
+                        <div style="flex:1; min-width:130px; padding:10px; border-radius:8px; background:#e8f5e9; border-top:4px solid #28a745; text-align:center;">
+                            <div style="font-weight:bold; font-size:0.8rem;">1. Réception Odoo</div>
+                            <div style="font-size:0.7rem; color:#28a745;">Lot créé + DLC saisie</div>
+                        </div>
+                        <div style="display:flex; align-items:center; color:var(--gray); font-size:1.2rem;">→</div>
+                        <div style="flex:1; min-width:130px; padding:10px; border-radius:8px; background:#e3f2fd; border-top:4px solid #0077b6; text-align:center;">
+                            <div style="font-weight:bold; font-size:0.8rem;">2. En stock</div>
+                            <div style="font-size:0.7rem; color:#0077b6;">Lot visible dans app</div>
+                        </div>
+                        <div style="display:flex; align-items:center; color:var(--gray); font-size:1.2rem;">→</div>
+                        <div style="flex:1; min-width:130px; padding:10px; border-radius:8px; background:#fff3e0; border-top:4px solid #fd7e14; text-align:center;">
+                            <div style="font-weight:bold; font-size:0.8rem;">3. Alerte DLC</div>
+                            <div style="font-size:0.7rem; color:#fd7e14;">J-30 avant expiration</div>
+                        </div>
+                        <div style="display:flex; align-items:center; color:var(--gray); font-size:1.2rem;">→</div>
+                        <div style="flex:1; min-width:130px; padding:10px; border-radius:8px; background:#fce4ec; border-top:4px solid #dc3545; text-align:center;">
+                            <div style="font-weight:bold; font-size:0.8rem;">4. Expiré</div>
+                            <div style="font-size:0.7rem; color:#dc3545;">Blocage vente FEFO</div>
+                        </div>
+                    </div>
+
+                    <h4 style="margin-top:15px;">Structure d'un lot Odoo</h4>
+                    <table>
+                        <tr><th>Champ Odoo</th><th>Type</th><th>Description</th><th>Exemple</th></tr>
+                        <tr><td><code>name</code></td><td>Char</td><td>Numéro de lot</td><td>LOT2026-001</td></tr>
+                        <tr><td><code>product_id</code></td><td>Many2one</td><td>Produit associé</td><td>Bichique 225g</td></tr>
+                        <tr><td><code>expiration_date</code></td><td>Datetime</td><td>DLC (Date Limite de Consommation)</td><td>2027-02-01</td></tr>
+                        <tr><td><code>use_date</code></td><td>Datetime</td><td>DLUO (Date de durabilité minimale)</td><td>2027-01-15</td></tr>
+                        <tr><td><code>alert_date</code></td><td>Datetime</td><td>Date d'alerte</td><td>2027-01-02</td></tr>
+                        <tr><td><code>removal_date</code></td><td>Datetime</td><td>Date d'enlèvement</td><td>2026-12-15</td></tr>
+                    </table>
+                    
+                    <div style="background:#fff3cd; border:1px solid #ffc107; padding:15px; border-radius:8px; margin-top:15px;">
+                        <strong>⚠️ Important :</strong> Les lots sont créés <strong>exclusivement dans Odoo</strong> lors de la validation de la réception (picking). L'app ne crée pas de lots, elle les <strong>consulte</strong>.
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">📊 4.2 — Dashboard Tranches de Péremption</div>
+                    <p>Vue synthétique du stock réparti par tranche de DLC restante.</p>
+                    
+                    <h4 style="margin-top:15px;">Tranches définies</h4>
+                    <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:10px; margin:15px 0;">
+                        <div style="text-align:center; padding:15px; background:#fce4ec; border-radius:8px; border-top:4px solid #dc3545;">
+                            <div style="font-size:1.5rem; font-weight:bold; color:#dc3545;">1-3</div>
+                            <div style="font-size:0.8rem; color:var(--gray);">mois</div>
+                            <div style="font-size:0.7rem; color:#dc3545; margin-top:5px;">CRITIQUE</div>
+                        </div>
+                        <div style="text-align:center; padding:15px; background:#fff3e0; border-radius:8px; border-top:4px solid #fd7e14;">
+                            <div style="font-size:1.5rem; font-weight:bold; color:#fd7e14;">4-6</div>
+                            <div style="font-size:0.8rem; color:var(--gray);">mois</div>
+                            <div style="font-size:0.7rem; color:#fd7e14; margin-top:5px;">ATTENTION</div>
+                        </div>
+                        <div style="text-align:center; padding:15px; background:#fff8e1; border-radius:8px; border-top:4px solid #ffc107;">
+                            <div style="font-size:1.5rem; font-weight:bold; color:#b8860b;">7-12</div>
+                            <div style="font-size:0.8rem; color:var(--gray);">mois</div>
+                            <div style="font-size:0.7rem; color:#b8860b; margin-top:5px;">NORMAL</div>
+                        </div>
+                        <div style="text-align:center; padding:15px; background:#e8f5e9; border-radius:8px; border-top:4px solid #28a745;">
+                            <div style="font-size:1.5rem; font-weight:bold; color:#28a745;">13-24</div>
+                            <div style="font-size:0.8rem; color:var(--gray);">mois</div>
+                            <div style="font-size:0.7rem; color:#28a745; margin-top:5px;">CONFORTABLE</div>
+                        </div>
+                        <div style="text-align:center; padding:15px; background:#e3f2fd; border-radius:8px; border-top:4px solid #0077b6;">
+                            <div style="font-size:1.5rem; font-weight:bold; color:#0077b6;">+24</div>
+                            <div style="font-size:0.8rem; color:var(--gray);">mois</div>
+                            <div style="font-size:0.7rem; color:#0077b6; margin-top:5px;">LONG TERME</div>
+                        </div>
+                    </div>
+
+                    <h4 style="margin-top:15px;">Calcul des tranches (côté API)</h4>
+                    <div style="background:#1a1a2e; padding:15px; border-radius:8px; overflow-x:auto;">
+                        <pre style="margin:0; color:#e0e0e0; font-size:0.8rem;"><span style="color:#75715e;">// Logique de calcul dans OdooApiService.php</span>
+<span style="color:#66d9ef;">$today</span> = <span style="color:#66d9ef;">new</span> \DateTime();
+<span style="color:#66d9ef;">$daysUntilExpiry</span> = <span style="color:#66d9ef;">$expirationDate</span>-&gt;diff(<span style="color:#66d9ef;">$today</span>)-&gt;days;
+<span style="color:#66d9ef;">$months</span> = <span style="color:#66d9ef;">$daysUntilExpiry</span> / <span style="color:#ae81ff;">30</span>;
+
+<span style="color:#66d9ef;">$bracket</span> = <span style="color:#66d9ef;">match</span>(<span style="color:#ae81ff;">true</span>) {
+    <span style="color:#66d9ef;">$months</span> &lt;= <span style="color:#ae81ff;">3</span>  =&gt; <span style="color:#a6e22e;">'1-3 mois'</span>,
+    <span style="color:#66d9ef;">$months</span> &lt;= <span style="color:#ae81ff;">6</span>  =&gt; <span style="color:#a6e22e;">'4-6 mois'</span>,
+    <span style="color:#66d9ef;">$months</span> &lt;= <span style="color:#ae81ff;">12</span> =&gt; <span style="color:#a6e22e;">'7-12 mois'</span>,
+    <span style="color:#66d9ef;">$months</span> &lt;= <span style="color:#ae81ff;">24</span> =&gt; <span style="color:#a6e22e;">'13-24 mois'</span>,
+    <span style="color:#66d9ef;">default</span>        =&gt; <span style="color:#a6e22e;">'+24 mois'</span>,
+};</pre>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">⏰ 4.3 — Alertes DLC</div>
+                    <p>Notification des produits dont la DLC approche, pour anticiper les actions (promo, retrait, rotation).</p>
+                    
+                    <table>
+                        <tr><th>Niveau</th><th>Critère</th><th>Action suggérée</th><th>Couleur</th></tr>
+                        <tr>
+                            <td><strong>Expiré</strong></td>
+                            <td>DLC dépassée</td>
+                            <td>Retrait du stock, destruction</td>
+                            <td><span style="display:inline-block; width:14px; height:14px; background:#dc3545; border-radius:3px; vertical-align:middle;"></span> Rouge</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Critique</strong></td>
+                            <td>DLC &lt; 30 jours</td>
+                            <td>Promo flash, rotation prioritaire</td>
+                            <td><span style="display:inline-block; width:14px; height:14px; background:#fd7e14; border-radius:3px; vertical-align:middle;"></span> Orange</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Attention</strong></td>
+                            <td>DLC &lt; 90 jours</td>
+                            <td>Planifier écoulement</td>
+                            <td><span style="display:inline-block; width:14px; height:14px; background:#ffc107; border-radius:3px; vertical-align:middle;"></span> Jaune</td>
+                        </tr>
+                        <tr>
+                            <td><strong>OK</strong></td>
+                            <td>DLC &gt; 90 jours</td>
+                            <td>Aucune action</td>
+                            <td><span style="display:inline-block; width:14px; height:14px; background:#28a745; border-radius:3px; vertical-align:middle;"></span> Vert</td>
+                        </tr>
+                    </table>
+
+                    <div style="background:#e3f2fd; border:1px solid #0077b6; padding:15px; border-radius:8px; margin-top:15px;">
+                        <strong>Paramètre configurable :</strong> Le seuil d'alerte (30 jours par défaut) doit pouvoir être ajusté. Dans Odoo : <code>Stock → Configuration → Paramètres → Traçabilité → Jours avant alerte</code>.
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">🐟 4.4 — Traçabilité produits de la mer (réglementaire)</div>
+                    <p>Champs obligatoires pour les produits de pêche (conformité réglementaire européenne).</p>
+                    
+                    <table>
+                        <tr><th>Champ</th><th>Champ Odoo</th><th>Type</th><th>Exemple</th><th>Apparaît sur</th></tr>
+                        <tr>
+                            <td>Zone de pêche FAO</td>
+                            <td><code>x_zone_peche</code></td>
+                            <td>Char</td>
+                            <td>FAO51 - OCEAN INDIEN OUEST</td>
+                            <td>BL, Facture, Étiquette</td>
+                        </tr>
+                        <tr>
+                            <td>Nom scientifique</td>
+                            <td><code>x_nom_scientifique</code></td>
+                            <td>Char</td>
+                            <td>STOLEPHORUS COMMERSONII</td>
+                            <td>BL, Facture, Étiquette</td>
+                        </tr>
+                        <tr>
+                            <td>Pays d'origine</td>
+                            <td><code>x_origine</code></td>
+                            <td>Char/Attribut</td>
+                            <td>INDE</td>
+                            <td>BL, Facture, Étiquette</td>
+                        </tr>
+                    </table>
+                    
+                    <div style="background:#fff3cd; border:1px solid #ffc107; padding:15px; border-radius:8px; margin-top:15px;">
+                        <strong>⚠️ Note :</strong> Ces champs sont sur le <strong>produit</strong> (pas sur le lot). Ils doivent être créés via <strong>Odoo Studio</strong> sur le modèle <code>product.template</code>, puis exposés via l'API.
+                    </div>
+                </div>
+
+                <!-- STRATÉGIE FEFO -->
+                <h2>5. Stratégie FEFO (First Expired, First Out)</h2>
+                <div class="card">
+                    <div class="card-header">🔄 Fonctionnement FEFO dans Odoo</div>
+                    
+                    <div style="display:flex; gap:6px; overflow-x:auto; padding:15px 0; align-items:flex-start;">
+                        <div style="flex:1; min-width:150px; padding:12px; border-radius:8px; background:#f3e5f5; border-top:4px solid #6f42c1; text-align:center;">
+                            <div style="font-weight:bold; font-size:0.85rem;">Réception</div>
+                            <div style="font-size:0.75rem; color:var(--gray);">Lot créé avec DLC</div>
+                        </div>
+                        <div style="display:flex; align-items:center; color:var(--gray); font-size:1.2rem;">→</div>
+                        <div style="flex:1; min-width:150px; padding:12px; border-radius:8px; background:#e3f2fd; border-top:4px solid #0077b6; text-align:center;">
+                            <div style="font-weight:bold; font-size:0.85rem;">Rangement</div>
+                            <div style="font-size:0.75rem; color:var(--gray);">CONGELATEUR 1/2/3</div>
+                        </div>
+                        <div style="display:flex; align-items:center; color:var(--gray); font-size:1.2rem;">→</div>
+                        <div style="flex:1; min-width:150px; padding:12px; border-radius:8px; background:#e8f5e9; border-top:4px solid #28a745; text-align:center;">
+                            <div style="font-weight:bold; font-size:0.85rem;">Picking (vente)</div>
+                            <div style="font-size:0.75rem; color:var(--gray);">FEFO = lot qui expire le + tôt</div>
+                        </div>
+                        <div style="display:flex; align-items:center; color:var(--gray); font-size:1.2rem;">→</div>
+                        <div style="flex:1; min-width:150px; padding:12px; border-radius:8px; background:#fff3e0; border-top:4px solid #fd7e14; text-align:center;">
+                            <div style="font-weight:bold; font-size:0.85rem;">Expédition</div>
+                            <div style="font-size:0.75rem; color:var(--gray);">Lot + DLC sur BL</div>
+                        </div>
+                    </div>
+
+                    <h4 style="margin-top:15px;">Configuration Odoo requise</h4>
+                    <table>
+                        <tr><th>Emplacement</th><th>ID</th><th>Stratégie d'enlèvement</th></tr>
+                        <tr><td>WH/Stock/CONGELATEUR-1</td><td>13</td><td>FEFO (First Expired, First Out)</td></tr>
+                        <tr><td>WH/Stock/CONGELATEUR-2</td><td>14</td><td>FEFO (First Expired, First Out)</td></tr>
+                        <tr><td>WH/Stock/CONGELATEUR-3</td><td>15</td><td>FEFO (First Expired, First Out)</td></tr>
+                        <tr><td>WH/LOGISTISUD</td><td>25</td><td>FEFO (First Expired, First Out)</td></tr>
+                    </table>
+                </div>
+
+                <!-- HOOK useOdoo -->
+                <h2>6. Extensions hook useOdoo (Frontend)</h2>
+                <div class="card">
+                    <div class="card-header">🪝 Nouvelles fonctions à ajouter dans useOdoo.ts</div>
+                    <table>
+                        <tr><th>Fonction</th><th>Retour</th><th>Description</th></tr>
+                        <tr>
+                            <td><code>getLots(filters?)</code></td>
+                            <td><code>LotItem[]</code></td>
+                            <td>Liste des lots avec filtre optionnel (produit, DLC, tranche)</td>
+                        </tr>
+                        <tr>
+                            <td><code>getLotDetail(lotId)</code></td>
+                            <td><code>LotDetail</code></td>
+                            <td>Détail d'un lot : quantités par emplacement, mouvements</td>
+                        </tr>
+                        <tr>
+                            <td><code>getProductLots(productId)</code></td>
+                            <td><code>LotItem[]</code></td>
+                            <td>Lots d'un produit spécifique</td>
+                        </tr>
+                        <tr>
+                            <td><code>getExpiringLots(days?)</code></td>
+                            <td><code>LotItem[]</code></td>
+                            <td>Lots expirant dans N jours (défaut: 30)</td>
+                        </tr>
+                        <tr>
+                            <td><code>getExpiryBrackets()</code></td>
+                            <td><code>ExpiryBrackets</code></td>
+                            <td>Dashboard tranches de péremption</td>
+                        </tr>
+                        <tr>
+                            <td><code>getLotTraceability(lotId)</code></td>
+                            <td><code>TraceabilityEntry[]</code></td>
+                            <td>Historique complet d'un lot</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- COMPOSANTS PWA -->
+                <h2>7. Composants PWA à créer</h2>
+                <div class="card">
+                    <div class="card-header">🖥️ Pages et composants React</div>
+                    <table>
+                        <tr><th>Composant</th><th>Chemin</th><th>Description</th></tr>
+                        <tr>
+                            <td><strong>LotsListPage</strong></td>
+                            <td><code>pwa/components/admin/stock/LotsList.tsx</code></td>
+                            <td>Liste paginée des lots avec filtres (produit, tranche DLC, emplacement). Indicateur couleur DLC.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>LotShowPage</strong></td>
+                            <td><code>pwa/components/admin/stock/LotShow.tsx</code></td>
+                            <td>Fiche lot détaillée : quantités par emplacement, historique mouvements, lien vers Odoo.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ExpiryDashboard</strong></td>
+                            <td><code>pwa/components/admin/stock/ExpiryDashboard.tsx</code></td>
+                            <td>Dashboard 5 tranches avec compteurs, graphique barres, drill-down vers les lots.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ExpiryAlerts</strong></td>
+                            <td><code>pwa/components/admin/stock/ExpiryAlerts.tsx</code></td>
+                            <td>Bandeau d'alertes DLC affiché en haut du Kanban et/ou dans un menu dédié.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ProductLots</strong></td>
+                            <td><code>pwa/components/admin/stock/ProductLots.tsx</code></td>
+                            <td>Onglet sur la fiche produit : lots actifs, stock par lot, DLC.</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- LIENS ODOO -->
+                <h2>8. Liens App ↔ Odoo</h2>
+                <div class="card">
+                    <div class="card-header">🔗 Navigation croisée</div>
+                    <table>
+                        <tr><th>Direction</th><th>Lien</th><th>Format</th></tr>
+                        <tr>
+                            <td>App → Lot Odoo</td>
+                            <td>Lien cliquable sur la fiche lot</td>
+                            <td><code>https://ah-chou1.odoo.com/odoo/inventory/products/lots/{lot_id}</code></td>
+                        </tr>
+                        <tr>
+                            <td>App → Stock Odoo</td>
+                            <td>Lien sur le dashboard</td>
+                            <td><code>https://ah-chou1.odoo.com/odoo/stock-quant</code></td>
+                        </tr>
+                        <tr>
+                            <td>App → Produit Odoo</td>
+                            <td>Lien sur la fiche produit</td>
+                            <td><code>https://ah-chou1.odoo.com/odoo/product-template/{product_id}</code></td>
+                        </tr>
+                    </table>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-top:20px;">
+                        <a href="https://ah-chou1.odoo.com/odoo/inventory/products/lots" target="_blank" style="display:block; background:#6f42c1; color:white; padding:15px; border-radius:8px; text-decoration:none; text-align:center; font-weight:bold;">
+                            🏷️ Lots Odoo
+                        </a>
+                        <a href="https://ah-chou1.odoo.com/odoo/stock-quant" target="_blank" style="display:block; background:var(--secondary); color:white; padding:15px; border-radius:8px; text-decoration:none; text-align:center; font-weight:bold;">
+                            📊 État des stocks
+                        </a>
+                        <a href="https://ah-chou1.odoo.com/odoo/inventory/receipts" target="_blank" style="display:block; background:var(--primary); color:white; padding:15px; border-radius:8px; text-decoration:none; text-align:center; font-weight:bold;">
+                            📦 Réceptions Odoo
+                        </a>
+                    </div>
+                </div>
+
+                <!-- PLAN D'IMPLÉMENTATION -->
+                <h2>9. Plan d'implémentation</h2>
+                <div class="card">
+                    <div class="card-header">🚀 Phases de développement</div>
+                    
+                    <h4 style="margin-top:15px; color:var(--primary);">Phase 1 — Paramétrage Odoo (prerequis)</h4>
+                    <table>
+                        <tr><th style="width:5%;">☐</th><th style="width:50%;">Action</th><th>Responsable</th></tr>
+                        <tr><td>☐</td><td>Vérifier activation lots + dates d'expiration dans Odoo</td><td>Admin Odoo</td></tr>
+                        <tr><td>☐</td><td>Configurer tous les produits en "Suivi par lot"</td><td>Admin Odoo</td></tr>
+                        <tr><td>☐</td><td>Vérifier FEFO sur CONGELATEUR 1/2/3 et LOGISTISUD</td><td>Admin Odoo</td></tr>
+                        <tr><td>☐</td><td>Créer champs x_zone_peche, x_nom_scientifique (Studio)</td><td>Admin Odoo</td></tr>
+                        <tr><td>☐</td><td>Tester une réception avec lot + DLC dans Odoo</td><td>Admin Odoo</td></tr>
+                    </table>
+
+                    <h4 style="margin-top:20px; color:#0077b6;">Phase 2 — Endpoints API (Backend Symfony)</h4>
+                    <table>
+                        <tr><th style="width:5%;">☐</th><th style="width:50%;">Action</th><th>Estimation</th></tr>
+                        <tr><td>☐</td><td>Ajouter méthodes <code>stock.lot</code> dans OdooApiService</td><td>2h</td></tr>
+                        <tr><td>☐</td><td>Créer endpoints lots dans OdooDataController</td><td>3h</td></tr>
+                        <tr><td>☐</td><td>Endpoint tranches de péremption (calcul serveur)</td><td>2h</td></tr>
+                        <tr><td>☐</td><td>Endpoint alertes DLC</td><td>1h</td></tr>
+                        <tr><td>☐</td><td>Tests endpoints sur staging</td><td>2h</td></tr>
+                    </table>
+
+                    <h4 style="margin-top:20px; color:#6f42c1;">Phase 3 — Hook &amp; Composants PWA (Frontend React)</h4>
+                    <table>
+                        <tr><th style="width:5%;">☐</th><th style="width:50%;">Action</th><th>Estimation</th></tr>
+                        <tr><td>☐</td><td>Étendre useOdoo avec fonctions traçabilité</td><td>2h</td></tr>
+                        <tr><td>☐</td><td>Composant LotsList (liste + filtres)</td><td>4h</td></tr>
+                        <tr><td>☐</td><td>Composant LotShow (fiche détaillée)</td><td>3h</td></tr>
+                        <tr><td>☐</td><td>Composant ExpiryDashboard (5 tranches)</td><td>4h</td></tr>
+                        <tr><td>☐</td><td>Composant ExpiryAlerts (bandeau alertes)</td><td>2h</td></tr>
+                        <tr><td>☐</td><td>Intégration menu navigation</td><td>1h</td></tr>
+                    </table>
+
+                    <h4 style="margin-top:20px; color:#28a745;">Phase 4 — Tests &amp; Déploiement Staging</h4>
+                    <table>
+                        <tr><th style="width:5%;">☐</th><th style="width:50%;">Action</th><th>Estimation</th></tr>
+                        <tr><td>☐</td><td>Créer lots de test dans Odoo (via réception)</td><td>1h</td></tr>
+                        <tr><td>☐</td><td>Tester consultation lots depuis l'app</td><td>1h</td></tr>
+                        <tr><td>☐</td><td>Tester dashboard tranches de péremption</td><td>1h</td></tr>
+                        <tr><td>☐</td><td>Tester alertes DLC (lots proches expiration)</td><td>1h</td></tr>
+                        <tr><td>☐</td><td>Déployer sur staging.creazot.com</td><td>1h</td></tr>
+                        <tr><td>☐</td><td>Validation utilisateur</td><td>2h</td></tr>
+                    </table>
+                </div>
+
+                <!-- CHECKLIST VALIDATION -->
+                <h2>10. Checklist de validation</h2>
+                <div class="card">
+                    <div class="card-header">✅ Points de contrôle</div>
+                    
+                    <h4 style="margin-top:15px; color:var(--primary);">Paramétrage Odoo</h4>
+                    <table>
+                        <tr><th style="width:5%;">☐</th><th style="width:50%;">Vérification</th><th>Comment</th></tr>
+                        <tr><td>☐</td><td>Traçabilité par lots activée</td><td>Stock → Config → Paramètres → Traçabilité</td></tr>
+                        <tr><td>☐</td><td>Dates d'expiration activées</td><td>Stock → Config → Paramètres → Traçabilité</td></tr>
+                        <tr><td>☐</td><td>Au moins 1 produit configuré en "Suivi par lot"</td><td>Fiche produit → Onglet Stock</td></tr>
+                        <tr><td>☐</td><td>FEFO activé sur congélateurs</td><td>Emplacement → Stratégie d'enlèvement</td></tr>
+                        <tr><td>☐</td><td>Lot de test créé via une réception</td><td>Réceptions → Valider avec lot + DLC</td></tr>
+                    </table>
+                    
+                    <h4 style="margin-top:20px; color:#0077b6;">API Backend</h4>
+                    <table>
+                        <tr><th style="width:5%;">☐</th><th style="width:50%;">Vérification</th><th>Comment</th></tr>
+                        <tr><td>☐</td><td>GET /odoo/lots retourne des données</td><td>curl ou Postman</td></tr>
+                        <tr><td>☐</td><td>GET /odoo/lots/expiry-brackets retourne les 5 tranches</td><td>curl ou Postman</td></tr>
+                        <tr><td>☐</td><td>GET /odoo/lots/expiring retourne les lots proches DLC</td><td>curl ou Postman</td></tr>
+                        <tr><td>☐</td><td>GET /odoo/product/{id}/lots retourne les lots d'un produit</td><td>curl ou Postman</td></tr>
+                    </table>
+                    
+                    <h4 style="margin-top:20px; color:#6f42c1;">Frontend PWA</h4>
+                    <table>
+                        <tr><th style="width:5%;">☐</th><th style="width:50%;">Vérification</th><th>Comment</th></tr>
+                        <tr><td>☐</td><td>Page Lots accessible depuis le menu</td><td>Navigation app</td></tr>
+                        <tr><td>☐</td><td>Liste des lots affichée avec indicateur DLC couleur</td><td>Page Lots</td></tr>
+                        <tr><td>☐</td><td>Dashboard tranches de péremption fonctionnel</td><td>Page Dashboard</td></tr>
+                        <tr><td>☐</td><td>Alertes DLC visibles (bandeau ou notification)</td><td>Kanban / Menu</td></tr>
+                        <tr><td>☐</td><td>Fiche lot détaillée avec lien Odoo</td><td>Clic sur un lot</td></tr>
+                    </table>
+                </div>
+
+                <!-- FAQ -->
+                <h2>11. Questions fréquentes</h2>
+                <div class="card">
+                    <div class="card-header">❓ FAQ</div>
+                    
+                    <div style="margin-bottom:20px;">
+                        <h4 style="color:var(--primary);">Q: L'app peut-elle créer des lots directement ?</h4>
+                        <p style="margin-left:20px; background:#f8f9fa; padding:15px; border-radius:8px;">
+                            Non. Les lots sont créés <strong>exclusivement dans Odoo</strong> lors de la validation de la réception (picking). L'app <strong>consulte</strong> les lots via l'API Odoo. Cela garantit la cohérence des données.
+                        </p>
+                    </div>
+                    
+                    <div style="margin-bottom:20px;">
+                        <h4 style="color:var(--primary);">Q: Comment fonctionne le FEFO avec les lots ?</h4>
+                        <p style="margin-left:20px; background:#f8f9fa; padding:15px; border-radius:8px;">
+                            Odoo <strong>propose automatiquement</strong> le lot avec la DLC la plus proche lors du picking (préparation de commande). Cela nécessite que la stratégie d'enlèvement soit configurée en <strong>FEFO</strong> sur chaque emplacement de stockage.
+                        </p>
+                    </div>
+                    
+                    <div style="margin-bottom:20px;">
+                        <h4 style="color:var(--primary);">Q: Que se passe-t-il si un lot expire ?</h4>
+                        <p style="margin-left:20px; background:#f8f9fa; padding:15px; border-radius:8px;">
+                            Si les dates d'expiration sont activées, Odoo peut <strong>bloquer la vente</strong> d'un lot dont la DLC est dépassée. L'app affichera ces lots en <strong>rouge</strong> dans le dashboard. L'action de retrait reste manuelle (transfert vers emplacement "Rebut").
+                        </p>
+                    </div>
+                    
+                    <div style="margin-bottom:20px;">
+                        <h4 style="color:var(--primary);">Q: Les champs zone de pêche et nom scientifique sont-ils sur le lot ou le produit ?</h4>
+                        <p style="margin-left:20px; background:#f8f9fa; padding:15px; border-radius:8px;">
+                            Sur le <strong>produit</strong> (<code>product.template</code>). Ces informations sont statiques par produit. Si un même produit peut venir de zones de pêche différentes, il faudra envisager de les mettre sur le <strong>lot</strong> (<code>stock.lot</code>) via des champs personnalisés.
+                        </p>
+                    </div>
+
+                    <div>
+                        <h4 style="color:var(--primary);">Q: Peut-on voir la traçabilité complète d'un lot (de la réception à la vente) ?</h4>
+                        <p style="margin-left:20px; background:#f8f9fa; padding:15px; border-radius:8px;">
+                            Oui, via l'endpoint <code>/odoo/lots/{id}/traceability</code> qui interroge <code>stock.move.line</code>. Cela retourne l'historique complet : réception → stockage → picking → expédition. Le lien vers Odoo permet aussi de consulter le rapport de traçabilité natif.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ================================================================== -->
+            <!-- GUIDE FLUX VENTE → PRODUITS & FOURNISSEURS                         -->
+            <!-- ================================================================== -->
+            <div id="guide-flux-vente" class="section">
+                <h1>📖 Guide Fonctionnel : Flux Vente → Produits &amp; Fournisseurs</h1>
+                
+                <div class="card">
+                    <div class="card-header">🎯 Objectif de ce guide</div>
+                    <p>Ce guide décrit le <strong>flux complet de vente dans Odoo</strong>, depuis la commande client jusqu'à la facturation. Les ventes sont gérées <strong>entièrement dans Odoo</strong> — l'App Achats Harel intervient uniquement sur le flux d'achat (calculette PR, commandes fournisseurs, transit maritime). Ce guide cartographie ce qui est <strong>déjà paramétré</strong> sur le staging (ah-chou1.odoo.com) et ce qui reste à valider.</p>
+                    <div style="background:#e3f2fd; border:1px solid #0077b6; padding:12px; border-radius:8px; margin-top:10px;">
+                        <strong>📌 Périmètre :</strong> App Achats = flux achat uniquement. Odoo = ventes, stock, compta, dashboards.
+                    </div>
+                </div>
+
+                <h2>1. État des lieux — Ce qui est en place sur staging</h2>
+                <div class="card">
+                    <div class="card-header">✅ Paramétrage effectué sur ah-chou1.odoo.com (au 27/02/2026)</div>
+                    <table>
+                        <tr><th style="width:35%;">Élément</th><th>Détail</th><th style="width:12%;">Statut</th></tr>
+                        <tr><td><strong>299 produits importés</strong></td><td>279 créés + 20 mis à jour. 78 en erreur EAN doublons → solution variantes par Origine</td><td><span class="badge badge-success">✅ Fait</span></td></tr>
+                        <tr><td><strong>231 clients importés</strong></td><td>210 créés + 21 mis à jour via script import_odoo.py</td><td><span class="badge badge-success">✅ Fait</span></td></tr>
+                        <tr><td><strong>76 fournisseurs importés</strong></td><td>56 créés + 20 mis à jour</td><td><span class="badge badge-success">✅ Fait</span></td></tr>
+                        <tr><td><strong>7 listes de prix</strong></td><td>Basées sur standard_price × (1 + Marge%). Validé le 26/02/2026</td><td><span class="badge badge-success">✅ Fait</span></td></tr>
+                        <tr><td><strong>4 conditions de paiement</strong></td><td>Comptant (id=11), 15j (id=12), 30j (id=13), 60j (id=14)</td><td><span class="badge badge-success">✅ Fait</span></td></tr>
+                        <tr><td><strong>4 tags groupes clients</strong></td><td>CHR, GMS, GROSSISTE, DIVERS</td><td><span class="badge badge-success">✅ Fait</span></td></tr>
+                        <tr><td><strong>19 tags enseignes</strong></td><td>AUCHAN, CARREFOUR, LECLERC, U, COCCI MARKET, etc.</td><td><span class="badge badge-success">✅ Fait</span></td></tr>
+                        <tr><td><strong>11 tags fournisseurs</strong></td><td>ASIE, FRANCE, MADAGASCAR, TRANSITAIRE, etc.</td><td><span class="badge badge-success">✅ Fait</span></td></tr>
+                        <tr><td><strong>7 catégories produits</strong></td><td>GEL OI → Apéro &amp; Snacking, Produits Marins, Plats Préparés, Traiteur, Surgelés, Viandes</td><td><span class="badge badge-success">✅ Fait</span></td></tr>
+                        <tr><td><strong>Champs personnalisés</strong></td><td>Produits (nom long, coef approche, marque, PRMUP…), Clients (groupe, enseigne, code tarif), Fournisseurs (groupe, incoterm)</td><td><span class="badge badge-success">✅ Fait</span></td></tr>
+                        <tr><td><strong>Entrepôt &amp; emplacements</strong></td><td>WH/Stock (congélateurs 1-3), RECEPTION, EXPEDITION, TRANSIT MARITIME, LOGISTISUD, PICKING, QUARANTAINE</td><td><span class="badge badge-success">✅ Fait</span></td></tr>
+                        <tr><td><strong>Livraison 2 étapes</strong></td><td>Pick (Stock → Picking/Output) + Ship (Output → Clients)</td><td><span class="badge badge-success">✅ Configuré</span></td></tr>
+                        <tr><td><strong>FEFO activé</strong></td><td>Traçabilité par lots + dates d'expiration</td><td><span class="badge badge-success">✅ Configuré</span></td></tr>
+                        <tr><td><strong>Attribut Origine (variantes)</strong></td><td>Inde (~115), Vietnam (~175), Indonésie (~18), + Chine, Thaïlande, Madagascar, La Réunion, France</td><td><span class="badge badge-success">✅ Créé</span></td></tr>
+                    </table>
+                </div>
+
+                <h2>2. Tarification en place — 7 listes de prix</h2>
+                <div class="card">
+                    <div class="card-header">💰 Listes de prix configurées (Bloc 3 — validé 26/02/2026)</div>
+                    <div style="background:#e3f2fd; border:1px solid #0077b6; padding:12px; border-radius:8px; margin-bottom:15px;">
+                        <strong>Principe :</strong> Prix de vente = <code>standard_price</code> (coût/PR) × (1 + Marge%). Le <code>standard_price</code> est mis à jour automatiquement par Odoo à chaque réception de marchandise.
+                    </div>
+                    <div style="overflow-x:auto; padding:15px 0;">
+                        <div style="display:flex; gap:6px; min-width:700px;">
+                            <div style="flex:1; padding:10px; border-radius:8px; background:#e7f1ff; border-top:4px solid #0d6efd; text-align:center;"><div style="font-weight:bold; font-size:0.85rem;">CATALOGUE</div><div style="font-size:0.7rem; color:#0d6efd;">Coût +40%</div><div style="font-size:0.65rem; color:#999;">id=2</div></div>
+                            <div style="flex:1; padding:10px; border-radius:8px; background:#e8f5e9; border-top:4px solid #28a745; text-align:center;"><div style="font-weight:bold; font-size:0.85rem;">HYPER</div><div style="font-size:0.7rem; color:#28a745;">Coût +35%</div><div style="font-size:0.65rem; color:#999;">id=3</div></div>
+                            <div style="flex:1; padding:10px; border-radius:8px; background:#e8f5e9; border-top:4px solid #2e7d32; text-align:center;"><div style="font-weight:bold; font-size:0.85rem;">SUPER</div><div style="font-size:0.7rem; color:#2e7d32;">Coût +30%</div><div style="font-size:0.65rem; color:#999;">id=4</div></div>
+                            <div style="flex:1; padding:10px; border-radius:8px; background:#fff8e1; border-top:4px solid #ffc107; text-align:center;"><div style="font-weight:bold; font-size:0.85rem;">GROSSISTE</div><div style="font-size:0.7rem; color:#b8860b;">Coût +25%</div><div style="font-size:0.65rem; color:#999;">id=5</div></div>
+                            <div style="flex:1; padding:10px; border-radius:8px; background:#fff3e0; border-top:4px solid #fd7e14; text-align:center;"><div style="font-weight:bold; font-size:0.85rem;">PLATEFORME</div><div style="font-size:0.7rem; color:#fd7e14;">Coût +20%</div><div style="font-size:0.65rem; color:#999;">id=6</div></div>
+                            <div style="flex:1; padding:10px; border-radius:8px; background:#f3e5f5; border-top:4px solid #6f42c1; text-align:center;"><div style="font-weight:bold; font-size:0.85rem;">CHR</div><div style="font-size:0.7rem; color:#6f42c1;">Coût +15%</div><div style="font-size:0.65rem; color:#999;">id=7</div></div>
+                            <div style="flex:1; padding:10px; border-radius:8px; background:#fce4ec; border-top:4px solid #e91e63; text-align:center;"><div style="font-weight:bold; font-size:0.85rem;">PARTENAIRE</div><div style="font-size:0.7rem; color:#e91e63;">Coût +10%</div><div style="font-size:0.65rem; color:#999;">id=8</div></div>
+                        </div>
+                    </div>
+                    <div style="background:#d4edda; border:1px solid #28a745; padding:15px; border-radius:8px; margin-top:15px;">
+                        <strong>💡 Boucle Achat → Vente :</strong> L'App Achats calcule le PR (coef approche, taux de change, frais transit) → crée le PO dans Odoo → à la réception Odoo met à jour <code>standard_price</code> → les listes de prix calculent automatiquement les prix de vente.
+                    </div>
+                    <div style="text-align:center; margin-top:15px;"><a href="https://ah-chou1.odoo.com/odoo/product-pricelist" target="_blank" style="display:inline-block; background:var(--primary); color:white; padding:12px 25px; border-radius:8px; text-decoration:none; font-weight:bold;">🔗 Voir les listes de prix dans Odoo</a></div>
+                </div>
+
+                <h2>3. Flux de vente — Workflow Odoo natif</h2>
+                <div class="card">
+                    <div class="card-header">🔄 Le flux de vente complet (géré 100% dans Odoo)</div>
+                    <div style="overflow-x:auto; padding:20px 0;">
+                        <div style="display:flex; gap:8px; min-width:750px;">
+                            <div style="flex:1; background:#0d6efd; color:white; padding:12px; border-radius:8px; text-align:center;"><div style="font-size:1.3rem;">📋</div><div style="font-weight:bold; font-size:0.85rem;">COMMANDE</div><div style="font-size:0.7rem; opacity:0.8; margin-top:4px;">sale.order confirmé</div></div>
+                            <div style="display:flex; align-items:center; color:#ccc;">→</div>
+                            <div style="flex:1; background:#ffc107; color:#333; padding:12px; border-radius:8px; text-align:center;"><div style="font-size:1.3rem;">📦</div><div style="font-weight:bold; font-size:0.85rem;">PRÉPARATION</div><div style="font-size:0.7rem; opacity:0.7; margin-top:4px;">Pick: Stock → Picking</div></div>
+                            <div style="display:flex; align-items:center; color:#ccc;">→</div>
+                            <div style="flex:1; background:#fd7e14; color:white; padding:12px; border-radius:8px; text-align:center;"><div style="font-size:1.3rem;">🚚</div><div style="font-weight:bold; font-size:0.85rem;">EXPÉDITION</div><div style="font-size:0.7rem; opacity:0.8; margin-top:4px;">Ship: Expédition → Clients</div></div>
+                            <div style="display:flex; align-items:center; color:#ccc;">→</div>
+                            <div style="flex:1; background:#28a745; color:white; padding:12px; border-radius:8px; text-align:center;"><div style="font-size:1.3rem;">💰</div><div style="font-weight:bold; font-size:0.85rem;">FACTURE</div><div style="font-size:0.7rem; opacity:0.8; margin-top:4px;">Facturation groupée</div></div>
+                        </div>
+                    </div>
+                    <div style="background:#f8f9fa; padding:15px; border-radius:8px; margin-top:15px;">
+                        <strong>📍 Emplacements Odoo impliqués (configurés sur staging) :</strong>
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px; margin-top:10px;">
+                            <div style="padding:8px; background:#e3f2fd; border-radius:5px; font-size:0.85rem;"><code>WH/Stock</code> (CONGELATEUR 1-3) — Stock principal</div>
+                            <div style="padding:8px; background:#e3f2fd; border-radius:5px; font-size:0.85rem;"><code>WH/PICKING</code> — Zone de préparation</div>
+                            <div style="padding:8px; background:#fff3cd; border-radius:5px; font-size:0.85rem;"><code>WH/EXPEDITION</code> — Zone d'expédition</div>
+                            <div style="padding:8px; background:#d4edda; border-radius:5px; font-size:0.85rem;"><code>Clients</code> — Destination finale</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">📋 Processus étape par étape</div>
+                    <table>
+                        <tr><th style="width:5%;">#</th><th style="width:20%;">Étape</th><th style="width:15%;">Acteur</th><th>Actions dans Odoo</th><th style="width:15%;">Document</th></tr>
+                        <tr><td>1</td><td><span class="badge" style="background:#0d6efd; color:white;">Commande client</span></td><td>Commercial</td><td><code>Ventes → Commandes → Créer</code><br>Sélectionner client (charge sa liste de prix), ajouter produits, confirmer.</td><td>sale.order</td></tr>
+                        <tr><td>2</td><td><span class="badge" style="background:#ffc107; color:#333;">Préparation (Pick)</span></td><td>Préparateur</td><td><code>Stock → Transferts → Bon de préparation</code><br>Réserver stock → sélectionner lot FEFO → valider.</td><td>stock.picking</td></tr>
+                        <tr><td>3</td><td><span class="badge" style="background:#fd7e14; color:white;">Expédition (Ship)</span></td><td>Logistique</td><td><code>Stock → Transferts → Bon de livraison</code><br>Charger → valider → imprimer BL pour signature.</td><td>stock.picking</td></tr>
+                        <tr><td>4</td><td><span class="badge" style="background:#28a745; color:white;">Facturation</span></td><td>Comptable</td><td><code>Ventes → Facturation → Factures à créer</code><br>Sélectionner BL → Créer factures groupées par client.</td><td>account.move</td></tr>
+                    </table>
+                </div>
+
+                <h2>4. Chaîne Fournisseur → Produit → Client</h2>
+                <div class="card">
+                    <div class="card-header">🔗 Comment l'achat alimente la vente</div>
+                    <div style="overflow-x:auto; padding:20px 0;">
+                        <div style="display:flex; gap:12px; min-width:700px; align-items:center;">
+                            <div style="flex:1; background:#e3f2fd; border:2px solid #0077b6; padding:15px; border-radius:10px; text-align:center;"><div style="font-size:1.5rem;">🏭</div><div style="font-weight:bold;">FOURNISSEUR</div><div style="font-size:0.8rem; color:#666;">76 importés</div><div style="font-size:0.7rem; margin-top:5px;">11 groupes (Asie, France…)</div></div>
+                            <div style="display:flex; flex-direction:column; align-items:center; color:#0077b6; font-weight:bold;"><div style="font-size:0.75rem;">App Achats</div><div style="font-size:1.5rem;">→</div><div style="font-size:0.7rem;">PO + calcul PR</div></div>
+                            <div style="flex:1; background:#fff3e0; border:2px solid #fd7e14; padding:15px; border-radius:10px; text-align:center;"><div style="font-size:1.5rem;">📦</div><div style="font-weight:bold;">PRODUIT</div><div style="font-size:0.8rem; color:#666;">299 importés</div><div style="font-size:0.7rem; margin-top:5px;">6 catégories GEL OI</div></div>
+                            <div style="display:flex; flex-direction:column; align-items:center; color:#28a745; font-weight:bold;"><div style="font-size:0.75rem;">Odoo Ventes</div><div style="font-size:1.5rem;">→</div><div style="font-size:0.7rem;">SO + liste prix</div></div>
+                            <div style="flex:1; background:#e8f5e9; border:2px solid #28a745; padding:15px; border-radius:10px; text-align:center;"><div style="font-size:1.5rem;">🏪</div><div style="font-weight:bold;">CLIENT</div><div style="font-size:0.8rem; color:#666;">231 importés</div><div style="font-size:0.7rem; margin-top:5px;">4 groupes + 19 enseignes</div></div>
+                        </div>
+                    </div>
+                    <table>
+                        <tr><th>Étape</th><th>Système</th><th>Donnée transmise</th></tr>
+                        <tr><td>1. Commande fournisseur</td><td><strong>App Achats</strong> → Odoo</td><td>PO avec prix d'achat + frais approche = PR</td></tr>
+                        <tr><td>2. Réception marchandise</td><td><strong>Odoo</strong> (via Kanban App)</td><td>Validation picking → Odoo met à jour <code>standard_price</code></td></tr>
+                        <tr><td>3. Commande client</td><td><strong>Odoo</strong> (Ventes)</td><td>Prix vente auto = <code>standard_price</code> × (1 + Marge%)</td></tr>
+                        <tr><td>4. Livraison + Facture</td><td><strong>Odoo</strong> (Stock + Compta)</td><td>BL, facture, marge = PV − PR</td></tr>
+                    </table>
+                </div>
+
+                <h2>5. Points à valider / affiner</h2>
+                <div class="card">
+                    <div class="card-header">⚠️ Points de vérification avant tests</div>
+                    <table>
+                        <tr><th style="width:5%;">☐</th><th style="width:40%;">Point</th><th>Détail</th><th style="width:15%;">Priorité</th></tr>
+                        <tr><td>☐</td><td>78 produits en doublon EAN</td><td>Créer les variantes par Origine pour les 60 EAN partagés</td><td><span class="badge badge-success">Haute</span></td></tr>
+                        <tr><td>☐</td><td>Attribution liste de prix aux clients</td><td>Vérifier que chaque client a <code>property_product_pricelist</code> attribué selon son code tarif</td><td><span class="badge badge-success">Haute</span></td></tr>
+                        <tr><td>☐</td><td>Conditions de paiement assignées</td><td>Vérifier que <code>property_payment_term_id</code> est renseigné sur les 231 clients</td><td><span class="badge badge-success">Haute</span></td></tr>
+                        <tr><td>☐</td><td>Taxes vente (TVA DOM) sur produits</td><td>Vérifier que <code>taxes_id</code> est renseigné (2.1% ou 8.5% DOM) sur chaque produit</td><td><span class="badge badge-success">Haute</span></td></tr>
+                        <tr><td>☐</td><td>Traçabilité par lots activée</td><td>Vérifier que <code>tracking = 'lot'</code> sur les produits nécessitant DLC/DLUO</td><td><span class="badge badge-warning">Moyenne</span></td></tr>
+                        <tr><td>☐</td><td>Promotions / 3xNet / RFA</td><td>Mécanismes non encore configurés. À planifier selon besoin immédiat</td><td><span class="badge badge-info">Basse</span></td></tr>
+                        <tr><td>☐</td><td>Équipe de vente</td><td>Pas encore créée. Attribution commerciaux → clients</td><td><span class="badge badge-warning">Moyenne</span></td></tr>
+                        <tr><td>☐</td><td>Encours clients (blocage)</td><td>Champ <code>credit_limit</code> et automatisation de blocage non configurés</td><td><span class="badge badge-warning">Moyenne</span></td></tr>
+                    </table>
+                </div>
+
+                <h2>6. Scénario de test — Flux vente complet</h2>
+                <div class="card">
+                    <div class="card-header">🧪 Test à réaliser sur staging</div>
+                    <table>
+                        <tr><th style="width:5%;">☐</th><th style="width:40%;">Test</th><th>Validation attendue</th></tr>
+                        <tr><td>☐</td><td>Créer une commande pour un client GMS (tarif Hyper, id=3)</td><td>Prix = coût × 1.35 automatiquement appliqué</td></tr>
+                        <tr><td>☐</td><td>Confirmer la commande</td><td>2 pickings créés (Pick + Ship)</td></tr>
+                        <tr><td>☐</td><td>Préparer le bon de préparation (Pick)</td><td>Stock décrémenté du congélateur, lot FEFO sélectionné</td></tr>
+                        <tr><td>☐</td><td>Valider l'expédition (Ship)</td><td>Stock sorti, BL imprimable</td></tr>
+                        <tr><td>☐</td><td>Créer la facture</td><td>Facture au bon montant, condition paiement 30j</td></tr>
+                        <tr><td>☐</td><td>Vérifier la marge dans les rapports</td><td>Marge = PV − standard_price (PR synchronisé par l'App)</td></tr>
+                    </table>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-top:20px;">
+                        <a href="https://ah-chou1.odoo.com/odoo/sales" target="_blank" style="display:block; background:#0d6efd; color:white; padding:15px; border-radius:8px; text-decoration:none; text-align:center; font-weight:bold;">📋 Commandes Vente</a>
+                        <a href="https://ah-chou1.odoo.com/odoo/contacts?domain=%5B%5B%22customer_rank%22%2C%22%3E%22%2C0%5D%5D" target="_blank" style="display:block; background:#28a745; color:white; padding:15px; border-radius:8px; text-decoration:none; text-align:center; font-weight:bold;">👥 Clients (231)</a>
+                        <a href="https://ah-chou1.odoo.com/odoo/product-pricelist" target="_blank" style="display:block; background:#6f42c1; color:white; padding:15px; border-radius:8px; text-decoration:none; text-align:center; font-weight:bold;">💰 Listes de prix (7)</a>
+                        <a href="https://ah-chou1.odoo.com/odoo/product-template" target="_blank" style="display:block; background:#fd7e14; color:white; padding:15px; border-radius:8px; text-decoration:none; text-align:center; font-weight:bold;">📦 Produits (299)</a>
+                    </div>
+                </div>
+
+                <h2>7. Questions fréquentes</h2>
+                <div class="card">
+                    <div class="card-header">❓ FAQ Flux de vente</div>
+                    <div style="margin-bottom:20px;">
+                        <h4 style="color:var(--primary);">Q: Les ventes sont-elles gérées dans l'App ou dans Odoo ?</h4>
+                        <p style="margin-left:20px; background:#f8f9fa; padding:15px; border-radius:8px;"><strong>Dans Odoo uniquement.</strong> L'App Achats Harel gère les achats (calculette PR, commandes fournisseurs, suivi transit Kanban). Les ventes, la préparation, la livraison et la facturation se font dans Odoo nativement.</p>
+                    </div>
+                    <div style="margin-bottom:20px;">
+                        <h4 style="color:var(--primary);">Q: Comment le prix de revient (PR) calculé par l'App impacte-t-il les ventes ?</h4>
+                        <p style="margin-left:20px; background:#f8f9fa; padding:15px; border-radius:8px;">L'App crée un PO dans Odoo avec le PR (coûts d'approche, taux de change). À la réception, Odoo met à jour le <code>standard_price</code> du produit. Les 7 listes de prix appliquent ensuite leur marge sur ce coût : exemple Catalogue = coût × 1.40, CHR = coût × 1.15.</p>
+                    </div>
+                    <div style="margin-bottom:20px;">
+                        <h4 style="color:var(--primary);">Q: Pourquoi 2 étapes de livraison (Pick + Ship) ?</h4>
+                        <p style="margin-left:20px; background:#f8f9fa; padding:15px; border-radius:8px;">La <strong>préparation</strong> (Pick) permet au préparateur de sélectionner les lots FEFO (First Expired First Out) et vérifier les DLC depuis les congélateurs. L'<strong>expédition</strong> (Ship) confirme le chargement et génère le BL à faire signer par le client.</p>
+                    </div>
+                    <div style="margin-bottom:20px;">
+                        <h4 style="color:var(--primary);">Q: Comment fonctionne la facturation groupée ?</h4>
+                        <p style="margin-left:20px; background:#f8f9fa; padding:15px; border-radius:8px;">Odoo permet de regrouper <strong>plusieurs BL d'un même client</strong> en une seule facture via <code>Ventes → Facturation → Factures à créer</code>. La fréquence (hebdo, mensuel) est définie par la politique commerciale.</p>
+                    </div>
+                    <div>
+                        <h4 style="color:var(--primary);">Q: Les 78 produits en erreur d'import peuvent-ils être vendus ?</h4>
+                        <p style="margin-left:20px; background:#f8f9fa; padding:15px; border-radius:8px;">Non, pas encore. Ces produits partagent des codes-barres (EAN doublons). La solution est de créer des <strong>variantes par Origine</strong> (Inde, Vietnam, Indonésie) via l'attribut déjà configuré dans Odoo. Chaque variante aura alors son propre code-barre unique.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ================================================================== -->
             <!-- GUIDE CONFIGURATION TRANSIT MARITIME                               -->
             <!-- ================================================================== -->
             <div id="guide-config-transit" class="section">
@@ -3701,13 +4512,17 @@ python3 import_odoo.py --type produits --dry-run</pre>
 │
 ├── 📥 <strong style="color:#6f42c1;">WH/RECEPTION</strong> (id=19, type=internal)
 │
-├── 🚢 <strong style="color:#0077b6;">WH/TRANSIT MARITIME</strong>
-│   ├── <strong>EN MER</strong> (id=22, type=transit)
-│   ├── <strong>PORT ARRIVEE</strong> (id=23, type=transit)
-│   └── <strong>DEDOUANEMENT</strong> (id=24, type=transit)
+├── 🚢 <strong style="color:#0077b6;">WH/TRANSIT MARITIME</strong> (id=21, type=transit)
+│   ├── <strong>DEPART</strong> (id=28, type=<span style="color:#28a745; font-weight:bold;">internal</span>)
+│   ├── <strong>EN MER</strong> (id=22, type=<span style="color:#28a745; font-weight:bold;">internal</span>)
+│   ├── <strong>PORT ARRIVEE</strong> (id=23, type=<span style="color:#28a745; font-weight:bold;">internal</span>)
+│   └── <strong>DEDOUANEMENT</strong> (id=24, type=<span style="color:#28a745; font-weight:bold;">internal</span>)
 │
 └── 🏭 <strong>WH/LOGISTISUD</strong> (id=25, type=internal)
                         </pre>
+                        <div style="background:#d4edda; border:1px solid #28a745; padding:12px; border-radius:8px; margin-top:10px;">
+                            <strong>Important :</strong> Les 4 emplacements de transit (DEPART, EN MER, PORT ARRIVEE, DEDOUANEMENT) ont été changés de <code>transit</code> à <code>internal</code> le 05/03/2026. Raison : les emplacements de type <code>transit</code> ne gèrent pas de <code>stock.quant</code> dans Odoo, rendant le stock invisible dans les rapports natifs. En type <code>internal</code>, le stock est visible dans Odoo (Inventaire → Rapports → État des stocks).
+                        </div>
                     </div>
                     <div style="text-align:center; margin-top:15px;">
                         <a href="https://ah-chou1.odoo.com/odoo/stock-location" target="_blank" style="display:inline-block; background:var(--primary); color:white; padding:12px 25px; border-radius:8px; text-decoration:none; font-weight:bold;">
@@ -3726,10 +4541,10 @@ python3 import_odoo.py --type produits --dry-run</pre>
                             <td><span style="display:inline-block; width:14px; height:14px; background:#6c757d; border-radius:3px; vertical-align:middle;"></span> #6c757d</td>
                             <td><code>NULL</code></td><td>—</td>
                         </tr>
-                        <tr>
+                        <tr style="background:#e3f2fd;">
                             <td>2</td><td><code>ENVOYE</code></td><td>Envoyé</td>
                             <td><span style="display:inline-block; width:14px; height:14px; background:#0d6efd; border-radius:3px; vertical-align:middle;"></span> #0d6efd</td>
-                            <td><code>NULL</code></td><td>—</td>
+                            <td><strong>28</strong></td><td>WH/TRANSIT MARITIME/DEPART</td>
                         </tr>
                         <tr style="background:#e3f2fd;">
                             <td>3</td><td><code>EN_MER</code></td><td>En mer</td>
@@ -3764,7 +4579,7 @@ python3 import_odoo.py --type produits --dry-run</pre>
                     <div class="card-header">✅ Natif dans Odoo (aucun dev côté Odoo)</div>
                     <table>
                         <tr><th style="width:40%;">Fonctionnalité</th><th>Statut ah-chou1</th></tr>
-                        <tr><td>Emplacements transit (EN MER, PORT, DEDOUANEMENT)</td><td><span class="badge badge-success">✅ Créés</span></td></tr>
+                        <tr><td>Emplacements transit → <strong>internal</strong> (DEPART, EN MER, PORT, DEDOUANEMENT)</td><td><span class="badge badge-success">✅ Créés &amp; Migrés</span></td></tr>
                         <tr><td>Emplacements internes (RECEPTION, Stock, LOGISTISUD)</td><td><span class="badge badge-success">✅ Créés</span></td></tr>
                         <tr><td>Transferts internes entre emplacements</td><td><span class="badge badge-success">✅ Natif</span></td></tr>
                         <tr><td>Réception avec lots/DLUO</td><td><span class="badge badge-success">✅ Natif</span></td></tr>
@@ -3847,6 +4662,319 @@ python3 import_odoo.py --type produits --dry-run</pre>
                         <code>odoo_database</code> = <code>ah-chou1</code><br>
                         <code>odoo_username</code> = <code>mathieu.loic.hoarau@gmail.com</code>
                     </div>
+                </div>
+            </div>
+            
+            <!-- ================================================================== -->
+            <!-- API SYNCHRONISATION ODOO — ARCHITECTURE TECHNIQUE                  -->
+            <!-- ================================================================== -->
+            <div id="guide-api-sync" class="section">
+                <h1>🔄 API Synchronisation Odoo — Architecture Technique</h1>
+                
+                <div class="card">
+                    <div class="card-header">🎯 Vue d'ensemble</div>
+                    <p>L'application communique avec Odoo via <strong>XML-RPC</strong> (protocole natif Odoo). Le backend PHP (Symfony) expose des endpoints REST qui encapsulent les appels XML-RPC. Le frontend React appelle ces endpoints via le hook <code>useOdoo</code>.</p>
+                    <div style="background:#f8f9fa; padding:20px; border-radius:8px; margin:15px 0;">
+                        <pre style="margin:0; font-family:monospace; line-height:1.8; font-size:0.9rem;">
+┌─────────────────┐     REST/JSON      ┌──────────────────────┐     XML-RPC      ┌──────────────────┐
+│   PWA (React)   │ ──────────────────→ │   API PHP (Symfony)  │ ───────────────→ │   Odoo SaaS 19   │
+│   useOdoo hook  │ ←────────────────── │   OdooApiService     │ ←─────────────── │   ah-chou1       │
+│                 │                     │   OdooDataController │                  │                  │
+└─────────────────┘                     └──────────────────────┘                  └──────────────────┘
+                        </pre>
+                    </div>
+                </div>
+
+                <h2>1. Endpoints API — Référence complète</h2>
+                
+                <div class="card">
+                    <div class="card-header">📋 Endpoints Achats / Bons de commande</div>
+                    <table>
+                        <tr><th>Méthode</th><th>Route</th><th>Description</th><th>Modèle Odoo</th></tr>
+                        <tr>
+                            <td><span class="badge badge-success">POST</span></td>
+                            <td><code>/odoo/purchase-order</code></td>
+                            <td>Crée un PO (RFQ → confirmation). Retourne <code>id</code>, <code>name</code>, <code>pickingId</code></td>
+                            <td><code>purchase.order</code></td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-success">POST</span></td>
+                            <td><code>/odoo/purchase-order/{id}/validate-receipt</code></td>
+                            <td>Positionne les quantités attendues sur le picking de réception, confirme et valide. Fait passer <code>receipt_status</code> à <code>full</code></td>
+                            <td><code>stock.picking</code>, <code>stock.move</code></td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-success">POST</span></td>
+                            <td><code>/odoo/purchase-order/{id}/cancel</code></td>
+                            <td>Annule le PO (<code>button_cancel</code>)</td>
+                            <td><code>purchase.order</code></td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-success">PUT</span></td>
+                            <td><code>/odoo/purchase-order/{id}/prices</code></td>
+                            <td>Met à jour les prix unitaires des lignes du PO (prix de revient définitifs)</td>
+                            <td><code>purchase.order.line</code></td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-success">GET</span></td>
+                            <td><code>/odoo/purchase-order/{id}/pickings</code></td>
+                            <td>Liste les pickings liés à un PO</td>
+                            <td><code>stock.picking</code></td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">📦 Endpoints Stock / Transferts</div>
+                    <table>
+                        <tr><th>Méthode</th><th>Route</th><th>Description</th><th>Modèle Odoo</th></tr>
+                        <tr>
+                            <td><span class="badge badge-success">POST</span></td>
+                            <td><code>/odoo/stock-transfer</code></td>
+                            <td>Crée un transfert interne entre 2 emplacements (auto-validé)</td>
+                            <td><code>stock.picking</code>, <code>stock.move</code></td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-success">GET</span></td>
+                            <td><code>/odoo/stock-at-location?location={id}</code></td>
+                            <td>Stock détaillé (produits, quantités, réservés) via <code>stock.quant</code></td>
+                            <td><code>stock.quant</code></td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-success">GET</span></td>
+                            <td><code>/odoo/stock-counts-batch?locations={ids}</code></td>
+                            <td>Compteurs de stock pour N emplacements en une requête (batch)</td>
+                            <td><code>stock.quant</code></td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-success">GET</span></td>
+                            <td><code>/odoo/movement-history?location={id}</code></td>
+                            <td>Historique des mouvements (entrées/sorties) d'un emplacement</td>
+                            <td><code>stock.move</code></td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">🏢 Endpoints Fournisseurs / Produits</div>
+                    <table>
+                        <tr><th>Méthode</th><th>Route</th><th>Description</th><th>Modèle Odoo</th></tr>
+                        <tr>
+                            <td><span class="badge badge-success">GET</span></td>
+                            <td><code>/odoo/suppliers/search?name={name}</code></td>
+                            <td>Recherche serveur-side d'un fournisseur par nom (5 résultats max)</td>
+                            <td><code>res.partner</code></td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-success">GET</span></td>
+                            <td><code>/odoo/products</code></td>
+                            <td>Liste les produits Odoo</td>
+                            <td><code>product.product</code></td>
+                        </tr>
+                    </table>
+                </div>
+
+                <h2>2. Gestion des erreurs XML-RPC — <code>safeExecute</code></h2>
+                <div class="card">
+                    <div class="card-header">⚠️ Problème : "cannot marshal None" (Odoo SaaS 19.1)</div>
+                    <p>Odoo SaaS 19.1 a un bug XML-RPC : les méthodes <code>action_confirm</code>, <code>button_validate</code>, <code>button_cancel</code> retournent <code>None</code> (Python), que le décodeur PHP XML-RPC ne peut pas désérialiser. Cela provoquait une <code>RuntimeException: cannot marshal None</code>.</p>
+                    
+                    <h4 style="margin-top:15px;">Solution : <code>safeExecute()</code></h4>
+                    <p>Un wrapper <code>safeExecute()</code> dans <code>OdooApiService.php</code> intercepte cette erreur et la traite comme un succès (l'action a bien été exécutée côté Odoo, seul le retour est problématique) :</p>
+                    <div style="background:#1a1a2e; padding:15px; border-radius:8px; margin:10px 0; overflow-x:auto;">
+                        <pre style="margin:0; color:#e0e0e0; font-size:0.8rem;">
+<span style="color:#66d9ef;">private function</span> <span style="color:#a6e22e;">safeExecute</span>(<span style="color:#66d9ef;">string</span> $model, <span style="color:#66d9ef;">string</span> $method, <span style="color:#66d9ef;">array</span> $args): <span style="color:#66d9ef;">mixed</span>
+{
+    <span style="color:#66d9ef;">try</span> {
+        <span style="color:#66d9ef;">return</span> $this-><span style="color:#a6e22e;">execute</span>($model, $method, $args);
+    } <span style="color:#66d9ef;">catch</span> (\RuntimeException $e) {
+        <span style="color:#66d9ef;">if</span> (str_contains($e->getMessage(), <span style="color:#a6e22e;">'cannot marshal None'</span>)) {
+            <span style="color:#75715e;">// Odoo a exécuté l'action mais retourne None</span>
+            <span style="color:#66d9ef;">return true</span>;
+        }
+        <span style="color:#66d9ef;">throw</span> $e;
+    }
+}</pre>
+                    </div>
+                    
+                    <h4 style="margin-top:15px;">Méthodes utilisant <code>safeExecute</code></h4>
+                    <table>
+                        <tr><th>Méthode Odoo</th><th>Utilisée dans</th><th>Action</th></tr>
+                        <tr><td><code>action_confirm</code></td><td><code>confirmRFQ()</code></td><td>Confirmation d'un PO (RFQ → Purchase Order)</td></tr>
+                        <tr><td><code>button_validate</code></td><td><code>createStockTransfer()</code>, <code>validatePurchaseOrderReceipt()</code></td><td>Validation d'un picking (transfert/réception)</td></tr>
+                        <tr><td><code>button_cancel</code></td><td><code>cancelPurchaseOrder()</code></td><td>Annulation d'un PO</td></tr>
+                        <tr><td><code>message_post</code></td><td><code>postPurchaseOrderMessage()</code></td><td>Post dans le chatter du PO</td></tr>
+                    </table>
+                </div>
+
+                <h2>3. Flux de synchronisation détaillé</h2>
+                <div class="card">
+                    <div class="card-header">🔄 Séquence complète : BROUILLON → REÇU</div>
+                    <table>
+                        <tr><th style="width:5%;">#</th><th style="width:25%;">Transition</th><th>Actions backend</th><th>Résultat Odoo</th></tr>
+                        <tr>
+                            <td>1</td>
+                            <td>BROUILLON → ENVOYÉ</td>
+                            <td>
+                                <code>createPurchaseOrder()</code><br>
+                                → crée PO + lignes<br>
+                                → <code>confirmRFQ()</code> (safeExecute)<br>
+                                → stocke <code>odoo_po_id</code> + <code>odoo_po_name</code> sur Achat
+                            </td>
+                            <td>PO confirmé, <code>state=purchase</code>, <code>receipt_status=pending</code></td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>ENVOYÉ → EN MER</td>
+                            <td>
+                                <code>syncTransitStatus()</code><br>
+                                → <code>createStockTransfer(DEPART→EN_MER)</code><br>
+                                → positionne quantités, valide picking<br>
+                                → <code>postPOMessage()</code> chatter
+                            </td>
+                            <td>stock.quant créé dans EN MER(22), <code>receipt_status=pending</code></td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>EN MER → AU PORT</td>
+                            <td>
+                                <code>syncTransitStatus()</code><br>
+                                → <code>createStockTransfer(EN_MER→PORT)</code>
+                            </td>
+                            <td>stock.quant déplacé EN MER→PORT(23)</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>AU PORT → DOUANE</td>
+                            <td>
+                                <code>syncTransitStatus()</code><br>
+                                → <code>createStockTransfer(PORT→DEDOUANEMENT)</code>
+                            </td>
+                            <td>stock.quant déplacé PORT→DEDOUANEMENT(24)</td>
+                        </tr>
+                        <tr style="background:#f3e5f5;">
+                            <td>5</td>
+                            <td>DOUANE → A_RECEPTIONNER</td>
+                            <td>
+                                Dialog PR : <code>calculateCostPrices()</code><br>
+                                → <code>updatePurchaseOrderPrices()</code><br>
+                                → <code>createStockTransfer(DEDOUANEMENT→RECEPTION)</code><br>
+                                → <code>postPOMessage()</code>
+                            </td>
+                            <td>Prix PO mis à jour, stock en RECEPTION(19)</td>
+                        </tr>
+                        <tr style="background:#d4edda;">
+                            <td>6</td>
+                            <td>A_RECEPTIONNER → REÇU</td>
+                            <td>
+                                Bouton «Valider réception»<br>
+                                → <code>validatePurchaseOrderReceipt()</code><br>
+                                → positionne qty done sur moves<br>
+                                → <code>button_validate</code> (safeExecute)<br>
+                                → <code>postPOMessage()</code>
+                            </td>
+                            <td><code>receipt_status=full</code> (Entièrement reçu)</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <h2>4. Lecture du stock — <code>stock.quant</code></h2>
+                <div class="card">
+                    <div class="card-header">📊 Pourquoi stock.quant et pas stock.move ?</div>
+                    <table>
+                        <tr><th style="width:30%;">Méthode</th><th>stock.quant (actuel)</th><th>stock.move (ancien)</th></tr>
+                        <tr>
+                            <td>Principe</td>
+                            <td>Quantité <strong>physique</strong> réelle par emplacement</td>
+                            <td>Calcul logique : somme des entrées - somme des sorties</td>
+                        </tr>
+                        <tr>
+                            <td>Prérequis</td>
+                            <td>Emplacements de type <code>internal</code></td>
+                            <td>Fonctionne avec <code>transit</code> et <code>internal</code></td>
+                        </tr>
+                        <tr>
+                            <td>Données</td>
+                            <td>quantity, reserved_quantity, in_date</td>
+                            <td>Nécessite 2 requêtes (in + out) + calcul</td>
+                        </tr>
+                        <tr>
+                            <td>Visibilité Odoo native</td>
+                            <td><strong>Oui</strong> — visible dans Inventaire → État des stocks</td>
+                            <td>Non — invisible dans les rapports natifs</td>
+                        </tr>
+                        <tr>
+                            <td>Performance</td>
+                            <td>1 requête, données pré-calculées</td>
+                            <td>2 requêtes + agrégation côté serveur</td>
+                        </tr>
+                    </table>
+                    <div style="background:#d4edda; border:1px solid #28a745; padding:15px; border-radius:8px; margin-top:15px;">
+                        <strong>Décision :</strong> En changeant les 4 emplacements de transit de <code>transit</code> à <code>internal</code>, Odoo maintient automatiquement des <code>stock.quant</code> (enregistrements de stock physique) dans ces emplacements. Cela permet la visibilité native dans Odoo ET une lecture simplifiée via l'API.
+                    </div>
+                </div>
+
+                <h2>5. Journal des modifications — Mars 2026</h2>
+                <div class="card">
+                    <div class="card-header">📝 Changelog technique</div>
+                    <table>
+                        <tr><th>Date</th><th>Modification</th><th>Fichier(s)</th></tr>
+                        <tr>
+                            <td>05/03/2026</td>
+                            <td>Emplacements 22,23,24,28 changés de <code>transit</code> à <code>internal</code></td>
+                            <td>Odoo (ah-chou1)</td>
+                        </tr>
+                        <tr>
+                            <td>05/03/2026</td>
+                            <td><code>getStockAtLocation()</code> réécrit pour utiliser <code>stock.quant</code></td>
+                            <td><code>OdooApiService.php</code></td>
+                        </tr>
+                        <tr>
+                            <td>05/03/2026</td>
+                            <td><code>getStockCountsBatch()</code> réécrit pour utiliser <code>stock.quant</code></td>
+                            <td><code>OdooApiService.php</code></td>
+                        </tr>
+                        <tr>
+                            <td>05/03/2026</td>
+                            <td>Nouvel endpoint <code>POST /odoo/purchase-order/{id}/validate-receipt</code></td>
+                            <td><code>OdooDataController.php</code></td>
+                        </tr>
+                        <tr>
+                            <td>05/03/2026</td>
+                            <td>Nouvelle méthode <code>validatePurchaseOrderReceipt()</code></td>
+                            <td><code>OdooApiService.php</code></td>
+                        </tr>
+                        <tr>
+                            <td>05/03/2026</td>
+                            <td>Hook <code>validateReceipt()</code> ajouté dans <code>useOdoo</code></td>
+                            <td><code>useOdoo.ts</code></td>
+                        </tr>
+                        <tr>
+                            <td>05/03/2026</td>
+                            <td><code>handleCheckReception()</code> refait pour valider le picking au lieu de vérifier</td>
+                            <td><code>AchatsKanban.tsx</code></td>
+                        </tr>
+                        <tr>
+                            <td>05/03/2026</td>
+                            <td>Rapport stock : colonnes Quantité/Réservé/Disponible (au lieu de Entré/Sorti)</td>
+                            <td><code>AchatsKanban.tsx</code></td>
+                        </tr>
+                        <tr>
+                            <td>05/03/2026</td>
+                            <td><code>confirmRFQ()</code> utilise <code>safeExecute()</code></td>
+                            <td><code>OdooApiService.php</code></td>
+                        </tr>
+                        <tr>
+                            <td>05/03/2026</td>
+                            <td><code>createPurchaseOrder()</code> lecture PO avant confirmation</td>
+                            <td><code>OdooApiService.php</code></td>
+                        </tr>
+                        <tr>
+                            <td>05/03/2026</td>
+                            <td>Endpoint batch <code>/odoo/stock-counts-batch</code> + <code>/odoo/suppliers/search</code></td>
+                            <td><code>OdooDataController.php</code></td>
+                        </tr>
+                    </table>
                 </div>
             </div>
             
