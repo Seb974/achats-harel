@@ -675,8 +675,9 @@ class OdooApiService
             'scheduled_date' => date('Y-m-d H:i:s'),
         ]);
 
+        $moveIds = [];
         foreach ($products as $p) {
-            $this->create('stock.move', [
+            $moveIds[] = $this->create('stock.move', [
                 'picking_id' => $picking,
                 'product_id' => $p['product_id'],
                 'product_uom_qty' => $p['qty'],
@@ -685,18 +686,64 @@ class OdooApiService
             ]);
         }
 
-        // Confirmer et valider automatiquement
-        $this->execute('stock.picking', 'action_confirm', [[$picking]]);
-        $this->execute('stock.picking', 'button_validate', [[$picking]]);
+        // Odoo SaaS 19.1 returns None from action methods, which causes
+        // "cannot marshal None" XML-RPC errors. The action still succeeds.
+        $this->safeExecute('stock.picking', 'action_confirm', [[$picking]]);
 
+        // Set done quantities on each move before validating
+        foreach ($moveIds as $moveId) {
+            $this->write('stock.move', [$moveId], ['quantity' => 0]);
+        }
+        $moves = $this->read('stock.move', $moveIds, ['id', 'product_uom_qty']);
+        foreach ($moves as $move) {
+            $this->write('stock.move', [$move['id']], [
+                'quantity' => $move['product_uom_qty'],
+            ]);
+        }
+
+        $this->safeExecute('stock.picking', 'button_validate', [[$picking]]);
+
+        // Verify final state
         $result = $this->read('stock.picking', [$picking], ['id', 'name', 'state', 'origin']);
+        $state = $result[0]['state'] ?? 'unknown';
+
+        // If still not done, try force-validating via immediate transfer
+        if ($state !== 'done') {
+            $this->logger->warning('Picking not done after validate, attempting force', [
+                'picking_id' => $picking, 'state' => $state,
+            ]);
+            try {
+                $this->safeExecute('stock.picking', 'action_set_quantities_to_reservation', [[$picking]]);
+                $this->safeExecute('stock.picking', 'button_validate', [[$picking]]);
+                $result = $this->read('stock.picking', [$picking], ['id', 'name', 'state', 'origin']);
+                $state = $result[0]['state'] ?? 'unknown';
+            } catch (\Throwable $e) {
+                $this->logger->warning('Force validate failed', ['error' => $e->getMessage()]);
+            }
+        }
 
         return [
             'success' => true,
             'picking_id' => $picking,
             'picking_name' => $result[0]['name'] ?? '',
-            'state' => $result[0]['state'] ?? '',
+            'state' => $state,
         ];
+    }
+
+    /**
+     * Execute an Odoo method, treating "cannot marshal None" errors as success
+     */
+    private function safeExecute(string $model, string $method, array $args = [], array $kwargs = []): mixed
+    {
+        try {
+            return $this->execute($model, $method, $args, $kwargs);
+        } catch (\RuntimeException $e) {
+            if (str_contains($e->getMessage(), 'cannot marshal None')) {
+                $this->logger->info("$model.$method returned None (treated as success)");
+                return true;
+            }
+            throw $e;
+        }
     }
 
     /**
@@ -704,7 +751,8 @@ class OdooApiService
      */
     public function cancelPurchaseOrder(int $orderId): bool
     {
-        return $this->execute('purchase.order', 'button_cancel', [[$orderId]]);
+        $this->safeExecute('purchase.order', 'button_cancel', [[$orderId]]);
+        return true;
     }
 
     /**
