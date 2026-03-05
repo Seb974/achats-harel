@@ -139,6 +139,22 @@ interface UseOdooReturn {
     getPurchaseOrderPickings: (orderId: number) => Promise<any[]>;
     checkPickingState: (pickingId: number) => Promise<PickingState>;
     syncTransitStatus: (achat: any, fromStatus: any, toStatus: any) => Promise<StockTransferResult | null>;
+    getStockAtLocation: (locationId: number) => Promise<StockAtLocationResult>;
+}
+
+interface StockAtLocationResult {
+    location_id: number;
+    location_name: string;
+    products: {
+        quant_id: number;
+        product_id: number;
+        product_name: string;
+        quantity: number;
+        reserved: number;
+    }[];
+    total_products: number;
+    total_quantity: number;
+    error?: string;
 }
 
 /**
@@ -777,6 +793,28 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         });
     }, [createStockTransfer, notify]);
 
+    const getStockAtLocation = useCallback(async (locationId: number): Promise<StockAtLocationResult> => {
+        try {
+            const response = await fetch(`${ENTRYPOINT}/odoo/stock-at-location/${locationId}`, {
+                headers: authHeaders(),
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.message || 'Erreur récupération stock');
+            }
+            return result;
+        } catch (e: any) {
+            return {
+                location_id: locationId,
+                location_name: '',
+                products: [],
+                total_products: 0,
+                total_quantity: 0,
+                error: e.message,
+            };
+        }
+    }, [session]);
+
     return {
         loading,
         error,
@@ -797,6 +835,7 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         getPurchaseOrderPickings,
         checkPickingState,
         syncTransitStatus,
+        getStockAtLocation,
     };
 };
 
