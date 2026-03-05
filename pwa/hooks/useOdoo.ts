@@ -139,6 +139,7 @@ interface UseOdooReturn {
     getPurchaseOrderPickings: (orderId: number) => Promise<any[]>;
     checkPickingState: (pickingId: number) => Promise<PickingState>;
     syncTransitStatus: (achat: any, fromStatus: any, toStatus: any) => Promise<StockTransferResult | null>;
+    getStockCountsBatch: (locationIds: number[]) => Promise<Record<number, number>>;
     getStockAtLocation: (locationId: number) => Promise<StockAtLocationResult>;
     getMovementHistory: (locationId: number) => Promise<MovementHistoryItem[]>;
     postPOMessage: (orderId: number, body: string) => Promise<void>;
@@ -285,21 +286,22 @@ export const useOdoo = (): UseOdooReturn => {
     }, [dataProvider, notify]);
 
     /**
-     * Recherche un fournisseur Odoo par nom (correspondance insensible à la casse)
+     * Recherche un fournisseur Odoo par nom (recherche côté serveur)
      */
     const findSupplierByName = useCallback(async (name: string): Promise<{ id: number; name: string } | null> => {
         if (!name) return null;
         try {
-            const suppliers = await getSuppliers(5000, 0);
-            const normalizedName = name.trim().toLowerCase();
-            const match = suppliers.find((s: any) =>
-                s.name?.trim().toLowerCase() === normalizedName
+            const response = await fetch(
+                `${ENTRYPOINT}/odoo/suppliers/search?name=${encodeURIComponent(name)}`,
+                { headers: authHeaders() },
             );
-            return match ? { id: match.id, name: match.name } : null;
+            const result = await response.json();
+            if (!response.ok || !result.found) return null;
+            return result.supplier;
         } catch {
             return null;
         }
-    }, [getSuppliers]);
+    }, [session]);
 
     /**
      * Crée une demande de devis (RFQ) dans Odoo
@@ -811,6 +813,25 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         });
     }, [createStockTransfer, notify]);
 
+    const getStockCountsBatch = useCallback(async (locationIds: number[]): Promise<Record<number, number>> => {
+        if (locationIds.length === 0) return {};
+        try {
+            const response = await fetch(
+                `${ENTRYPOINT}/odoo/stock-counts-batch?locations=${locationIds.join(',')}`,
+                { headers: authHeaders() },
+            );
+            const result = await response.json();
+            if (!response.ok) return {};
+            const counts: Record<number, number> = {};
+            for (const [locId, data] of Object.entries(result.counts ?? {})) {
+                counts[Number(locId)] = (data as any).total_products ?? 0;
+            }
+            return counts;
+        } catch {
+            return {};
+        }
+    }, [session]);
+
     const getStockAtLocation = useCallback(async (locationId: number): Promise<StockAtLocationResult> => {
         try {
             const response = await fetch(`${ENTRYPOINT}/odoo/stock-at-location/${locationId}`, {
@@ -878,6 +899,7 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         getPurchaseOrderPickings,
         checkPickingState,
         syncTransitStatus,
+        getStockCountsBatch,
         getStockAtLocation,
         getMovementHistory,
         postPOMessage,

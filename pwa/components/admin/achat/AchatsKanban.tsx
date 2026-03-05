@@ -227,6 +227,7 @@ export const AchatsKanban = () => {
         createPurchaseOrder,
         convertAchatToPurchaseOrder,
         findSupplierByName,
+        getStockCountsBatch,
         getStockAtLocation,
         getMovementHistory,
         postPOMessage,
@@ -258,21 +259,13 @@ export const AchatsKanban = () => {
 
     useEffect(() => {
         if (!isOdooConfigured || allStatuses.length === 0) return;
-        const locationStatuses = allStatuses.filter((s: any) => s.odooLocationId);
-        if (locationStatuses.length === 0) return;
+        const locationIds = allStatuses
+            .filter((s: any) => s.odooLocationId)
+            .map((s: any) => s.odooLocationId as number);
+        if (locationIds.length === 0) return;
 
-        const loadStockCounts = async () => {
-            const counts: Record<number, number> = {};
-            await Promise.all(
-                locationStatuses.map(async (s: any) => {
-                    const result = await getStockAtLocation(s.odooLocationId);
-                    counts[s.odooLocationId] = result.total_products;
-                })
-            );
-            setStockCounts(counts);
-        };
-        loadStockCounts();
-    }, [allStatuses, isOdooConfigured, getStockAtLocation]);
+        getStockCountsBatch(locationIds).then(setStockCounts);
+    }, [allStatuses, isOdooConfigured]);
 
     const handleHeaderClick = useCallback(async (status: any) => {
         if (!status.odooLocationId) return;
@@ -376,17 +369,11 @@ export const AchatsKanban = () => {
             notify(`${achat.supplier || achat.shipNumber || '#' + achat.id} → ${targetStatus.label}`, { type: 'success' });
             refresh();
 
-            // Rafraîchir les compteurs de stock Odoo
-            const locationStatuses = allStatuses.filter((s: any) => s.odooLocationId);
-            if (locationStatuses.length > 0) {
-                const counts: Record<number, number> = {};
-                await Promise.all(
-                    locationStatuses.map(async (s: any) => {
-                        const result = await getStockAtLocation(s.odooLocationId);
-                        counts[s.odooLocationId] = result.total_products;
-                    })
-                );
-                setStockCounts(counts);
+            const locationIds = allStatuses
+                .filter((s: any) => s.odooLocationId)
+                .map((s: any) => s.odooLocationId as number);
+            if (locationIds.length > 0) {
+                getStockCountsBatch(locationIds).then(setStockCounts);
             }
         } catch (e: any) {
             notify(e.message || 'Erreur lors de la transition', { type: 'error' });

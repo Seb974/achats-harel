@@ -638,6 +638,71 @@ class OdooDataController extends AbstractController
         }
     }
 
+    /**
+     * Récupère les compteurs de stock pour plusieurs emplacements en un seul appel
+     *
+     * Query: ?locations=22,23,24,28,19
+     */
+    #[Route('/stock-counts-batch', name: 'stock_counts_batch', methods: ['GET'])]
+    public function getStockCountsBatch(Request $request): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $locationsParam = $request->query->get('locations', '');
+            $locationIds = array_filter(array_map('intval', explode(',', $locationsParam)));
+
+            if (empty($locationIds)) {
+                return $this->json(['error' => 'locations query parameter requis (ex: ?locations=22,23,24)'], 400);
+            }
+
+            $counts = $this->odooService->getStockCountsBatch($locationIds);
+
+            return $this->json(['counts' => $counts]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Failed to fetch batch stock counts', ['error' => $e->getMessage()]);
+            return $this->json([
+                'error' => 'Erreur lors de la récupération des compteurs de stock',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Recherche un fournisseur par nom (côté serveur, pas besoin de charger tous les fournisseurs)
+     */
+    #[Route('/suppliers/search', name: 'search_supplier', methods: ['GET'])]
+    public function searchSupplier(Request $request): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $name = $request->query->get('name', '');
+            if (empty($name)) {
+                return $this->json(['error' => 'name query parameter requis'], 400);
+            }
+
+            $supplier = $this->odooService->findSupplierByName($name);
+
+            return $this->json([
+                'found' => $supplier !== null,
+                'supplier' => $supplier,
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Failed to search supplier', ['error' => $e->getMessage()]);
+            return $this->json([
+                'error' => 'Erreur lors de la recherche du fournisseur',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     // =========================================================================
     // ENDPOINTS DONNÉES DE RÉFÉRENCE
     // =========================================================================
