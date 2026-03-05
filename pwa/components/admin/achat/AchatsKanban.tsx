@@ -245,6 +245,21 @@ export const AchatsKanban = () => {
         history: any[];
     }>({ open: false, status: null, loading: false, data: null, history: [] });
 
+    interface TransitionStep {
+        label: string;
+        status: 'pending' | 'running' | 'success' | 'error' | 'skipped';
+        detail?: string;
+    }
+    const [transDialog, setTransDialog] = useState<{
+        open: boolean;
+        achat: any;
+        fromStatus: any;
+        targetStatus: any;
+        phase: 'confirm' | 'executing' | 'done';
+        steps: TransitionStep[];
+        error?: string;
+    }>({ open: false, achat: null, fromStatus: null, targetStatus: null, phase: 'confirm', steps: [] });
+
     const data = useMemo(() => rawData ?? [], [rawData]);
 
     useEffect(() => {
@@ -323,6 +338,42 @@ export const AchatsKanban = () => {
         return fullAchat;
     };
 
+    const describeTransitionSteps = (fromCode: string, toCode: string, achat: any): TransitionStep[] => {
+        const isReverse = isReverseTransition(fromCode, toCode);
+        const fromStatus = getStatusByCode(fromCode);
+        const toStatus = getStatusByCode(toCode);
+        const steps: TransitionStep[] = [];
+
+        if (fromCode === 'BROUILLON' && toCode === 'ENVOYE') {
+            steps.push({ label: 'Recherche fournisseur dans Odoo', status: 'pending' });
+            steps.push({ label: 'Création du bon de commande (PO)', status: 'pending' });
+            steps.push({ label: 'Confirmation RFQ → Purchase Order', status: 'pending' });
+            steps.push({ label: 'Message chatter PO', status: 'pending' });
+        } else if (isReverse && fromCode === 'ENVOYE' && toCode === 'BROUILLON') {
+            steps.push({ label: 'Annulation du PO Odoo (button_cancel)', status: 'pending' });
+            steps.push({ label: 'Suppression lien PO sur achat', status: 'pending' });
+        } else {
+            const srcLoc = isReverse ? toStatus : fromStatus;
+            const destLoc = isReverse ? fromStatus : toStatus;
+            const srcName = srcLoc?.label || fromCode;
+            const destName = destLoc?.label || toCode;
+            const srcId = srcLoc?.odooLocationId;
+            const destId = destLoc?.odooLocationId;
+
+            if (srcId && destId) {
+                steps.push({ label: `Transfert stock : ${srcName} (${srcId}) → ${destName} (${destId})`, status: 'pending' });
+                steps.push({ label: 'Positionnement quantités sur le picking', status: 'pending' });
+                steps.push({ label: 'Validation du picking (button_validate)', status: 'pending' });
+            }
+            if (achat.odooPurchaseOrderId) {
+                steps.push({ label: `Message chatter PO (${achat.odooPurchaseOrderName || 'PO#' + achat.odooPurchaseOrderId})`, status: 'pending' });
+            }
+        }
+        steps.push({ label: 'Mise à jour statut dans l\'app', status: 'pending' });
+        steps.push({ label: 'Actualisation compteurs stock', status: 'pending' });
+        return steps;
+    };
+
     const handleDrop = useCallback(async (achatId: string, targetStatus: any) => {
         const achat = data.find((a: any) => String(a.id) === String(achatId));
         if (!achat) return;
@@ -333,7 +384,7 @@ export const AchatsKanban = () => {
         if (fromCode === toCode) return;
 
         if (toCode === 'RECU') {
-            notify('Le passage à REÇU se fait via le bouton de vérification de réception', { type: 'info' });
+            notify('Le passage à REÇU se fait via le bouton de validation de réception', { type: 'info' });
             return;
         }
 
@@ -347,39 +398,206 @@ export const AchatsKanban = () => {
             return;
         }
 
-        await executeTransition(achat, targetStatus);
-    }, [data, notify]);
+        const fromStatus = getStatusByCode(fromCode) || achat.status;
+        const steps = describeTransitionSteps(fromCode, toCode, achat);
+        setTransDialog({
+            open: true,
+            achat,
+            fromStatus,
+            targetStatus,
+            phase: 'confirm',
+            steps,
+        });
+    }, [data, notify, statuses]);
 
-    const executeTransition = async (achat: any, targetStatus: any) => {
+    const updateStep = (index: number, update: Partial<TransitionStep>) => {
+        setTransDialog(prev => {
+            const steps = [...prev.steps];
+            steps[index] = { ...steps[index], ...update };
+            return { ...prev, steps };
+        });
+    };
+
+    const executeTransitionWithSteps = async () => {
+        setTransDialog(prev => ({ ...prev, phase: 'executing' }));
         setProcessing(true);
+
+        const { achat, targetStatus } = transDialog;
+        if (!achat || !targetStatus) return;
+
         const fromCode = achat.status?.code;
         const toCode = targetStatus.code;
         const isReverse = isReverseTransition(fromCode, toCode);
         const statusIri = targetStatus['@id'] || `/statuses/${targetStatus.id}`;
+        let stepIdx = 0;
+        let hasError = false;
 
         try {
             if (fromCode === 'BROUILLON' && toCode === 'ENVOYE') {
-                await handleBrouillonToEnvoye(achat, statusIri);
+                if (!isOdooConfigured) {
+                    for (let i = 0; i < transDialog.steps.length - 2; i++) updateStep(i, { status: 'skipped', detail: 'Odoo non configuré' });
+                    stepIdx = transDialog.steps.length - 2;
+                } else {
+                    const fullAchat = await fetchFullAchat(achat.id);
+
+                    updateStep(stepIdx, { status: 'running' });
+                    if (!fullAchat.supplierId && fullAchat.supplier) {
+                        const match = await findSupplierByName(fullAchat.supplier);
+                        if (match) {
+                            fullAchat.supplierId = match.id;
+                            await patchAchat(achat.id, { supplierId: match.id });
+                            updateStep(stepIdx, { status: 'success', detail: `${match.name} (id=${match.id})` });
+                        } else {
+                            updateStep(stepIdx, { status: 'error', detail: `"${fullAchat.supplier}" introuvable` });
+                        }
+                    } else {
+                        updateStep(stepIdx, { status: 'success', detail: fullAchat.supplier || 'OK' });
+                    }
+                    stepIdx++;
+
+                    const poData = convertAchatToPurchaseOrder(fullAchat);
+                    if (!poData) {
+                        updateStep(stepIdx, { status: 'error', detail: 'Aucun article ou fournisseur' });
+                        stepIdx++;
+                        updateStep(stepIdx, { status: 'skipped' });
+                        stepIdx++;
+                        updateStep(stepIdx, { status: 'skipped' });
+                        stepIdx++;
+                        await patchAchat(achat.id, { status: statusIri });
+                        updateStep(stepIdx, { status: 'success', detail: 'Statut mis à jour (sans PO)' });
+                        stepIdx++;
+                        updateStep(stepIdx, { status: 'skipped' });
+                        hasError = true;
+                    } else {
+                        updateStep(stepIdx, { status: 'running' });
+                        try {
+                            const result = await createPurchaseOrder(poData);
+                            if (result.success && result.order_id) {
+                                updateStep(stepIdx, { status: 'success', detail: `${result.order_name} (id=${result.order_id})` });
+                                stepIdx++;
+                                updateStep(stepIdx, { status: 'success', detail: 'RFQ confirmé' });
+                                stepIdx++;
+
+                                updateStep(stepIdx, { status: 'running' });
+                                postPOMessage(result.order_id,
+                                    `<p><strong>Statut transit : ENVOYÉ</strong><br/>Commande créée le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>`
+                                );
+                                updateStep(stepIdx, { status: 'success' });
+                                stepIdx++;
+
+                                updateStep(stepIdx, { status: 'running' });
+                                await patchAchat(achat.id, {
+                                    status: statusIri,
+                                    odooPurchaseOrderId: result.order_id,
+                                    odooPurchaseOrderName: result.order_name ?? null,
+                                });
+                                updateStep(stepIdx, { status: 'success' });
+                                stepIdx++;
+                            } else {
+                                throw new Error(result.error || 'Erreur création PO');
+                            }
+                        } catch (e: any) {
+                            updateStep(stepIdx, { status: 'error', detail: e.message });
+                            hasError = true;
+                            stepIdx = transDialog.steps.length - 1;
+                        }
+                    }
+                }
             } else if (isReverse && fromCode === 'ENVOYE' && toCode === 'BROUILLON') {
-                await handleEnvoyeToBrouillon(achat, statusIri);
+                if (achat.odooPurchaseOrderId) {
+                    updateStep(stepIdx, { status: 'running' });
+                    try {
+                        await cancelPurchaseOrder(achat.odooPurchaseOrderId);
+                        updateStep(stepIdx, { status: 'success', detail: `PO ${achat.odooPurchaseOrderName} annulé` });
+                    } catch (e: any) {
+                        updateStep(stepIdx, { status: 'error', detail: e.message });
+                    }
+                } else {
+                    updateStep(stepIdx, { status: 'skipped', detail: 'Aucun PO lié' });
+                }
+                stepIdx++;
+
+                updateStep(stepIdx, { status: 'running' });
+                await patchAchat(achat.id, { status: statusIri, odooPurchaseOrderId: null, odooPurchaseOrderName: null });
+                updateStep(stepIdx, { status: 'success' });
+                stepIdx++;
             } else {
-                await handleStockTransition(achat, targetStatus, statusIri, isReverse);
+                const fromStatus = getStatusByCode(fromCode) || achat.status;
+                const srcLocationId = isReverse ? targetStatus.odooLocationId : fromStatus?.odooLocationId;
+                const destLocationId = isReverse ? fromStatus?.odooLocationId : targetStatus.odooLocationId;
+
+                if (srcLocationId && destLocationId) {
+                    updateStep(stepIdx, { status: 'running' });
+                    const fullAchat = await fetchFullAchat(achat.id);
+                    try {
+                        await syncTransitStatus(
+                            fullAchat,
+                            isReverse ? targetStatus : fromStatus,
+                            isReverse ? fromStatus : targetStatus,
+                        );
+                        updateStep(stepIdx, { status: 'success', detail: `loc ${srcLocationId} → ${destLocationId}` });
+                        stepIdx++;
+                        updateStep(stepIdx, { status: 'success', detail: 'Quantités positionnées' });
+                        stepIdx++;
+                        updateStep(stepIdx, { status: 'success', detail: 'Picking validé (done)' });
+                        stepIdx++;
+                    } catch (e: any) {
+                        updateStep(stepIdx, { status: 'error', detail: e.message });
+                        stepIdx += 3;
+                        hasError = true;
+                    }
+                }
+
+                if (achat.odooPurchaseOrderId) {
+                    updateStep(stepIdx, { status: 'running' });
+                    const arrow = isReverse ? 'Retour' : 'Transit';
+                    const fromLabel = fromStatus?.label || fromCode;
+                    const toLabel = targetStatus.label;
+                    postPOMessage(achat.odooPurchaseOrderId,
+                        `<p><strong>${arrow} : ${fromLabel} → ${toLabel}</strong><br/>${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>`
+                    );
+                    updateStep(stepIdx, { status: 'success' });
+                    stepIdx++;
+                }
+
+                updateStep(stepIdx, { status: 'running' });
+                await patchAchat(achat.id, { status: statusIri });
+                updateStep(stepIdx, { status: 'success' });
+                stepIdx++;
             }
 
-            notify(`${achat.supplier || achat.shipNumber || '#' + achat.id} → ${targetStatus.label}`, { type: 'success' });
+            if (!hasError && stepIdx < transDialog.steps.length) {
+                updateStep(stepIdx, { status: 'running' });
+                const locationIds = allStatuses
+                    .filter((s: any) => s.odooLocationId)
+                    .map((s: any) => s.odooLocationId as number);
+                if (locationIds.length > 0) {
+                    const counts = await getStockCountsBatch(locationIds);
+                    setStockCounts(counts);
+                }
+                updateStep(stepIdx, { status: 'success' });
+            }
+
             refresh();
-
-            const locationIds = allStatuses
-                .filter((s: any) => s.odooLocationId)
-                .map((s: any) => s.odooLocationId as number);
-            if (locationIds.length > 0) {
-                getStockCountsBatch(locationIds).then(setStockCounts);
-            }
         } catch (e: any) {
-            notify(e.message || 'Erreur lors de la transition', { type: 'error' });
+            setTransDialog(prev => ({ ...prev, error: e.message }));
         } finally {
             setProcessing(false);
+            setTransDialog(prev => ({ ...prev, phase: 'done' }));
         }
+    };
+
+    const executeTransition = async (achat: any, targetStatus: any) => {
+        const fromCode = achat.status?.code;
+        const steps = describeTransitionSteps(fromCode, targetStatus.code, achat);
+        setTransDialog({
+            open: true,
+            achat,
+            fromStatus: getStatusByCode(fromCode) || achat.status,
+            targetStatus,
+            phase: 'confirm',
+            steps,
+        });
     };
 
     const handleBrouillonToEnvoye = async (achat: any, statusIri: string) => {
@@ -584,6 +802,130 @@ export const AchatsKanban = () => {
                     />
                 ))}
             </Box>
+
+            {/* DIALOG TRANSITION UNIVERSELLE */}
+            <Dialog
+                open={transDialog.open}
+                onClose={() => { if (transDialog.phase !== 'executing') setTransDialog(prev => ({ ...prev, open: false })); }}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <LocalShippingIcon color="primary" />
+                    <Box>
+                        <Typography variant="h6" component="span">
+                            {transDialog.fromStatus?.label || '?'} → {transDialog.targetStatus?.label || '?'}
+                        </Typography>
+                        {transDialog.achat && (
+                            <Typography variant="body2" color="text.secondary">
+                                {transDialog.achat.supplier || ''} — {transDialog.achat.shipNumber || `#${transDialog.achat.id}`}
+                            </Typography>
+                        )}
+                    </Box>
+                </DialogTitle>
+                <DialogContent>
+                    {transDialog.phase === 'confirm' && (
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                            Les actions suivantes seront exécutées dans Odoo :
+                        </Alert>
+                    )}
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {transDialog.steps.map((step, i) => (
+                            <Box
+                                key={i}
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'flex-start',
+                                    gap: 1.5,
+                                    p: 1,
+                                    borderRadius: 1,
+                                    bgcolor: step.status === 'error' ? 'error.50' : step.status === 'success' ? 'success.50' : step.status === 'running' ? 'action.hover' : 'transparent',
+                                    border: step.status === 'running' ? '1px solid' : '1px solid transparent',
+                                    borderColor: step.status === 'running' ? 'primary.main' : 'transparent',
+                                }}
+                            >
+                                <Box sx={{ mt: 0.3, minWidth: 24, textAlign: 'center' }}>
+                                    {step.status === 'pending' && <Typography color="text.disabled">○</Typography>}
+                                    {step.status === 'running' && <CircularProgress size={18} />}
+                                    {step.status === 'success' && <Typography color="success.main">✓</Typography>}
+                                    {step.status === 'error' && <Typography color="error.main">✗</Typography>}
+                                    {step.status === 'skipped' && <Typography color="text.disabled">—</Typography>}
+                                </Box>
+                                <Box sx={{ flex: 1 }}>
+                                    <Typography
+                                        variant="body2"
+                                        sx={{
+                                            fontWeight: step.status === 'running' ? 'bold' : 'normal',
+                                            color: step.status === 'skipped' ? 'text.disabled' : 'text.primary',
+                                        }}
+                                    >
+                                        {step.label}
+                                    </Typography>
+                                    {step.detail && (
+                                        <Typography variant="caption" color={step.status === 'error' ? 'error.main' : 'text.secondary'}>
+                                            {step.detail}
+                                        </Typography>
+                                    )}
+                                </Box>
+                            </Box>
+                        ))}
+                    </Box>
+
+                    {transDialog.error && (
+                        <Alert severity="error" sx={{ mt: 2 }}>{transDialog.error}</Alert>
+                    )}
+
+                    {transDialog.phase === 'done' && !transDialog.error && transDialog.steps.every(s => s.status !== 'error') && (
+                        <Alert severity="success" sx={{ mt: 2 }}>
+                            Transition complète. Toutes les actions Odoo ont été exécutées.
+                        </Alert>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    {transDialog.phase === 'confirm' && (
+                        <>
+                            <Button
+                                onClick={() => setTransDialog(prev => ({ ...prev, open: false }))}
+                                color="inherit"
+                            >
+                                Annuler
+                            </Button>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                onClick={executeTransitionWithSteps}
+                                startIcon={<LocalShippingIcon />}
+                            >
+                                Exécuter
+                            </Button>
+                        </>
+                    )}
+                    {transDialog.phase === 'executing' && (
+                        <Typography variant="body2" color="text.secondary" sx={{ p: 1 }}>
+                            Exécution en cours...
+                        </Typography>
+                    )}
+                    {transDialog.phase === 'done' && (
+                        <>
+                            {transDialog.achat?.odooPurchaseOrderId && (
+                                <Button
+                                    onClick={() => window.open(`https://ah-chou1.odoo.com/odoo/purchase/${transDialog.achat.odooPurchaseOrderId}`, '_blank')}
+                                    startIcon={<OpenInNewIcon />}
+                                >
+                                    Voir PO dans Odoo
+                                </Button>
+                            )}
+                            <Button
+                                variant="contained"
+                                onClick={() => setTransDialog(prev => ({ ...prev, open: false }))}
+                            >
+                                Fermer
+                            </Button>
+                        </>
+                    )}
+                </DialogActions>
+            </Dialog>
 
             <Dialog open={prDialog.open} onClose={() => handlePrConfirm('later')} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
