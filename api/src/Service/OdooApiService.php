@@ -864,7 +864,8 @@ class OdooApiService
     }
 
     /**
-     * Récupère le stock réel dans un emplacement via stock.quant (locations internal)
+     * Récupère le stock dans un emplacement.
+     * Essaie stock.quant d'abord, fallback sur stock.move si vide.
      */
     public function getStockAtLocation(int $locationId): array
     {
@@ -878,24 +879,93 @@ class OdooApiService
             ['product_id', 'quantity', 'reserved_quantity', 'in_date']
         );
 
-        $products = [];
-        foreach ($quants as $q) {
-            $pid = is_array($q['product_id']) ? $q['product_id'][0] : $q['product_id'];
-            $pname = is_array($q['product_id']) ? $q['product_id'][1] : '';
-            $products[] = [
-                'product_id' => $pid,
-                'product_name' => $pname,
-                'quantity' => $q['quantity'] ?? 0,
-                'reserved' => $q['reserved_quantity'] ?? 0,
-                'available' => ($q['quantity'] ?? 0) - ($q['reserved_quantity'] ?? 0),
-                'since' => $q['in_date'] ?? null,
+        if (!empty($quants)) {
+            $products = [];
+            foreach ($quants as $q) {
+                $pid = is_array($q['product_id']) ? $q['product_id'][0] : $q['product_id'];
+                $pname = is_array($q['product_id']) ? $q['product_id'][1] : '';
+                $products[] = [
+                    'product_id' => $pid,
+                    'product_name' => $pname,
+                    'quantity' => $q['quantity'] ?? 0,
+                    'reserved' => $q['reserved_quantity'] ?? 0,
+                    'available' => ($q['quantity'] ?? 0) - ($q['reserved_quantity'] ?? 0),
+                    'since' => $q['in_date'] ?? null,
+                ];
+            }
+            return [
+                'location_id' => $locationId,
+                'location_name' => $locationName,
+                'location_usage' => $usage,
+                'source' => 'stock.quant',
+                'products' => $products,
+                'total_products' => count($products),
+                'total_quantity' => array_sum(array_column($products, 'quantity')),
             ];
+        }
+
+        return $this->getStockAtLocationViaMoves($locationId, $locationName, $usage);
+    }
+
+    /**
+     * Calcul du stock logique via stock.move (fallback quand stock.quant est vide)
+     */
+    private function getStockAtLocationViaMoves(int $locationId, string $locationName, string $usage): array
+    {
+        $inMoves = $this->searchRead(
+            'stock.move',
+            [['location_dest_id', '=', $locationId], ['state', '=', 'done']],
+            ['product_id', 'quantity', 'date']
+        );
+
+        $outMoves = $this->searchRead(
+            'stock.move',
+            [['location_id', '=', $locationId], ['state', '=', 'done']],
+            ['product_id', 'quantity']
+        );
+
+        $stock = [];
+        foreach ($inMoves as $m) {
+            $pid = is_array($m['product_id']) ? $m['product_id'][0] : $m['product_id'];
+            $pname = is_array($m['product_id']) ? $m['product_id'][1] : '';
+            if (!isset($stock[$pid])) {
+                $stock[$pid] = ['product_id' => $pid, 'product_name' => $pname, 'in' => 0, 'out' => 0, 'last_in' => null];
+            }
+            $stock[$pid]['in'] += $m['quantity'] ?? 0;
+            $date = $m['date'] ?? null;
+            if ($date && (!$stock[$pid]['last_in'] || $date > $stock[$pid]['last_in'])) {
+                $stock[$pid]['last_in'] = $date;
+            }
+        }
+        foreach ($outMoves as $m) {
+            $pid = is_array($m['product_id']) ? $m['product_id'][0] : $m['product_id'];
+            $pname = is_array($m['product_id']) ? $m['product_id'][1] : '';
+            if (!isset($stock[$pid])) {
+                $stock[$pid] = ['product_id' => $pid, 'product_name' => $pname, 'in' => 0, 'out' => 0, 'last_in' => null];
+            }
+            $stock[$pid]['out'] += $m['quantity'] ?? 0;
+        }
+
+        $products = [];
+        foreach ($stock as $s) {
+            $balance = $s['in'] - $s['out'];
+            if ($balance > 0) {
+                $products[] = [
+                    'product_id' => $s['product_id'],
+                    'product_name' => $s['product_name'],
+                    'quantity' => $balance,
+                    'reserved' => 0,
+                    'available' => $balance,
+                    'since' => $s['last_in'],
+                ];
+            }
         }
 
         return [
             'location_id' => $locationId,
             'location_name' => $locationName,
             'location_usage' => $usage,
+            'source' => 'stock.move',
             'products' => $products,
             'total_products' => count($products),
             'total_quantity' => array_sum(array_column($products, 'quantity')),
@@ -1009,7 +1079,8 @@ class OdooApiService
     }
 
     /**
-     * Récupère les compteurs de stock pour plusieurs emplacements via stock.quant
+     * Récupère les compteurs de stock pour plusieurs emplacements.
+     * Essaie stock.quant d'abord, fallback stock.move pour les locations vides.
      *
      * @param int[] $locationIds
      * @return array<int, array{total_products: int, total_quantity: float}>
@@ -1035,6 +1106,31 @@ class OdooApiService
             $locId = is_array($q['location_id']) ? $q['location_id'][0] : $q['location_id'];
             $pid = is_array($q['product_id']) ? $q['product_id'][0] : $q['product_id'];
             $stock[$locId][$pid] = ($stock[$locId][$pid] ?? 0) + ($q['quantity'] ?? 0);
+        }
+
+        $emptyLocIds = array_values(array_filter($locationIds, fn($id) => empty($stock[$id])));
+
+        if (!empty($emptyLocIds)) {
+            $inMoves = $this->searchRead(
+                'stock.move',
+                [['location_dest_id', 'in', $emptyLocIds], ['state', '=', 'done']],
+                ['product_id', 'quantity', 'location_dest_id']
+            );
+            $outMoves = $this->searchRead(
+                'stock.move',
+                [['location_id', 'in', $emptyLocIds], ['state', '=', 'done']],
+                ['product_id', 'quantity', 'location_id']
+            );
+            foreach ($inMoves as $m) {
+                $locId = is_array($m['location_dest_id']) ? $m['location_dest_id'][0] : $m['location_dest_id'];
+                $pid = is_array($m['product_id']) ? $m['product_id'][0] : $m['product_id'];
+                $stock[$locId][$pid] = ($stock[$locId][$pid] ?? 0) + ($m['quantity'] ?? 0);
+            }
+            foreach ($outMoves as $m) {
+                $locId = is_array($m['location_id']) ? $m['location_id'][0] : $m['location_id'];
+                $pid = is_array($m['product_id']) ? $m['product_id'][0] : $m['product_id'];
+                $stock[$locId][$pid] = ($stock[$locId][$pid] ?? 0) - ($m['quantity'] ?? 0);
+            }
         }
 
         $result = [];
@@ -1100,35 +1196,47 @@ class OdooApiService
     private function xmlRpcCall(string $url, string $method, array $params): mixed
     {
         $request = $this->encodeXmlRpcRequest($method, $params);
-        
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $request,
-            CURLOPT_HTTPHEADER => [
-                'Content-Type: text/xml; charset=utf-8',
-                'Content-Length: ' . strlen($request),
-            ],
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_SSL_VERIFYHOST => 2,
-        ]);
+        $maxRetries = 3;
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
-        curl_close($ch);
-        
-        if ($response === false) {
-            throw new \RuntimeException("XML-RPC call failed: " . $error);
+        for ($attempt = 0; $attempt <= $maxRetries; $attempt++) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => $request,
+                CURLOPT_HTTPHEADER => [
+                    'Content-Type: text/xml; charset=utf-8',
+                    'Content-Length: ' . strlen($request),
+                ],
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2,
+            ]);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+            curl_close($ch);
+
+            if ($response === false) {
+                throw new \RuntimeException("XML-RPC call failed: " . $error);
+            }
+
+            if ($httpCode === 429 && $attempt < $maxRetries) {
+                $wait = (int) pow(2, $attempt + 1);
+                $this->logger->warning("Odoo rate limit (429), retry in {$wait}s (attempt " . ($attempt + 1) . "/$maxRetries)");
+                sleep($wait);
+                continue;
+            }
+
+            if ($httpCode >= 400) {
+                throw new \RuntimeException("XML-RPC HTTP error: $httpCode");
+            }
+
+            return $this->decodeXmlRpcResponse($response);
         }
 
-        if ($httpCode >= 400) {
-            throw new \RuntimeException("XML-RPC HTTP error: $httpCode");
-        }
-
-        return $this->decodeXmlRpcResponse($response);
+        throw new \RuntimeException("XML-RPC failed after $maxRetries retries (429 rate limit)");
     }
 
     /**
