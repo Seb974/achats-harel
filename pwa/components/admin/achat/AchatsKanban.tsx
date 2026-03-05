@@ -228,6 +228,8 @@ export const AchatsKanban = () => {
         convertAchatToPurchaseOrder,
         findSupplierByName,
         getStockAtLocation,
+        getMovementHistory,
+        postPOMessage,
     } = useOdoo();
 
     const [prDialog, setPrDialog] = useState<{ open: boolean; achat: any; targetStatus: any }>({ open: false, achat: null, targetStatus: null });
@@ -239,7 +241,8 @@ export const AchatsKanban = () => {
         status: any;
         loading: boolean;
         data: any;
-    }>({ open: false, status: null, loading: false, data: null });
+        history: any[];
+    }>({ open: false, status: null, loading: false, data: null, history: [] });
 
     const data = useMemo(() => rawData ?? [], [rawData]);
 
@@ -273,11 +276,14 @@ export const AchatsKanban = () => {
 
     const handleHeaderClick = useCallback(async (status: any) => {
         if (!status.odooLocationId) return;
-        setStockDialog({ open: true, status, loading: true, data: null });
+        setStockDialog({ open: true, status, loading: true, data: null, history: [] });
 
-        const result = await getStockAtLocation(status.odooLocationId);
-        setStockDialog(prev => ({ ...prev, loading: false, data: result }));
-    }, [getStockAtLocation]);
+        const [result, history] = await Promise.all([
+            getStockAtLocation(status.odooLocationId),
+            getMovementHistory(status.odooLocationId),
+        ]);
+        setStockDialog(prev => ({ ...prev, loading: false, data: result, history }));
+    }, [getStockAtLocation, getMovementHistory]);
 
     const statuses = useMemo(() => {
         return KANBAN_ORDER
@@ -424,6 +430,9 @@ export const AchatsKanban = () => {
                     odooPurchaseOrderId: result.order_id,
                     odooPurchaseOrderName: result.order_name ?? null,
                 });
+                postPOMessage(result.order_id,
+                    `<p><strong>📦 Statut transit : ENVOYÉ</strong><br/>Commande créée depuis l'application Achats Harel le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>`
+                );
             } else {
                 throw new Error(result.error || 'Erreur création PO Odoo');
             }
@@ -435,6 +444,9 @@ export const AchatsKanban = () => {
 
     const handleEnvoyeToBrouillon = async (achat: any, statusIri: string) => {
         if (achat.odooPurchaseOrderId) {
+            postPOMessage(achat.odooPurchaseOrderId,
+                `<p><strong>⬅️ Retour : ENVOYÉ → BROUILLON</strong><br/>Commande annulée le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>`
+            );
             try {
                 await cancelPurchaseOrder(achat.odooPurchaseOrderId);
             } catch (e: any) {
@@ -466,6 +478,15 @@ export const AchatsKanban = () => {
             } catch (e: any) {
                 notify(`Transfert stock Odoo échoué : ${e.message}. Statut mis à jour quand même.`, { type: 'warning' });
             }
+        }
+
+        if (achat.odooPurchaseOrderId) {
+            const arrow = isReverse ? '⬅️ Retour' : '➡️ Transit';
+            const fromLabel = fromStatus?.label || fromStatusCode;
+            const toLabel = targetStatus.label;
+            postPOMessage(achat.odooPurchaseOrderId,
+                `<p><strong>${arrow} : ${fromLabel} → ${toLabel}</strong><br/>${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>`
+            );
         }
 
         await patchAchat(achat.id, { status: statusIri });
@@ -526,6 +547,11 @@ export const AchatsKanban = () => {
                 if (recuStatus) {
                     const statusIri = recuStatus['@id'] || `/statuses/${recuStatus.id}`;
                     await patchAchat(achat.id, { status: statusIri });
+                    if (achat.odooPurchaseOrderId) {
+                        postPOMessage(achat.odooPurchaseOrderId,
+                            `<p><strong>✅ RÉCEPTION COMPLÈTE</strong><br/>Marchandises reçues et validées le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>`
+                        );
+                    }
                     notify('Réception complète — statut passé à REÇU', { type: 'success' });
                     refresh();
                 }
@@ -631,13 +657,13 @@ export const AchatsKanban = () => {
 
             <Dialog
                 open={stockDialog.open}
-                onClose={() => setStockDialog({ open: false, status: null, loading: false, data: null })}
+                onClose={() => setStockDialog({ open: false, status: null, loading: false, data: null, history: [] })}
                 maxWidth="md"
                 fullWidth
             >
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                     <InventoryIcon color="primary" />
-                    Rapport de stock Odoo — {stockDialog.status?.label}
+                    Rapport de stock — {stockDialog.status?.label}
                     {stockDialog.data?.location_name && (
                         <Chip label={stockDialog.data.location_name} size="small" variant="outlined" sx={{ ml: 1 }} />
                     )}
@@ -652,48 +678,99 @@ export const AchatsKanban = () => {
                         </Box>
                     ) : stockDialog.data?.error ? (
                         <Alert severity="error">{stockDialog.data.error}</Alert>
-                    ) : stockDialog.data?.products?.length === 0 ? (
-                        <Alert severity="info">
-                            Aucun stock dans cet emplacement. Les produits n'ont pas encore été transférés ici ou ont déjà été déplacés.
-                        </Alert>
                     ) : (
                         <>
-                            <Box display="flex" gap={2} mb={2}>
-                                <Chip
-                                    label={`${stockDialog.data?.total_products ?? 0} produit(s)`}
-                                    color="primary"
-                                    variant="outlined"
-                                />
-                                <Chip
-                                    label={`Qté totale : ${stockDialog.data?.total_quantity ?? 0}`}
-                                    color="secondary"
-                                    variant="outlined"
-                                />
-                            </Box>
-                            <TableContainer component={Paper} variant="outlined">
-                                <Table size="small">
-                                    <TableHead>
-                                        <TableRow>
-                                            <TableCell><strong>Produit</strong></TableCell>
-                                            <TableCell align="right"><strong>Quantité</strong></TableCell>
-                                            <TableCell align="right"><strong>Réservé</strong></TableCell>
-                                            <TableCell align="right"><strong>Disponible</strong></TableCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {stockDialog.data?.products?.map((p: any) => (
-                                            <TableRow key={p.quant_id}>
-                                                <TableCell>{p.product_name || `#${p.product_id}`}</TableCell>
-                                                <TableCell align="right">{p.quantity}</TableCell>
-                                                <TableCell align="right">{p.reserved}</TableCell>
-                                                <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                                                    {p.quantity - p.reserved}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </TableContainer>
+                            {/* Stock actuel */}
+                            <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
+                                Stock actuel dans cet emplacement
+                            </Typography>
+                            {stockDialog.data?.products?.length === 0 ? (
+                                <Alert severity="info" sx={{ mb: 2 }}>
+                                    Aucun produit actuellement à cette étape.
+                                </Alert>
+                            ) : (
+                                <>
+                                    <Box display="flex" gap={2} mb={1}>
+                                        <Chip
+                                            label={`${stockDialog.data?.total_products ?? 0} produit(s)`}
+                                            color="primary"
+                                            variant="outlined"
+                                            size="small"
+                                        />
+                                        <Chip
+                                            label={`Qté totale : ${stockDialog.data?.total_quantity ?? 0}`}
+                                            color="secondary"
+                                            variant="outlined"
+                                            size="small"
+                                        />
+                                    </Box>
+                                    <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
+                                        <Table size="small">
+                                            <TableHead>
+                                                <TableRow>
+                                                    <TableCell><strong>Produit</strong></TableCell>
+                                                    <TableCell align="right"><strong>Présent</strong></TableCell>
+                                                    <TableCell align="right"><strong>Entré</strong></TableCell>
+                                                    <TableCell align="right"><strong>Sorti</strong></TableCell>
+                                                    <TableCell><strong>Depuis</strong></TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {stockDialog.data?.products?.map((p: any) => (
+                                                    <TableRow key={p.product_id}>
+                                                        <TableCell>{p.product_name || `#${p.product_id}`}</TableCell>
+                                                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>{p.quantity}</TableCell>
+                                                        <TableCell align="right" sx={{ color: 'success.main' }}>{p.entered}</TableCell>
+                                                        <TableCell align="right" sx={{ color: 'error.main' }}>{p.exited}</TableCell>
+                                                        <TableCell>
+                                                            {p.since ? new Date(p.since).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                </>
+                            )}
+
+                            {/* Historique des mouvements */}
+                            {stockDialog.history.length > 0 && (
+                                <>
+                                    <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
+                                        Historique des mouvements
+                                    </Typography>
+                                    <TableContainer component={Paper} variant="outlined">
+                                        <Table size="small">
+                                            <TableHead>
+                                                <TableRow>
+                                                    <TableCell><strong>Date</strong></TableCell>
+                                                    <TableCell />
+                                                    <TableCell><strong>Produit</strong></TableCell>
+                                                    <TableCell align="right"><strong>Qté</strong></TableCell>
+                                                    <TableCell><strong>Origine</strong></TableCell>
+                                                    <TableCell><strong>Picking</strong></TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {stockDialog.history.map((m: any, i: number) => (
+                                                    <TableRow key={i} sx={{ bgcolor: m.direction === 'in' ? 'success.50' : 'error.50' }}>
+                                                        <TableCell sx={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                                                            {m.date ? new Date(m.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
+                                                        </TableCell>
+                                                        <TableCell sx={{ fontSize: '0.85rem' }}>
+                                                            {m.direction === 'in' ? '📥' : '📤'}
+                                                        </TableCell>
+                                                        <TableCell sx={{ fontSize: '0.8rem' }}>{m.product_name || `#${m.product_id}`}</TableCell>
+                                                        <TableCell align="right">{m.quantity}</TableCell>
+                                                        <TableCell sx={{ fontSize: '0.75rem' }}>{m.origin}</TableCell>
+                                                        <TableCell sx={{ fontSize: '0.75rem' }}>{m.picking}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                </>
+                            )}
                         </>
                     )}
                 </DialogContent>
@@ -712,7 +789,7 @@ export const AchatsKanban = () => {
                         </Button>
                     )}
                     <Button
-                        onClick={() => setStockDialog({ open: false, status: null, loading: false, data: null })}
+                        onClick={() => setStockDialog({ open: false, status: null, loading: false, data: null, history: [] })}
                     >
                         Fermer
                     </Button>
