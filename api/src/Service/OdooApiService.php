@@ -528,7 +528,8 @@ class OdooApiService
      */
     public function confirmRFQ(int $orderId): bool
     {
-        return $this->execute('purchase.order', 'button_confirm', [[$orderId]]);
+        $this->safeExecute('purchase.order', 'button_confirm', [[$orderId]]);
+        return true;
     }
 
     /**
@@ -598,9 +599,8 @@ class OdooApiService
         }
 
         if ($addedLines === 0) {
-            // Supprimer le PO vide
             try {
-                $this->execute('purchase.order', 'button_cancel', [[$orderId]]);
+                $this->safeExecute('purchase.order', 'button_cancel', [[$orderId]]);
                 $this->execute('purchase.order', 'unlink', [[$orderId]]);
             } catch (\Throwable $e) {
                 // ignore cleanup errors
@@ -610,14 +610,31 @@ class OdooApiService
             );
         }
 
-        // Confirmer automatiquement la commande
-        $this->confirmRFQ($orderId);
-
-        // Récupérer les informations de la commande créée
+        // Lire le PO AVANT confirmation pour garantir qu'on a le nom même si confirm échoue
         $order = $this->read('purchase.order', [$orderId], [
-            'id', 'name', 'partner_id', 'date_order', 'date_planned', 
+            'id', 'name', 'partner_id', 'date_order', 'date_planned',
             'amount_untaxed', 'amount_total', 'state', 'order_line', 'origin'
         ]);
+
+        // Confirmer la commande (tolérant aux erreurs XML-RPC "cannot marshal None")
+        try {
+            $this->confirmRFQ($orderId);
+        } catch (\Throwable $e) {
+            $this->logger->warning('PO confirmation error (PO still created)', [
+                'order_id' => $orderId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        // Relire pour avoir le state à jour après confirmation
+        try {
+            $order = $this->read('purchase.order', [$orderId], [
+                'id', 'name', 'partner_id', 'date_order', 'date_planned',
+                'amount_untaxed', 'amount_total', 'state', 'order_line', 'origin'
+            ]);
+        } catch (\Throwable $e) {
+            // Garder les données d'avant confirmation
+        }
 
         $result = [
             'success' => true,
@@ -626,7 +643,7 @@ class OdooApiService
             'supplier' => is_array($order[0]['partner_id']) ? $order[0]['partner_id'][1] : $order[0]['partner_id'],
             'amount_untaxed' => $order[0]['amount_untaxed'] ?? 0,
             'amount_total' => $order[0]['amount_total'] ?? 0,
-            'state' => $order[0]['state'] ?? 'purchase',
+            'state' => $order[0]['state'] ?? 'draft',
             'origin' => $order[0]['origin'] ?? '',
             'lines_count' => $addedLines,
         ];
@@ -962,6 +979,80 @@ class OdooApiService
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Calcule le stock pour plusieurs emplacements en une seule passe
+     *
+     * @param int[] $locationIds
+     * @return array<int, array{total_products: int, total_quantity: float}>
+     */
+    public function getStockCountsBatch(array $locationIds): array
+    {
+        if (empty($locationIds)) {
+            return [];
+        }
+
+        $inMoves = $this->searchRead(
+            'stock.move',
+            [['location_dest_id', 'in', $locationIds], ['state', '=', 'done']],
+            ['product_id', 'quantity', 'location_dest_id']
+        );
+
+        $outMoves = $this->searchRead(
+            'stock.move',
+            [['location_id', 'in', $locationIds], ['state', '=', 'done']],
+            ['product_id', 'quantity', 'location_id']
+        );
+
+        $stock = [];
+        foreach ($locationIds as $locId) {
+            $stock[$locId] = [];
+        }
+
+        foreach ($inMoves as $m) {
+            $locId = is_array($m['location_dest_id']) ? $m['location_dest_id'][0] : $m['location_dest_id'];
+            $pid = is_array($m['product_id']) ? $m['product_id'][0] : $m['product_id'];
+            $stock[$locId][$pid] = ($stock[$locId][$pid] ?? 0) + ($m['quantity'] ?? 0);
+        }
+        foreach ($outMoves as $m) {
+            $locId = is_array($m['location_id']) ? $m['location_id'][0] : $m['location_id'];
+            $pid = is_array($m['product_id']) ? $m['product_id'][0] : $m['product_id'];
+            $stock[$locId][$pid] = ($stock[$locId][$pid] ?? 0) - ($m['quantity'] ?? 0);
+        }
+
+        $result = [];
+        foreach ($locationIds as $locId) {
+            $products = array_filter($stock[$locId] ?? [], fn($qty) => $qty > 0);
+            $result[$locId] = [
+                'total_products' => count($products),
+                'total_quantity' => array_sum($products),
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Recherche un fournisseur par nom (côté serveur)
+     */
+    public function findSupplierByName(string $name): ?array
+    {
+        $suppliers = $this->searchRead(
+            'res.partner',
+            [['name', 'ilike', trim($name)], '|', ['supplier_rank', '>', 0], ['is_company', '=', true]],
+            ['id', 'name'],
+            5
+        );
+
+        $normalizedName = mb_strtolower(trim($name));
+        foreach ($suppliers as $s) {
+            if (mb_strtolower(trim($s['name'])) === $normalizedName) {
+                return ['id' => $s['id'], 'name' => $s['name']];
+            }
+        }
+
+        return !empty($suppliers) ? ['id' => $suppliers[0]['id'], 'name' => $suppliers[0]['name']] : null;
     }
 
     /**
