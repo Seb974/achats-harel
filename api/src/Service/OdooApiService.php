@@ -864,10 +864,7 @@ class OdooApiService
     }
 
     /**
-     * Calcule le stock logique dans un emplacement transit via stock.move
-     *
-     * Les locations de type `transit` n'ont pas de stock.quant.
-     * On calcule : moves entrants (dest=loc, done) - moves sortants (src=loc, done)
+     * Récupère le stock réel dans un emplacement via stock.quant (locations internal)
      */
     public function getStockAtLocation(int $locationId): array
     {
@@ -875,53 +872,24 @@ class OdooApiService
         $locationName = $location[0]['complete_name'] ?? $location[0]['name'] ?? "Location #$locationId";
         $usage = $location[0]['usage'] ?? 'unknown';
 
-        $inMoves = $this->searchRead(
-            'stock.move',
-            [['location_dest_id', '=', $locationId], ['state', '=', 'done']],
-            ['product_id', 'quantity', 'date']
+        $quants = $this->searchRead(
+            'stock.quant',
+            [['location_id', '=', $locationId], ['quantity', '>', 0]],
+            ['product_id', 'quantity', 'reserved_quantity', 'in_date']
         );
-
-        $outMoves = $this->searchRead(
-            'stock.move',
-            [['location_id', '=', $locationId], ['state', '=', 'done']],
-            ['product_id', 'quantity']
-        );
-
-        $stock = [];
-        foreach ($inMoves as $m) {
-            $pid = is_array($m['product_id']) ? $m['product_id'][0] : $m['product_id'];
-            $pname = is_array($m['product_id']) ? $m['product_id'][1] : '';
-            if (!isset($stock[$pid])) {
-                $stock[$pid] = ['product_id' => $pid, 'product_name' => $pname, 'in' => 0, 'out' => 0, 'last_in' => null];
-            }
-            $stock[$pid]['in'] += $m['quantity'] ?? 0;
-            $date = $m['date'] ?? null;
-            if ($date && (!$stock[$pid]['last_in'] || $date > $stock[$pid]['last_in'])) {
-                $stock[$pid]['last_in'] = $date;
-            }
-        }
-        foreach ($outMoves as $m) {
-            $pid = is_array($m['product_id']) ? $m['product_id'][0] : $m['product_id'];
-            $pname = is_array($m['product_id']) ? $m['product_id'][1] : '';
-            if (!isset($stock[$pid])) {
-                $stock[$pid] = ['product_id' => $pid, 'product_name' => $pname, 'in' => 0, 'out' => 0, 'last_in' => null];
-            }
-            $stock[$pid]['out'] += $m['quantity'] ?? 0;
-        }
 
         $products = [];
-        foreach ($stock as $s) {
-            $balance = $s['in'] - $s['out'];
-            if ($balance > 0) {
-                $products[] = [
-                    'product_id' => $s['product_id'],
-                    'product_name' => $s['product_name'],
-                    'quantity' => $balance,
-                    'entered' => $s['in'],
-                    'exited' => $s['out'],
-                    'since' => $s['last_in'],
-                ];
-            }
+        foreach ($quants as $q) {
+            $pid = is_array($q['product_id']) ? $q['product_id'][0] : $q['product_id'];
+            $pname = is_array($q['product_id']) ? $q['product_id'][1] : '';
+            $products[] = [
+                'product_id' => $pid,
+                'product_name' => $pname,
+                'quantity' => $q['quantity'] ?? 0,
+                'reserved' => $q['reserved_quantity'] ?? 0,
+                'available' => ($q['quantity'] ?? 0) - ($q['reserved_quantity'] ?? 0),
+                'since' => $q['in_date'] ?? null,
+            ];
         }
 
         return [
@@ -931,6 +899,65 @@ class OdooApiService
             'products' => $products,
             'total_products' => count($products),
             'total_quantity' => array_sum(array_column($products, 'quantity')),
+        ];
+    }
+
+    /**
+     * Valide le picking de réception d'un PO (fait passer receipt_status à "full")
+     */
+    public function validatePurchaseOrderReceipt(int $orderId): array
+    {
+        $order = $this->read('purchase.order', [$orderId], ['name', 'receipt_status']);
+        $poName = $order[0]['name'] ?? "PO#$orderId";
+
+        $pickings = $this->searchRead(
+            'stock.picking',
+            [['origin', '=', $poName], ['state', 'not in', ['done', 'cancel']]],
+            ['id', 'name', 'state', 'move_ids']
+        );
+
+        if (empty($pickings)) {
+            return [
+                'success' => false,
+                'message' => 'Aucun picking de réception en attente pour ce PO',
+                'receipt_status' => $order[0]['receipt_status'] ?? 'unknown',
+            ];
+        }
+
+        $validated = [];
+        foreach ($pickings as $picking) {
+            $pickingId = $picking['id'];
+            $moveIds = $picking['move_ids'] ?? [];
+
+            if (!empty($moveIds)) {
+                $moves = $this->read('stock.move', $moveIds, ['id', 'product_uom_qty']);
+                foreach ($moves as $move) {
+                    $this->write('stock.move', [$move['id']], [
+                        'quantity' => $move['product_uom_qty'],
+                    ]);
+                }
+            }
+
+            if ($picking['state'] === 'draft') {
+                $this->safeExecute('stock.picking', 'action_confirm', [[$pickingId]]);
+            }
+
+            $this->safeExecute('stock.picking', 'button_validate', [[$pickingId]]);
+
+            $result = $this->read('stock.picking', [$pickingId], ['id', 'name', 'state']);
+            $validated[] = [
+                'picking_id' => $pickingId,
+                'picking_name' => $result[0]['name'] ?? '',
+                'state' => $result[0]['state'] ?? 'unknown',
+            ];
+        }
+
+        $updatedOrder = $this->read('purchase.order', [$orderId], ['receipt_status']);
+
+        return [
+            'success' => true,
+            'pickings_validated' => $validated,
+            'receipt_status' => $updatedOrder[0]['receipt_status'] ?? 'unknown',
         ];
     }
 
@@ -982,7 +1009,7 @@ class OdooApiService
     }
 
     /**
-     * Calcule le stock pour plusieurs emplacements en une seule passe
+     * Récupère les compteurs de stock pour plusieurs emplacements via stock.quant
      *
      * @param int[] $locationIds
      * @return array<int, array{total_products: int, total_quantity: float}>
@@ -993,15 +1020,9 @@ class OdooApiService
             return [];
         }
 
-        $inMoves = $this->searchRead(
-            'stock.move',
-            [['location_dest_id', 'in', $locationIds], ['state', '=', 'done']],
-            ['product_id', 'quantity', 'location_dest_id']
-        );
-
-        $outMoves = $this->searchRead(
-            'stock.move',
-            [['location_id', 'in', $locationIds], ['state', '=', 'done']],
+        $quants = $this->searchRead(
+            'stock.quant',
+            [['location_id', 'in', $locationIds], ['quantity', '>', 0]],
             ['product_id', 'quantity', 'location_id']
         );
 
@@ -1010,15 +1031,10 @@ class OdooApiService
             $stock[$locId] = [];
         }
 
-        foreach ($inMoves as $m) {
-            $locId = is_array($m['location_dest_id']) ? $m['location_dest_id'][0] : $m['location_dest_id'];
-            $pid = is_array($m['product_id']) ? $m['product_id'][0] : $m['product_id'];
-            $stock[$locId][$pid] = ($stock[$locId][$pid] ?? 0) + ($m['quantity'] ?? 0);
-        }
-        foreach ($outMoves as $m) {
-            $locId = is_array($m['location_id']) ? $m['location_id'][0] : $m['location_id'];
-            $pid = is_array($m['product_id']) ? $m['product_id'][0] : $m['product_id'];
-            $stock[$locId][$pid] = ($stock[$locId][$pid] ?? 0) - ($m['quantity'] ?? 0);
+        foreach ($quants as $q) {
+            $locId = is_array($q['location_id']) ? $q['location_id'][0] : $q['location_id'];
+            $pid = is_array($q['product_id']) ? $q['product_id'][0] : $q['product_id'];
+            $stock[$locId][$pid] = ($stock[$locId][$pid] ?? 0) + ($q['quantity'] ?? 0);
         }
 
         $result = [];
