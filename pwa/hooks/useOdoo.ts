@@ -583,9 +583,8 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
 
             return {
                 product_id: item.productId,
-                product_qty: item.mainQuantity, // Quantité en unités de base
-                price_unit: item.mainPr, // Prix de revient par unité de base
-                product_uom: item.mainPackagingId, // UDM de base
+                product_qty: item.mainQuantity,
+                price_unit: item.mainPr,
                 name: description,
             };
         });

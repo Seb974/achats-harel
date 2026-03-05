@@ -570,7 +570,9 @@ class OdooApiService
         // Créer le bon de commande en brouillon d'abord
         $orderId = $this->create('purchase.order', $orderData);
 
-        // Créer les lignes de commande
+        // Créer les lignes de commande (tolérant aux produits manquants)
+        $skippedLines = [];
+        $addedLines = 0;
         foreach ($lines as $line) {
             $lineData = [
                 'order_id' => $orderId,
@@ -579,18 +581,33 @@ class OdooApiService
                 'price_unit' => $line['price_unit'],
             ];
 
-            // Ajouter la description si fournie
             if (!empty($line['name'])) {
                 $lineData['name'] = $line['name'];
             }
 
-            // Ajouter l'unité de mesure si fournie
-            // Note: Dans Odoo 19, le champ s'appelle 'product_uom_id' pas 'product_uom'
-            if (!empty($line['product_uom'])) {
-                $lineData['product_uom_id'] = $line['product_uom'];
+            try {
+                $this->create('purchase.order.line', $lineData);
+                $addedLines++;
+            } catch (\Throwable $e) {
+                $productDesc = $line['name'] ?? "product_id={$line['product_id']}";
+                $skippedLines[] = "Produit #{$line['product_id']} ignoré : {$e->getMessage()}";
+                $this->logger->warning("PO line skipped for product {$line['product_id']}", [
+                    'error' => $e->getMessage(),
+                ]);
             }
+        }
 
-            $this->create('purchase.order.line', $lineData);
+        if ($addedLines === 0) {
+            // Supprimer le PO vide
+            try {
+                $this->execute('purchase.order', 'button_cancel', [[$orderId]]);
+                $this->execute('purchase.order', 'unlink', [[$orderId]]);
+            } catch (\Throwable $e) {
+                // ignore cleanup errors
+            }
+            throw new \RuntimeException(
+                "Aucune ligne n'a pu être ajoutée au PO. " . implode(' | ', $skippedLines)
+            );
         }
 
         // Confirmer automatiquement la commande
@@ -602,7 +619,7 @@ class OdooApiService
             'amount_untaxed', 'amount_total', 'state', 'order_line', 'origin'
         ]);
 
-        return [
+        $result = [
             'success' => true,
             'order_id' => $orderId,
             'order_name' => $order[0]['name'] ?? "PO{$orderId}",
@@ -611,8 +628,15 @@ class OdooApiService
             'amount_total' => $order[0]['amount_total'] ?? 0,
             'state' => $order[0]['state'] ?? 'purchase',
             'origin' => $order[0]['origin'] ?? '',
-            'lines_count' => count($lines),
+            'lines_count' => $addedLines,
         ];
+
+        if (!empty($skippedLines)) {
+            $result['warnings'] = $skippedLines;
+            $result['skipped_count'] = count($skippedLines);
+        }
+
+        return $result;
     }
 
     // =========================================================================
