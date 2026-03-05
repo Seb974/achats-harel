@@ -139,6 +139,7 @@ interface UseOdooReturn {
     getPurchaseOrderPickings: (orderId: number) => Promise<any[]>;
     checkPickingState: (pickingId: number) => Promise<PickingState>;
     syncTransitStatus: (achat: any, fromStatus: any, toStatus: any) => Promise<StockTransferResult | null>;
+    validateReceipt: (orderId: number) => Promise<{ success: boolean; receipt_status?: string; error?: string }>;
     getStockCountsBatch: (locationIds: number[]) => Promise<Record<number, number>>;
     getStockAtLocation: (locationId: number) => Promise<StockAtLocationResult>;
     getMovementHistory: (locationId: number) => Promise<MovementHistoryItem[]>;
@@ -149,8 +150,8 @@ interface StockAtLocationProduct {
     product_id: number;
     product_name: string;
     quantity: number;
-    entered: number;
-    exited: number;
+    reserved: number;
+    available: number;
     since: string | null;
 }
 
@@ -813,6 +814,30 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         });
     }, [createStockTransfer, notify]);
 
+    const validateReceipt = useCallback(async (orderId: number): Promise<{ success: boolean; receipt_status?: string; error?: string }> => {
+        setLoading(true);
+        try {
+            const response = await fetch(`${ENTRYPOINT}/odoo/purchase-order/${orderId}/validate-receipt`, {
+                method: 'POST',
+                headers: authHeaders(),
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.message || 'Erreur validation réception');
+            }
+            if (result.success) {
+                notify('Réception validée dans Odoo', { type: 'success' });
+            }
+            return result;
+        } catch (e: any) {
+            const msg = e.message || 'Erreur validation réception';
+            notify(msg, { type: 'error' });
+            return { success: false, error: msg };
+        } finally {
+            setLoading(false);
+        }
+    }, [session, notify]);
+
     const getStockCountsBatch = useCallback(async (locationIds: number[]): Promise<Record<number, number>> => {
         if (locationIds.length === 0) return {};
         try {
@@ -899,6 +924,7 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         getPurchaseOrderPickings,
         checkPickingState,
         syncTransitStatus,
+        validateReceipt,
         getStockCountsBatch,
         getStockAtLocation,
         getMovementHistory,

@@ -519,6 +519,32 @@ class OdooDataController extends AbstractController
     }
 
     /**
+     * Valide le picking de réception d'un PO (passage receipt_status → full)
+     */
+    #[Route('/purchase-order/{id}/validate-receipt', name: 'validate_purchase_order_receipt', methods: ['POST'])]
+    public function validatePurchaseOrderReceipt(int $id): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $result = $this->odooService->validatePurchaseOrderReceipt($id);
+
+            $this->logger->info('PO receipt validation', $result);
+
+            return $this->json($result);
+        } catch (\Throwable $e) {
+            $this->logger->error('Failed to validate PO receipt', ['id' => $id, 'error' => $e->getMessage()]);
+            return $this->json([
+                'error' => 'Erreur lors de la validation de la réception',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Annule un bon de commande dans Odoo
      */
     #[Route('/purchase-order/{id}/cancel', name: 'cancel_purchase_order', methods: ['POST'])]

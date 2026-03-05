@@ -223,7 +223,7 @@ export const AchatsKanban = () => {
         updatePurchaseOrderPrices,
         cancelPurchaseOrder,
         calculateCostPrices,
-        getPurchaseOrderPickings,
+        validateReceipt,
         createPurchaseOrder,
         convertAchatToPurchaseOrder,
         findSupplierByName,
@@ -517,40 +517,31 @@ export const AchatsKanban = () => {
 
         setProcessing(true);
         try {
-            const pickings = await getPurchaseOrderPickings(achat.odooPurchaseOrderId);
-            const receptionPickings = pickings.filter(
-                (p: any) => p.picking_type_id?.[1]?.includes('Réception') || p.picking_type_id?.[1]?.includes('Receipt')
-            );
+            const result = await validateReceipt(achat.odooPurchaseOrderId);
 
-            if (receptionPickings.length === 0) {
-                notify('Aucune réception trouvée dans Odoo pour cette commande', { type: 'warning' });
-                return;
-            }
-
-            const allDone = receptionPickings.every((p: any) => p.state === 'done');
-
-            if (allDone) {
+            if (result.success) {
                 const recuStatus = getStatusByCode('RECU');
                 if (recuStatus) {
                     const statusIri = recuStatus['@id'] || `/statuses/${recuStatus.id}`;
                     await patchAchat(achat.id, { status: statusIri });
-                    if (achat.odooPurchaseOrderId) {
-                        postPOMessage(achat.odooPurchaseOrderId,
-                            `<p><strong>✅ RÉCEPTION COMPLÈTE</strong><br/>Marchandises reçues et validées le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>`
-                        );
-                    }
-                    notify('Réception complète — statut passé à REÇU', { type: 'success' });
+                    postPOMessage(achat.odooPurchaseOrderId,
+                        `<p><strong>✅ RÉCEPTION COMPLÈTE</strong><br/>Marchandises reçues et validées le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}<br/>Statut réception Odoo : ${result.receipt_status}</p>`
+                    );
+                    notify(`Réception validée — receipt_status: ${result.receipt_status}`, { type: 'success' });
                     refresh();
+
+                    const locationIds = allStatuses
+                        .filter((s: any) => s.odooLocationId)
+                        .map((s: any) => s.odooLocationId as number);
+                    if (locationIds.length > 0) {
+                        getStockCountsBatch(locationIds).then(setStockCounts);
+                    }
                 }
             } else {
-                const doneCount = receptionPickings.filter((p: any) => p.state === 'done').length;
-                notify(
-                    `Réception en cours (${doneCount}/${receptionPickings.length} validées). Complétez la réception dans Odoo.`,
-                    { type: 'info' }
-                );
+                notify(result.error || 'Aucun picking à valider', { type: 'info' });
             }
         } catch (e: any) {
-            notify(e.message || 'Erreur vérification réception', { type: 'error' });
+            notify(e.message || 'Erreur validation réception', { type: 'error' });
         } finally {
             setProcessing(false);
         }
@@ -696,9 +687,9 @@ export const AchatsKanban = () => {
                                             <TableHead>
                                                 <TableRow>
                                                     <TableCell><strong>Produit</strong></TableCell>
-                                                    <TableCell align="right"><strong>Présent</strong></TableCell>
-                                                    <TableCell align="right"><strong>Entré</strong></TableCell>
-                                                    <TableCell align="right"><strong>Sorti</strong></TableCell>
+                                                    <TableCell align="right"><strong>Quantité</strong></TableCell>
+                                                    <TableCell align="right"><strong>Réservé</strong></TableCell>
+                                                    <TableCell align="right"><strong>Disponible</strong></TableCell>
                                                     <TableCell><strong>Depuis</strong></TableCell>
                                                 </TableRow>
                                             </TableHead>
@@ -707,8 +698,8 @@ export const AchatsKanban = () => {
                                                     <TableRow key={p.product_id}>
                                                         <TableCell>{p.product_name || `#${p.product_id}`}</TableCell>
                                                         <TableCell align="right" sx={{ fontWeight: 'bold' }}>{p.quantity}</TableCell>
-                                                        <TableCell align="right" sx={{ color: 'success.main' }}>{p.entered}</TableCell>
-                                                        <TableCell align="right" sx={{ color: 'error.main' }}>{p.exited}</TableCell>
+                                                        <TableCell align="right" sx={{ color: 'warning.main' }}>{p.reserved ?? 0}</TableCell>
+                                                        <TableCell align="right" sx={{ color: 'success.main' }}>{p.available ?? p.quantity}</TableCell>
                                                         <TableCell>
                                                             {p.since ? new Date(p.since).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
                                                         </TableCell>
