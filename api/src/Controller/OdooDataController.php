@@ -546,6 +546,64 @@ class OdooDataController extends AbstractController
         }
     }
 
+    /**
+     * Récupère le stock présent dans un emplacement Odoo (via stock.quant)
+     */
+    #[Route('/stock-at-location/{locationId}', name: 'stock_at_location', methods: ['GET'])]
+    public function getStockAtLocation(int $locationId): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $result = $this->odooService->getStockAtLocation($locationId);
+
+            return $this->json($result);
+        } catch (\Throwable $e) {
+            $this->logger->error('Failed to fetch stock at location', [
+                'locationId' => $locationId,
+                'error' => $e->getMessage(),
+            ]);
+            return $this->json([
+                'error' => 'Erreur lors de la récupération du stock',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Récupère les pickings liés à un emplacement
+     */
+    #[Route('/pickings-by-location/{locationId}', name: 'pickings_by_location', methods: ['GET'])]
+    public function getPickingsByLocation(int $locationId): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $pickings = $this->odooService->getPickingsByLocation($locationId);
+
+            return $this->json([
+                'pickings' => $pickings,
+                'count' => count($pickings),
+                'location_id' => $locationId,
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Failed to fetch pickings by location', [
+                'locationId' => $locationId,
+                'error' => $e->getMessage(),
+            ]);
+            return $this->json([
+                'error' => 'Erreur lors de la récupération des transferts',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     // =========================================================================
     // ENDPOINTS DONNÉES DE RÉFÉRENCE
     // =========================================================================

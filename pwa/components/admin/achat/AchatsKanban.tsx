@@ -4,10 +4,13 @@ import {
     Box, Card, CardContent, Typography, Chip, IconButton, Tooltip,
     Dialog, DialogTitle, DialogContent, DialogActions, Button,
     CircularProgress, LinearProgress, Badge,
+    Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+    Paper, Alert,
 } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+import InventoryIcon from '@mui/icons-material/Inventory';
 import { useOdoo } from '../../../hooks/useOdoo';
 
 const KANBAN_ORDER = [
@@ -28,6 +31,8 @@ interface KanbanColumnProps {
     onDrop: (achatId: string, targetStatus: any) => void;
     onShowOdoo: (achat: any) => void;
     onCheckReception: (achat: any) => void;
+    stockCount?: number;
+    onHeaderClick?: (status: any) => void;
 }
 
 const KanbanCard = ({ achat, onShowOdoo, onCheckReception }: {
@@ -110,8 +115,9 @@ const KanbanCard = ({ achat, onShowOdoo, onCheckReception }: {
     );
 };
 
-const KanbanColumn = ({ status, achats, onDrop, onShowOdoo, onCheckReception }: KanbanColumnProps) => {
+const KanbanColumn = ({ status, achats, onDrop, onShowOdoo, onCheckReception, stockCount, onHeaderClick }: KanbanColumnProps) => {
     const [isDragOver, setIsDragOver] = useState(false);
+    const hasOdooLocation = !!status.odooLocationId;
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
@@ -150,6 +156,7 @@ const KanbanColumn = ({ status, achats, onDrop, onShowOdoo, onCheckReception }: 
             }}
         >
             <Box
+                onClick={() => hasOdooLocation && onHeaderClick?.(status)}
                 sx={{
                     p: 1,
                     borderBottom: '1px solid',
@@ -159,11 +166,31 @@ const KanbanColumn = ({ status, achats, onDrop, onShowOdoo, onCheckReception }: 
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
+                    cursor: hasOdooLocation ? 'pointer' : 'default',
+                    '&:hover': hasOdooLocation ? { filter: 'brightness(1.1)' } : {},
                 }}
             >
-                <Typography variant="subtitle2" color="white" fontWeight="bold" noWrap>
-                    {status.label}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+                    <Typography variant="subtitle2" color="white" fontWeight="bold" noWrap>
+                        {status.label}
+                    </Typography>
+                    {hasOdooLocation && stockCount !== undefined && stockCount > 0 && (
+                        <Tooltip title={`${stockCount} produit(s) dans Odoo`}>
+                            <Chip
+                                icon={<InventoryIcon sx={{ fontSize: 14, color: 'white !important' }} />}
+                                label={stockCount}
+                                size="small"
+                                sx={{
+                                    height: 20,
+                                    fontSize: '0.7rem',
+                                    bgcolor: 'rgba(255,255,255,0.25)',
+                                    color: 'white',
+                                    '& .MuiChip-label': { px: 0.5 },
+                                }}
+                            />
+                        </Tooltip>
+                    )}
+                </Box>
                 <Badge badgeContent={achats.length} color="default" sx={{ '& .MuiBadge-badge': { bgcolor: 'rgba(255,255,255,0.3)', color: 'white' } }}>
                     <Box />
                 </Badge>
@@ -200,11 +227,19 @@ export const AchatsKanban = () => {
         createPurchaseOrder,
         convertAchatToPurchaseOrder,
         findSupplierByName,
+        getStockAtLocation,
     } = useOdoo();
 
     const [prDialog, setPrDialog] = useState<{ open: boolean; achat: any; targetStatus: any }>({ open: false, achat: null, targetStatus: null });
     const [processing, setProcessing] = useState(false);
     const [allStatuses, setAllStatuses] = useState<any[]>([]);
+    const [stockCounts, setStockCounts] = useState<Record<number, number>>({});
+    const [stockDialog, setStockDialog] = useState<{
+        open: boolean;
+        status: any;
+        loading: boolean;
+        data: any;
+    }>({ open: false, status: null, loading: false, data: null });
 
     const data = useMemo(() => rawData ?? [], [rawData]);
 
@@ -217,6 +252,32 @@ export const AchatsKanban = () => {
             setAllStatuses(statusData ?? []);
         }).catch(() => setAllStatuses([]));
     }, [dataProvider]);
+
+    useEffect(() => {
+        if (!isOdooConfigured || allStatuses.length === 0) return;
+        const locationStatuses = allStatuses.filter((s: any) => s.odooLocationId);
+        if (locationStatuses.length === 0) return;
+
+        const loadStockCounts = async () => {
+            const counts: Record<number, number> = {};
+            await Promise.all(
+                locationStatuses.map(async (s: any) => {
+                    const result = await getStockAtLocation(s.odooLocationId);
+                    counts[s.odooLocationId] = result.total_products;
+                })
+            );
+            setStockCounts(counts);
+        };
+        loadStockCounts();
+    }, [allStatuses, isOdooConfigured, getStockAtLocation]);
+
+    const handleHeaderClick = useCallback(async (status: any) => {
+        if (!status.odooLocationId) return;
+        setStockDialog({ open: true, status, loading: true, data: null });
+
+        const result = await getStockAtLocation(status.odooLocationId);
+        setStockDialog(prev => ({ ...prev, loading: false, data: result }));
+    }, [getStockAtLocation]);
 
     const statuses = useMemo(() => {
         return KANBAN_ORDER
@@ -308,6 +369,19 @@ export const AchatsKanban = () => {
 
             notify(`${achat.supplier || achat.shipNumber || '#' + achat.id} → ${targetStatus.label}`, { type: 'success' });
             refresh();
+
+            // Rafraîchir les compteurs de stock Odoo
+            const locationStatuses = allStatuses.filter((s: any) => s.odooLocationId);
+            if (locationStatuses.length > 0) {
+                const counts: Record<number, number> = {};
+                await Promise.all(
+                    locationStatuses.map(async (s: any) => {
+                        const result = await getStockAtLocation(s.odooLocationId);
+                        counts[s.odooLocationId] = result.total_products;
+                    })
+                );
+                setStockCounts(counts);
+            }
         } catch (e: any) {
             notify(e.message || 'Erreur lors de la transition', { type: 'error' });
         } finally {
@@ -501,6 +575,8 @@ export const AchatsKanban = () => {
                         onDrop={handleDrop}
                         onShowOdoo={handleShowOdoo}
                         onCheckReception={handleCheckReception}
+                        stockCount={status.odooLocationId ? stockCounts[status.odooLocationId] : undefined}
+                        onHeaderClick={handleHeaderClick}
                     />
                 ))}
             </Box>
@@ -549,6 +625,96 @@ export const AchatsKanban = () => {
                         disabled={processing}
                     >
                         Plus tard
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={stockDialog.open}
+                onClose={() => setStockDialog({ open: false, status: null, loading: false, data: null })}
+                maxWidth="md"
+                fullWidth
+            >
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <InventoryIcon color="primary" />
+                    Rapport de stock Odoo — {stockDialog.status?.label}
+                    {stockDialog.data?.location_name && (
+                        <Chip label={stockDialog.data.location_name} size="small" variant="outlined" sx={{ ml: 1 }} />
+                    )}
+                </DialogTitle>
+                <DialogContent>
+                    {stockDialog.loading ? (
+                        <Box textAlign="center" py={4}>
+                            <CircularProgress />
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                Chargement depuis Odoo...
+                            </Typography>
+                        </Box>
+                    ) : stockDialog.data?.error ? (
+                        <Alert severity="error">{stockDialog.data.error}</Alert>
+                    ) : stockDialog.data?.products?.length === 0 ? (
+                        <Alert severity="info">
+                            Aucun stock dans cet emplacement. Les produits n'ont pas encore été transférés ici ou ont déjà été déplacés.
+                        </Alert>
+                    ) : (
+                        <>
+                            <Box display="flex" gap={2} mb={2}>
+                                <Chip
+                                    label={`${stockDialog.data?.total_products ?? 0} produit(s)`}
+                                    color="primary"
+                                    variant="outlined"
+                                />
+                                <Chip
+                                    label={`Qté totale : ${stockDialog.data?.total_quantity ?? 0}`}
+                                    color="secondary"
+                                    variant="outlined"
+                                />
+                            </Box>
+                            <TableContainer component={Paper} variant="outlined">
+                                <Table size="small">
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell><strong>Produit</strong></TableCell>
+                                            <TableCell align="right"><strong>Quantité</strong></TableCell>
+                                            <TableCell align="right"><strong>Réservé</strong></TableCell>
+                                            <TableCell align="right"><strong>Disponible</strong></TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {stockDialog.data?.products?.map((p: any) => (
+                                            <TableRow key={p.quant_id}>
+                                                <TableCell>{p.product_name || `#${p.product_id}`}</TableCell>
+                                                <TableCell align="right">{p.quantity}</TableCell>
+                                                <TableCell align="right">{p.reserved}</TableCell>
+                                                <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+                                                    {p.quantity - p.reserved}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                        </>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    {stockDialog.status?.odooLocationId && (
+                        <Button
+                            onClick={() => {
+                                window.open(
+                                    `https://ah-chou1.odoo.com/odoo/inventory/products?location_id=${stockDialog.status.odooLocationId}`,
+                                    '_blank'
+                                );
+                            }}
+                            startIcon={<OpenInNewIcon />}
+                        >
+                            Voir dans Odoo
+                        </Button>
+                    )}
+                    <Button
+                        onClick={() => setStockDialog({ open: false, status: null, loading: false, data: null })}
+                    >
+                        Fermer
                     </Button>
                 </DialogActions>
             </Dialog>

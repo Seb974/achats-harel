@@ -799,6 +799,51 @@ class OdooApiService
     }
 
     /**
+     * Récupère le stock présent dans un emplacement Odoo via stock.quant
+     */
+    public function getStockAtLocation(int $locationId): array
+    {
+        $quants = $this->searchRead(
+            'stock.quant',
+            [['location_id', '=', $locationId], ['quantity', '>', 0]],
+            ['id', 'product_id', 'quantity', 'reserved_quantity', 'location_id']
+        );
+
+        $location = $this->read('stock.location', [$locationId], ['id', 'name', 'complete_name']);
+        $locationName = $location[0]['complete_name'] ?? $location[0]['name'] ?? "Location #$locationId";
+
+        $products = array_map(fn($q) => [
+            'quant_id' => $q['id'],
+            'product_id' => is_array($q['product_id']) ? $q['product_id'][0] : $q['product_id'],
+            'product_name' => is_array($q['product_id']) ? $q['product_id'][1] : '',
+            'quantity' => $q['quantity'] ?? 0,
+            'reserved' => $q['reserved_quantity'] ?? 0,
+        ], $quants);
+
+        return [
+            'location_id' => $locationId,
+            'location_name' => $locationName,
+            'products' => $products,
+            'total_products' => count($products),
+            'total_quantity' => array_sum(array_column($products, 'quantity')),
+        ];
+    }
+
+    /**
+     * Récupère les stock.picking liés à un emplacement (source ou destination)
+     */
+    public function getPickingsByLocation(int $locationId, int $limit = 20): array
+    {
+        return $this->searchRead(
+            'stock.picking',
+            [['|', ['location_id', '=', $locationId], ['location_dest_id', '=', $locationId]]],
+            ['id', 'name', 'state', 'origin', 'scheduled_date', 'date_done',
+             'picking_type_id', 'location_id', 'location_dest_id'],
+            $limit
+        );
+    }
+
+    /**
      * Récupère l'ID du type de picking interne
      */
     private function getInternalPickingTypeId(): int
