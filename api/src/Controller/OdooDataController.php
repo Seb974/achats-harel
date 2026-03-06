@@ -566,6 +566,33 @@ class OdooDataController extends AbstractController
     }
 
     /**
+     * Remet à 0 tous les quants transit pour les produits donnés (retour à brouillon)
+     */
+    #[Route('/clear-transit-stock', name: 'clear_transit_stock', methods: ['POST'])]
+    public function clearTransitStock(Request $request): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $data = json_decode($request->getContent(), true);
+            $products = $data['products'] ?? [];
+            if (empty($products)) {
+                return $this->json(['error' => 'products requis'], 400);
+            }
+
+            $this->odooService->clearTransitStock($products);
+
+            return $this->json(['success' => true, 'cleared' => count($products)]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Failed to clear transit stock', ['error' => $e->getMessage()]);
+            return $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Valide le picking de réception d'un PO (passage receipt_status → full)
      */
     #[Route('/purchase-order/{id}/validate-receipt', name: 'validate_purchase_order_receipt', methods: ['POST'])]

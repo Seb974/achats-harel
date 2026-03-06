@@ -139,6 +139,7 @@ interface UseOdooReturn {
     getPurchaseOrderPickings: (orderId: number) => Promise<any[]>;
     checkPickingState: (pickingId: number) => Promise<PickingState>;
     syncTransitStatus: (achat: any, fromStatus: any, toStatus: any) => Promise<StockTransferResult | null>;
+    clearTransitStock: (achat: any) => Promise<void>;
     updateTransitStatus: (orderId: number, statusCode: string) => Promise<void>;
     validateReceipt: (orderId: number) => Promise<{ success: boolean; receipt_status?: string; error?: string }>;
     getStockCountsBatch: (locationIds: number[]) => Promise<Record<number, number>>;
@@ -837,6 +838,25 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         });
     }, [createStockTransfer, notify]);
 
+    const clearTransitStock = useCallback(async (achat: any): Promise<void> => {
+        const products = (achat.items ?? []).map((item: any) => ({
+            product_id: item.productId || item.product_id,
+            qty: item.mainQuantity || item.quantity || 1,
+        })).filter((p: any) => p.product_id);
+
+        if (products.length === 0) return;
+
+        try {
+            await fetch(`${ENTRYPOINT}/odoo/clear-transit-stock`, {
+                method: 'POST',
+                headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ products }),
+            });
+        } catch (e) {
+            console.warn('Failed to clear transit stock', e);
+        }
+    }, [session]);
+
     const updateTransitStatus = useCallback(async (orderId: number, statusCode: string): Promise<void> => {
         try {
             await fetch(`${ENTRYPOINT}/odoo/purchase-order/${orderId}/transit-status`, {
@@ -972,6 +992,7 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         getPurchaseOrderPickings,
         checkPickingState,
         syncTransitStatus,
+        clearTransitStock,
         updateTransitStatus,
         validateReceipt,
         getStockCountsBatch,

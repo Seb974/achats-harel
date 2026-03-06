@@ -793,9 +793,12 @@ class OdooApiService
         }
     }
 
+    private const TRANSIT_LOCATION_IDS = [28, 22, 23, 24]; // DEPART, EN MER, PORT ARRIVEE, DEDOUANEMENT
+
     /**
-     * After a transit transfer, reconcile quants to guarantee coherence:
-     * source location → 0, destination location → expected qty.
+     * After a transit transfer, reconcile quants across ALL transit locations:
+     * - Zero out every transit location for each product
+     * - Set correct qty ONLY at the destination
      */
     private function reconcileTransitQuants(int $srcLocationId, int $destLocationId, array $products): void
     {
@@ -805,50 +808,49 @@ class OdooApiService
             $productId = $p['product_id'];
             $expectedQty = $p['qty'];
 
-            // Zero out source
-            $srcQuants = $this->searchRead('stock.quant', [
+            // Find ALL quants for this product across ALL transit locations
+            $allQuants = $this->searchRead('stock.quant', [
                 ['product_id', '=', $productId],
-                ['location_id', '=', $srcLocationId],
-            ], ['id', 'quantity'], 1);
+                ['location_id', 'in', self::TRANSIT_LOCATION_IDS],
+            ], ['id', 'quantity', 'location_id'], 10);
 
-            if (!empty($srcQuants) && $srcQuants[0]['quantity'] != 0) {
-                try {
-                    $this->execute('stock.quant', 'write', [
-                        [$srcQuants[0]['id']], ['inventory_quantity' => 0],
-                    ], $ctx);
-                    $this->safeExecute('stock.quant', 'action_apply_inventory', [[$srcQuants[0]['id']]], $ctx);
-                } catch (\Throwable $e) {
-                    $this->logger->warning('Reconcile: zero source failed', [
-                        'quant_id' => $srcQuants[0]['id'], 'error' => $e->getMessage(),
-                    ]);
+            foreach ($allQuants as $q) {
+                $locId = is_array($q['location_id']) ? $q['location_id'][0] : $q['location_id'];
+                $isDestination = ($locId === $destLocationId);
+                $targetQty = $isDestination ? $expectedQty : 0;
+
+                if ((float)$q['quantity'] !== (float)$targetQty) {
+                    try {
+                        $this->execute('stock.quant', 'write', [
+                            [$q['id']], ['inventory_quantity' => $targetQty],
+                        ], $ctx);
+                        $this->safeExecute('stock.quant', 'action_apply_inventory', [[$q['id']]], $ctx);
+                    } catch (\Throwable $e) {
+                        $this->logger->warning('Reconcile: adjust quant failed', [
+                            'quant_id' => $q['id'], 'target_qty' => $targetQty,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
                 }
             }
 
-            // Set correct qty at destination
-            $destQuants = $this->searchRead('stock.quant', [
-                ['product_id', '=', $productId],
-                ['location_id', '=', $destLocationId],
-            ], ['id', 'quantity'], 1);
-
-            try {
-                if (!empty($destQuants)) {
-                    if ($destQuants[0]['quantity'] != $expectedQty) {
-                        $this->execute('stock.quant', 'write', [
-                            [$destQuants[0]['id']], ['inventory_quantity' => $expectedQty],
-                        ], $ctx);
-                        $this->safeExecute('stock.quant', 'action_apply_inventory', [[$destQuants[0]['id']]], $ctx);
-                    }
-                } else {
+            // If no quant exists yet at destination, create it
+            $destExists = false;
+            foreach ($allQuants as $q) {
+                $locId = is_array($q['location_id']) ? $q['location_id'][0] : $q['location_id'];
+                if ($locId === $destLocationId) { $destExists = true; break; }
+            }
+            if (!$destExists) {
+                try {
                     $qId = $this->execute('stock.quant', 'create', [
                         ['product_id' => $productId, 'location_id' => $destLocationId, 'inventory_quantity' => $expectedQty],
                     ], $ctx);
                     $this->safeExecute('stock.quant', 'action_apply_inventory', [[$qId]], $ctx);
+                } catch (\Throwable $e) {
+                    $this->logger->warning('Reconcile: create dest quant failed', [
+                        'product_id' => $productId, 'error' => $e->getMessage(),
+                    ]);
                 }
-            } catch (\Throwable $e) {
-                $this->logger->warning('Reconcile: set dest failed', [
-                    'product_id' => $productId, 'location_id' => $destLocationId,
-                    'error' => $e->getMessage(),
-                ]);
             }
         }
 
@@ -856,6 +858,40 @@ class OdooApiService
             'src' => $srcLocationId, 'dest' => $destLocationId,
             'products' => count($products),
         ]);
+    }
+
+    /**
+     * Clears all transit stock for the given products (used when PO is cancelled).
+     */
+    public function clearTransitStock(array $products): void
+    {
+        $ctx = ['context' => ['inventory_mode' => true]];
+
+        foreach ($products as $p) {
+            $productId = $p['product_id'];
+
+            $allQuants = $this->searchRead('stock.quant', [
+                ['product_id', '=', $productId],
+                ['location_id', 'in', self::TRANSIT_LOCATION_IDS],
+            ], ['id', 'quantity'], 10);
+
+            foreach ($allQuants as $q) {
+                if ((float)$q['quantity'] !== 0.0) {
+                    try {
+                        $this->execute('stock.quant', 'write', [
+                            [$q['id']], ['inventory_quantity' => 0],
+                        ], $ctx);
+                        $this->safeExecute('stock.quant', 'action_apply_inventory', [[$q['id']]], $ctx);
+                    } catch (\Throwable $e) {
+                        $this->logger->warning('clearTransitStock failed', [
+                            'quant_id' => $q['id'], 'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            }
+        }
+
+        $this->logger->info('Transit stock cleared', ['products' => count($products)]);
     }
 
     /**
