@@ -519,6 +519,33 @@ class OdooDataController extends AbstractController
     }
 
     /**
+     * Met à jour x_statut_transit sur le PO Odoo
+     */
+    #[Route('/purchase-order/{id}/transit-status', name: 'update_transit_status', methods: ['POST'])]
+    public function updateTransitStatus(int $id, Request $request): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $data = json_decode($request->getContent(), true);
+            $statusCode = $data['status_code'] ?? null;
+            if (!$statusCode) {
+                return $this->json(['error' => 'status_code requis'], 400);
+            }
+
+            $this->odooService->updatePurchaseOrderTransitStatus($id, $statusCode);
+
+            return $this->json(['success' => true, 'status_code' => $statusCode]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Failed to update transit status', ['id' => $id, 'error' => $e->getMessage()]);
+            return $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Valide le picking de réception d'un PO (passage receipt_status → full)
      */
     #[Route('/purchase-order/{id}/validate-receipt', name: 'validate_purchase_order_receipt', methods: ['POST'])]

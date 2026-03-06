@@ -224,6 +224,7 @@ export const AchatsKanban = () => {
         cancelPurchaseOrder,
         calculateCostPrices,
         validateReceipt,
+        updateTransitStatus,
         createPurchaseOrder,
         convertAchatToPurchaseOrder,
         findSupplierByName,
@@ -369,6 +370,9 @@ export const AchatsKanban = () => {
                 steps.push({ label: `Message chatter PO (${achat.odooPurchaseOrderName || 'PO#' + achat.odooPurchaseOrderId})`, status: 'pending' });
             }
         }
+        if (achat.odooPurchaseOrderId || (fromCode === 'BROUILLON' && toCode === 'ENVOYE')) {
+            steps.push({ label: `Statut transit Odoo → ${toStatus?.label || toCode}`, status: 'pending' });
+        }
         steps.push({ label: 'Mise à jour statut dans l\'app', status: 'pending' });
         steps.push({ label: 'Actualisation compteurs stock', status: 'pending' });
         return steps;
@@ -486,6 +490,11 @@ export const AchatsKanban = () => {
                                 stepIdx++;
 
                                 updateStep(stepIdx, { status: 'running' });
+                                await updateTransitStatus(result.order_id, 'ENVOYE');
+                                updateStep(stepIdx, { status: 'success', detail: 'x_statut_transit = envoye' });
+                                stepIdx++;
+
+                                updateStep(stepIdx, { status: 'running' });
                                 await patchAchat(achat.id, {
                                     status: statusIri,
                                     odooPurchaseOrderId: result.order_id,
@@ -521,6 +530,8 @@ export const AchatsKanban = () => {
                 await patchAchat(achat.id, { status: statusIri, odooPurchaseOrderId: null, odooPurchaseOrderName: null });
                 updateStep(stepIdx, { status: 'success' });
                 stepIdx++;
+
+                // No transit status update since PO is cancelled
             } else {
                 const fromStatus = getStatusByCode(fromCode) || achat.status;
                 const srcLocationId = isReverse ? targetStatus.odooLocationId : fromStatus?.odooLocationId;
@@ -557,6 +568,12 @@ export const AchatsKanban = () => {
                         `<p><strong>${arrow} : ${fromLabel} → ${toLabel}</strong><br/>${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>`
                     );
                     updateStep(stepIdx, { status: 'success' });
+                    stepIdx++;
+
+                    updateStep(stepIdx, { status: 'running' });
+                    await updateTransitStatus(achat.odooPurchaseOrderId, toCode);
+                    const odooVal = toCode.toLowerCase().replace('_', '_');
+                    updateStep(stepIdx, { status: 'success', detail: `x_statut_transit = ${odooVal}` });
                     stepIdx++;
                 }
 
@@ -742,6 +759,7 @@ export const AchatsKanban = () => {
                 if (recuStatus) {
                     const statusIri = recuStatus['@id'] || `/statuses/${recuStatus.id}`;
                     await patchAchat(achat.id, { status: statusIri });
+                    await updateTransitStatus(achat.odooPurchaseOrderId, 'RECU');
                     postPOMessage(achat.odooPurchaseOrderId,
                         `<p><strong>✅ RÉCEPTION COMPLÈTE</strong><br/>Marchandises reçues et validées le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}<br/>Statut réception Odoo : ${result.receipt_status}</p>`
                     );
