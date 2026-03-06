@@ -1059,6 +1059,38 @@ class OdooApiService
         }, $moves);
     }
 
+    private const TRANSIT_STATUS_MAP = [
+        'BROUILLON' => 'brouillon',
+        'ENVOYE' => 'envoye',
+        'EN_MER' => 'en_mer',
+        'AU_PORT' => 'au_port',
+        'DOUANE' => 'douane',
+        'A_RECEPTIONNER' => 'a_receptionner',
+        'RECU' => 'recu',
+    ];
+
+    /**
+     * Met à jour le champ x_statut_transit sur le PO Odoo
+     */
+    public function updatePurchaseOrderTransitStatus(int $orderId, string $appStatusCode): void
+    {
+        $odooValue = self::TRANSIT_STATUS_MAP[$appStatusCode] ?? null;
+        if (!$odooValue) {
+            $this->logger->warning('Unknown transit status code', ['code' => $appStatusCode]);
+            return;
+        }
+
+        try {
+            $this->write('purchase.order', [$orderId], ['x_statut_transit' => $odooValue]);
+        } catch (\Throwable $e) {
+            $this->logger->warning('Failed to update transit status on PO', [
+                'order_id' => $orderId,
+                'status' => $odooValue,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
     /**
      * Poste un message dans le chatter d'un bon de commande Odoo
      */

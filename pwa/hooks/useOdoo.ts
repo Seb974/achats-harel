@@ -139,6 +139,7 @@ interface UseOdooReturn {
     getPurchaseOrderPickings: (orderId: number) => Promise<any[]>;
     checkPickingState: (pickingId: number) => Promise<PickingState>;
     syncTransitStatus: (achat: any, fromStatus: any, toStatus: any) => Promise<StockTransferResult | null>;
+    updateTransitStatus: (orderId: number, statusCode: string) => Promise<void>;
     validateReceipt: (orderId: number) => Promise<{ success: boolean; receipt_status?: string; error?: string }>;
     getStockCountsBatch: (locationIds: number[]) => Promise<Record<number, number>>;
     getStockAtLocation: (locationId: number) => Promise<StockAtLocationResult>;
@@ -814,6 +815,18 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         });
     }, [createStockTransfer, notify]);
 
+    const updateTransitStatus = useCallback(async (orderId: number, statusCode: string): Promise<void> => {
+        try {
+            await fetch(`${ENTRYPOINT}/odoo/purchase-order/${orderId}/transit-status`, {
+                method: 'POST',
+                headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status_code: statusCode }),
+            });
+        } catch (e) {
+            console.warn('Failed to update transit status on PO', e);
+        }
+    }, [session]);
+
     const validateReceipt = useCallback(async (orderId: number): Promise<{ success: boolean; receipt_status?: string; error?: string }> => {
         setLoading(true);
         try {
@@ -924,6 +937,7 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         getPurchaseOrderPickings,
         checkPickingState,
         syncTransitStatus,
+        updateTransitStatus,
         validateReceipt,
         getStockCountsBatch,
         getStockAtLocation,
