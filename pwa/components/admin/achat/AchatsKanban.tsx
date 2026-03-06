@@ -329,12 +329,10 @@ export const AchatsKanban = () => {
             steps.push({ label: 'Annulation du PO Odoo (button_cancel)', status: 'pending' });
             steps.push({ label: 'Suppression lien PO sur achat', status: 'pending' });
         } else {
-            const srcLoc = isReverse ? toStatus : fromStatus;
-            const destLoc = isReverse ? fromStatus : toStatus;
-            const srcName = srcLoc?.label || fromCode;
-            const destName = destLoc?.label || toCode;
-            const srcId = srcLoc?.odooLocationId;
-            const destId = destLoc?.odooLocationId;
+            const srcName = fromStatus?.label || fromCode;
+            const destName = toStatus?.label || toCode;
+            const srcId = fromStatus?.odooLocationId;
+            const destId = toStatus?.odooLocationId;
 
             if (srcId && destId) {
                 steps.push({ label: `Transfert stock : ${srcName} (${srcId}) → ${destName} (${destId})`, status: 'pending' });
@@ -509,8 +507,8 @@ export const AchatsKanban = () => {
                 // No transit status update since PO is cancelled
             } else {
                 const fromStatus = getStatusByCode(fromCode) || achat.status;
-                const srcLocationId = isReverse ? targetStatus.odooLocationId : fromStatus?.odooLocationId;
-                const destLocationId = isReverse ? fromStatus?.odooLocationId : targetStatus.odooLocationId;
+                const srcLocationId = fromStatus?.odooLocationId;
+                const destLocationId = targetStatus.odooLocationId;
 
                 let transferResult: any = null;
                 if (srcLocationId && destLocationId) {
@@ -519,8 +517,8 @@ export const AchatsKanban = () => {
                     try {
                         transferResult = await syncTransitStatus(
                             fullAchat,
-                            isReverse ? targetStatus : fromStatus,
-                            isReverse ? fromStatus : targetStatus,
+                            fromStatus,
+                            targetStatus,
                         );
                         updateStep(stepIdx, { status: 'success', detail: `loc ${srcLocationId} → ${destLocationId}` });
                         stepIdx++;
@@ -657,17 +655,13 @@ export const AchatsKanban = () => {
         const fromStatusCode = achat.status?.code;
         const fromStatus = getStatusByCode(fromStatusCode) || achat.status;
 
-        const srcLocationId = isReverse ? targetStatus.odooLocationId : fromStatus?.odooLocationId;
-        const destLocationId = isReverse ? fromStatus?.odooLocationId : targetStatus.odooLocationId;
+        const srcLocationId = fromStatus?.odooLocationId;
+        const destLocationId = targetStatus.odooLocationId;
 
         if (srcLocationId && destLocationId) {
             const fullAchat = await fetchFullAchat(achat.id);
             try {
-                await syncTransitStatus(
-                    fullAchat,
-                    isReverse ? targetStatus : fromStatus,
-                    isReverse ? fromStatus : targetStatus,
-                );
+                await syncTransitStatus(fullAchat, fromStatus, targetStatus);
             } catch (e: any) {
                 notify(`Transfert stock Odoo échoué : ${e.message}. Statut mis à jour quand même.`, { type: 'warning' });
             }
