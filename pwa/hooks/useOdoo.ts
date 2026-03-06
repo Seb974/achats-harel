@@ -143,6 +143,7 @@ interface UseOdooReturn {
     validateReceipt: (orderId: number) => Promise<{ success: boolean; receipt_status?: string; error?: string }>;
     getStockCountsBatch: (locationIds: number[]) => Promise<Record<number, number>>;
     getStockAtLocation: (locationId: number) => Promise<StockAtLocationResult>;
+    getStockByTransitStatus: (statusCode: string) => Promise<TransitStockResult>;
     getMovementHistory: (locationId: number) => Promise<MovementHistoryItem[]>;
     postPOMessage: (orderId: number, body: string) => Promise<void>;
 }
@@ -161,6 +162,25 @@ interface StockAtLocationResult {
     location_name: string;
     location_usage?: string;
     products: StockAtLocationProduct[];
+    total_products: number;
+    total_quantity: number;
+    error?: string;
+}
+
+interface TransitStockProduct {
+    product_id: number;
+    product_name: string;
+    quantity: number;
+    price_unit: number;
+    price_subtotal: number;
+    po_name: string;
+    po_id: number;
+}
+
+interface TransitStockResult {
+    transit_status: string;
+    purchase_orders: number;
+    products: TransitStockProduct[];
     total_products: number;
     total_quantity: number;
     error?: string;
@@ -870,6 +890,19 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         }
     }, [session]);
 
+    const getStockByTransitStatus = useCallback(async (statusCode: string): Promise<TransitStockResult> => {
+        try {
+            const response = await fetch(`${ENTRYPOINT}/odoo/stock-by-transit/${statusCode}`, {
+                headers: authHeaders(),
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.message || 'Erreur récupération stock transit');
+            return result;
+        } catch (e: any) {
+            return { transit_status: statusCode, purchase_orders: 0, products: [], total_products: 0, total_quantity: 0, error: e.message };
+        }
+    }, [session]);
+
     const getStockAtLocation = useCallback(async (locationId: number): Promise<StockAtLocationResult> => {
         try {
             const response = await fetch(`${ENTRYPOINT}/odoo/stock-at-location/${locationId}`, {
@@ -941,6 +974,7 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         validateReceipt,
         getStockCountsBatch,
         getStockAtLocation,
+        getStockByTransitStatus,
         getMovementHistory,
         postPOMessage,
     };

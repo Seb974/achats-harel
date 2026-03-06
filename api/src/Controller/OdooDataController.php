@@ -519,6 +519,26 @@ class OdooDataController extends AbstractController
     }
 
     /**
+     * Retourne les produits des PO dans un statut transit donné
+     */
+    #[Route('/stock-by-transit/{statusCode}', name: 'stock_by_transit_status', methods: ['GET'])]
+    public function getStockByTransitStatus(string $statusCode): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $result = $this->odooService->getStockByTransitStatus($statusCode);
+            return $this->json($result);
+        } catch (\Throwable $e) {
+            $this->logger->error('Failed to get stock by transit status', ['status' => $statusCode, 'error' => $e->getMessage()]);
+            return $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Met à jour x_statut_transit sur le PO Odoo
      */
     #[Route('/purchase-order/{id}/transit-status', name: 'update_transit_status', methods: ['POST'])]
