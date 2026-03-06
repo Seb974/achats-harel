@@ -1092,6 +1092,54 @@ class OdooApiService
     }
 
     /**
+     * Retourne les produits des PO ayant un x_statut_transit donné
+     */
+    public function getStockByTransitStatus(string $appStatusCode): array
+    {
+        $odooValue = self::TRANSIT_STATUS_MAP[$appStatusCode] ?? null;
+        if (!$odooValue) {
+            return ['transit_status' => $appStatusCode, 'purchase_orders' => 0, 'products' => [], 'total_products' => 0, 'total_quantity' => 0];
+        }
+
+        $pos = $this->searchRead('purchase.order', [
+            ['x_statut_transit', '=', $odooValue],
+            ['state', 'in', ['draft', 'purchase', 'done']],
+        ], ['id', 'name', 'order_line']);
+
+        $products = [];
+        foreach ($pos as $po) {
+            $lineIds = $po['order_line'] ?? [];
+            if (empty($lineIds)) continue;
+
+            $lines = $this->read('purchase.order.line', $lineIds, [
+                'product_id', 'product_qty', 'price_unit', 'price_subtotal',
+            ]);
+
+            foreach ($lines as $line) {
+                $pid = is_array($line['product_id']) ? $line['product_id'][0] : $line['product_id'];
+                $pname = is_array($line['product_id']) ? $line['product_id'][1] : '?';
+                $products[] = [
+                    'product_id' => $pid,
+                    'product_name' => $pname,
+                    'quantity' => $line['product_qty'] ?? 0,
+                    'price_unit' => $line['price_unit'] ?? 0,
+                    'price_subtotal' => $line['price_subtotal'] ?? 0,
+                    'po_name' => $po['name'],
+                    'po_id' => $po['id'],
+                ];
+            }
+        }
+
+        return [
+            'transit_status' => $odooValue,
+            'purchase_orders' => count($pos),
+            'products' => $products,
+            'total_products' => count($products),
+            'total_quantity' => array_sum(array_column($products, 'quantity')),
+        ];
+    }
+
+    /**
      * Poste un message dans le chatter d'un bon de commande Odoo
      */
     public function postPurchaseOrderMessage(int $orderId, string $body): void
