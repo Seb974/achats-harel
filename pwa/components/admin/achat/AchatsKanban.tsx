@@ -1043,15 +1043,28 @@ export const AchatsKanban = () => {
                 </DialogContent>
                 <DialogActions>
                     {stockDialog.status?.odooLocationId && (
-                        <Button
-                            onClick={() => window.open(
-                                `https://ah-chou1.odoo.com/odoo/inventory/products?location_id=${stockDialog.status.odooLocationId}`,
-                                '_blank'
-                            )}
-                            startIcon={<OpenInNewIcon />}
-                        >
-                            Inventaire Odoo
-                        </Button>
+                        <>
+                            <Button
+                                onClick={() => window.open(
+                                    `https://ah-chou1.odoo.com/odoo/inventory/reporting/inventory?location_id=${stockDialog.status.odooLocationId}`,
+                                    '_blank'
+                                )}
+                                startIcon={<OpenInNewIcon />}
+                                size="small"
+                            >
+                                Stock Odoo
+                            </Button>
+                            <Button
+                                onClick={() => window.open(
+                                    `https://ah-chou1.odoo.com/odoo/inventory/operations/transfers?origin=${stockDialog.status?.label || ''}`,
+                                    '_blank'
+                                )}
+                                startIcon={<OpenInNewIcon />}
+                                size="small"
+                            >
+                                Transferts Odoo
+                            </Button>
+                        </>
                     )}
                     <Button
                         onClick={() => setStockDialog({ open: false, status: null, loading: false, data: null })}
