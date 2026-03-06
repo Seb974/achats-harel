@@ -825,7 +825,9 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
             return null;
         }
 
-        const origin = achat.shipNumber || `HAREL-${achat.id}`;
+        const poRef = achat.odooPurchaseOrderName || '';
+        const shipRef = achat.shipNumber || `HAREL-${achat.id}`;
+        const origin = poRef ? `${poRef} (${shipRef})` : shipRef;
 
         return createStockTransfer({
             location_src_id: srcLocationId,
