@@ -217,6 +217,7 @@ export const AchatsKanban = () => {
         calculateCostPrices,
         validateReceipt,
         updateTransitStatus,
+        clearTransitStock,
         createPurchaseOrder,
         convertAchatToPurchaseOrder,
         findSupplierByName,
@@ -327,7 +328,7 @@ export const AchatsKanban = () => {
             steps.push({ label: 'Message chatter PO', status: 'pending' });
         } else if (isReverse && fromCode === 'ENVOYE' && toCode === 'BROUILLON') {
             steps.push({ label: 'Annulation du PO Odoo (button_cancel)', status: 'pending' });
-            steps.push({ label: 'Suppression lien PO sur achat', status: 'pending' });
+            steps.push({ label: 'Nettoyage stock transit + suppression lien PO', status: 'pending' });
         } else {
             const srcName = fromStatus?.label || fromCode;
             const destName = toStatus?.label || toCode;
@@ -500,11 +501,11 @@ export const AchatsKanban = () => {
                 stepIdx++;
 
                 updateStep(stepIdx, { status: 'running' });
+                const fullAchatForClear = await fetchFullAchat(achat.id);
+                await clearTransitStock(fullAchatForClear);
                 await patchAchat(achat.id, { status: statusIri, odooPurchaseOrderId: null, odooPurchaseOrderName: null });
                 updateStep(stepIdx, { status: 'success' });
                 stepIdx++;
-
-                // No transit status update since PO is cancelled
             } else {
                 const fromStatus = getStatusByCode(fromCode) || achat.status;
                 const srcLocationId = fromStatus?.odooLocationId;
@@ -644,6 +645,8 @@ export const AchatsKanban = () => {
                 notify(`Annulation PO Odoo échouée : ${e.message}`, { type: 'warning' });
             }
         }
+        const fullAchat = await fetchFullAchat(achat.id);
+        await clearTransitStock(fullAchat);
         await patchAchat(achat.id, {
             status: statusIri,
             odooPurchaseOrderId: null,
