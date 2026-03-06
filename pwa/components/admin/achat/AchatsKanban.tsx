@@ -1046,7 +1046,7 @@ export const AchatsKanban = () => {
                         <>
                             <Button
                                 onClick={() => window.open(
-                                    `https://ah-chou1.odoo.com/odoo/inventory/reporting/inventory?location_id=${stockDialog.status.odooLocationId}`,
+                                    `https://ah-chou1.odoo.com/odoo/inventory/reporting/stock?location_id=${stockDialog.status.odooLocationId}`,
                                     '_blank'
                                 )}
                                 startIcon={<OpenInNewIcon />}
