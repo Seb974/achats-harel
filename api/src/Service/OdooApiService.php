@@ -684,6 +684,10 @@ class OdooApiService
     {
         $pickingTypeId = $this->getInternalPickingTypeId();
 
+        // Ensure source location has stock before creating the transfer.
+        // Without this, Odoo creates negative quants at source.
+        $this->ensureSourceStock($locationSrcId, $products);
+
         $picking = $this->create('stock.picking', [
             'picking_type_id' => $pickingTypeId,
             'location_id' => $locationSrcId,
@@ -703,11 +707,8 @@ class OdooApiService
             ]);
         }
 
-        // Odoo SaaS 19.1 returns None from action methods, which causes
-        // "cannot marshal None" XML-RPC errors. The action still succeeds.
         $this->safeExecute('stock.picking', 'action_confirm', [[$picking]]);
 
-        // Set done quantities on each move before validating
         foreach ($moveIds as $moveId) {
             $this->write('stock.move', [$moveId], ['quantity' => 0]);
         }
@@ -720,11 +721,9 @@ class OdooApiService
 
         $this->safeExecute('stock.picking', 'button_validate', [[$picking]]);
 
-        // Verify final state
         $result = $this->read('stock.picking', [$picking], ['id', 'name', 'state', 'origin']);
         $state = $result[0]['state'] ?? 'unknown';
 
-        // If still not done, try force-validating via immediate transfer
         if ($state !== 'done') {
             $this->logger->warning('Picking not done after validate, attempting force', [
                 'picking_id' => $picking, 'state' => $state,
@@ -739,12 +738,124 @@ class OdooApiService
             }
         }
 
+        // Reconcile quants: zero out source, set correct qty at destination
+        $this->reconcileTransitQuants($locationSrcId, $locationDestId, $products);
+
         return [
             'success' => true,
             'picking_id' => $picking,
             'picking_name' => $result[0]['name'] ?? '',
             'state' => $state,
         ];
+    }
+
+    /**
+     * Ensures products have sufficient stock at source before a transfer.
+     * Uses inventory adjustments to create stock if missing.
+     */
+    private function ensureSourceStock(int $locationId, array $products): void
+    {
+        $ctx = ['context' => ['inventory_mode' => true]];
+
+        foreach ($products as $p) {
+            $productId = $p['product_id'];
+            $requiredQty = $p['qty'];
+
+            $quants = $this->searchRead('stock.quant', [
+                ['product_id', '=', $productId],
+                ['location_id', '=', $locationId],
+            ], ['id', 'quantity'], 1);
+
+            $currentQty = $quants[0]['quantity'] ?? 0;
+
+            if ($currentQty >= $requiredQty) {
+                continue;
+            }
+
+            try {
+                if (!empty($quants)) {
+                    $this->execute('stock.quant', 'write', [
+                        [$quants[0]['id']], ['inventory_quantity' => $requiredQty],
+                    ], $ctx);
+                    $this->safeExecute('stock.quant', 'action_apply_inventory', [[$quants[0]['id']]], $ctx);
+                } else {
+                    $qId = $this->execute('stock.quant', 'create', [
+                        ['product_id' => $productId, 'location_id' => $locationId, 'inventory_quantity' => $requiredQty],
+                    ], $ctx);
+                    $this->safeExecute('stock.quant', 'action_apply_inventory', [[$qId]], $ctx);
+                }
+            } catch (\Throwable $e) {
+                $this->logger->warning('ensureSourceStock failed', [
+                    'product_id' => $productId, 'location_id' => $locationId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+    }
+
+    /**
+     * After a transit transfer, reconcile quants to guarantee coherence:
+     * source location → 0, destination location → expected qty.
+     */
+    private function reconcileTransitQuants(int $srcLocationId, int $destLocationId, array $products): void
+    {
+        $ctx = ['context' => ['inventory_mode' => true]];
+
+        foreach ($products as $p) {
+            $productId = $p['product_id'];
+            $expectedQty = $p['qty'];
+
+            // Zero out source
+            $srcQuants = $this->searchRead('stock.quant', [
+                ['product_id', '=', $productId],
+                ['location_id', '=', $srcLocationId],
+            ], ['id', 'quantity'], 1);
+
+            if (!empty($srcQuants) && $srcQuants[0]['quantity'] != 0) {
+                try {
+                    $this->execute('stock.quant', 'write', [
+                        [$srcQuants[0]['id']], ['inventory_quantity' => 0],
+                    ], $ctx);
+                    $this->safeExecute('stock.quant', 'action_apply_inventory', [[$srcQuants[0]['id']]], $ctx);
+                } catch (\Throwable $e) {
+                    $this->logger->warning('Reconcile: zero source failed', [
+                        'quant_id' => $srcQuants[0]['id'], 'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            // Set correct qty at destination
+            $destQuants = $this->searchRead('stock.quant', [
+                ['product_id', '=', $productId],
+                ['location_id', '=', $destLocationId],
+            ], ['id', 'quantity'], 1);
+
+            try {
+                if (!empty($destQuants)) {
+                    if ($destQuants[0]['quantity'] != $expectedQty) {
+                        $this->execute('stock.quant', 'write', [
+                            [$destQuants[0]['id']], ['inventory_quantity' => $expectedQty],
+                        ], $ctx);
+                        $this->safeExecute('stock.quant', 'action_apply_inventory', [[$destQuants[0]['id']]], $ctx);
+                    }
+                } else {
+                    $qId = $this->execute('stock.quant', 'create', [
+                        ['product_id' => $productId, 'location_id' => $destLocationId, 'inventory_quantity' => $expectedQty],
+                    ], $ctx);
+                    $this->safeExecute('stock.quant', 'action_apply_inventory', [[$qId]], $ctx);
+                }
+            } catch (\Throwable $e) {
+                $this->logger->warning('Reconcile: set dest failed', [
+                    'product_id' => $productId, 'location_id' => $destLocationId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        $this->logger->info('Transit quants reconciled', [
+            'src' => $srcLocationId, 'dest' => $destLocationId,
+            'products' => count($products),
+        ]);
     }
 
     /**
