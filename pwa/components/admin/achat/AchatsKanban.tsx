@@ -1046,7 +1046,7 @@ export const AchatsKanban = () => {
                         <>
                             <Button
                                 onClick={() => window.open(
-                                    `https://ah-chou1.odoo.com/odoo/inventory/reporting/stock?location_id=${stockDialog.status.odooLocationId}`,
+                                    `https://ah-chou1.odoo.com/web#action=697&search_default_location_id=${stockDialog.status.odooLocationId}`,
                                     '_blank'
                                 )}
                                 startIcon={<OpenInNewIcon />}
@@ -1056,7 +1056,7 @@ export const AchatsKanban = () => {
                             </Button>
                             <Button
                                 onClick={() => window.open(
-                                    `https://ah-chou1.odoo.com/odoo/inventory/operations/transfers?origin=${stockDialog.status?.label || ''}`,
+                                    `https://ah-chou1.odoo.com/web#action=710`,
                                     '_blank'
                                 )}
                                 startIcon={<OpenInNewIcon />}
