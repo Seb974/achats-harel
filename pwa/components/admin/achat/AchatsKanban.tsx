@@ -220,10 +220,7 @@ export const AchatsKanban = () => {
         createPurchaseOrder,
         convertAchatToPurchaseOrder,
         findSupplierByName,
-        getStockCountsBatch,
-        getStockAtLocation,
         getStockByTransitStatus,
-        getMovementHistory,
         postPOMessage,
     } = useOdoo();
 
@@ -562,14 +559,6 @@ export const AchatsKanban = () => {
             }
 
             if (!hasError && stepIdx < transDialog.steps.length) {
-                updateStep(stepIdx, { status: 'running' });
-                const locationIds = allStatuses
-                    .filter((s: any) => s.odooLocationId)
-                    .map((s: any) => s.odooLocationId as number);
-                if (locationIds.length > 0) {
-                    const counts = await getStockCountsBatch(locationIds);
-                    setStockCounts(counts);
-                }
                 updateStep(stepIdx, { status: 'success' });
             }
 
@@ -743,13 +732,6 @@ export const AchatsKanban = () => {
                     );
                     notify(`Réception validée — receipt_status: ${result.receipt_status}`, { type: 'success' });
                     refresh();
-
-                    const locationIds = allStatuses
-                        .filter((s: any) => s.odooLocationId)
-                        .map((s: any) => s.odooLocationId as number);
-                    if (locationIds.length > 0) {
-                        getStockCountsBatch(locationIds).then(setStockCounts);
-                    }
                 }
             } else {
                 notify(result.error || 'Aucun picking à valider', { type: 'info' });
