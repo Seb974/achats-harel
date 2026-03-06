@@ -512,20 +512,21 @@ export const AchatsKanban = () => {
                 const srcLocationId = isReverse ? targetStatus.odooLocationId : fromStatus?.odooLocationId;
                 const destLocationId = isReverse ? fromStatus?.odooLocationId : targetStatus.odooLocationId;
 
+                let transferResult: any = null;
                 if (srcLocationId && destLocationId) {
                     updateStep(stepIdx, { status: 'running' });
                     const fullAchat = await fetchFullAchat(achat.id);
                     try {
-                        await syncTransitStatus(
+                        transferResult = await syncTransitStatus(
                             fullAchat,
                             isReverse ? targetStatus : fromStatus,
                             isReverse ? fromStatus : targetStatus,
                         );
                         updateStep(stepIdx, { status: 'success', detail: `loc ${srcLocationId} → ${destLocationId}` });
                         stepIdx++;
-                        updateStep(stepIdx, { status: 'success', detail: 'Quantités positionnées' });
+                        updateStep(stepIdx, { status: 'success', detail: transferResult?.picking_name || 'OK' });
                         stepIdx++;
-                        updateStep(stepIdx, { status: 'success', detail: 'Picking validé (done)' });
+                        updateStep(stepIdx, { status: 'success', detail: `state: ${transferResult?.state || 'done'}` });
                         stepIdx++;
                     } catch (e: any) {
                         updateStep(stepIdx, { status: 'error', detail: e.message });
@@ -539,8 +540,11 @@ export const AchatsKanban = () => {
                     const arrow = isReverse ? 'Retour' : 'Transit';
                     const fromLabel = fromStatus?.label || fromCode;
                     const toLabel = targetStatus.label;
+                    const pickingRef = transferResult?.picking_name
+                        ? `<br/>Transfert : <a href="https://ah-chou1.odoo.com/odoo/inventory/transfers/${transferResult.picking_id}">${transferResult.picking_name}</a> (${transferResult.state})`
+                        : '';
                     postPOMessage(achat.odooPurchaseOrderId,
-                        `<p><strong>${arrow} : ${fromLabel} → ${toLabel}</strong><br/>${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>`
+                        `<p><strong>${arrow} : ${fromLabel} → ${toLabel}</strong><br/>${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}${pickingRef}</p>`
                     );
                     updateStep(stepIdx, { status: 'success' });
                     stepIdx++;
