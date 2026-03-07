@@ -140,6 +140,8 @@ interface UseOdooReturn {
     checkPickingState: (pickingId: number) => Promise<PickingState>;
     syncTransitStatus: (achat: any, fromStatus: any, toStatus: any) => Promise<StockTransferResult | null>;
     clearTransitStock: (achat: any) => Promise<void>;
+    getReceptionInfo: (orderId: number) => Promise<{ has_picking: boolean; picking_id?: number; picking_name?: string; picking_state?: string; receipt_status: string }>;
+    checkReceptionStatusBatch: (orderIds: number[]) => Promise<Record<number, { receipt_status: string; is_received: boolean }>>;
     updateTransitStatus: (orderId: number, statusCode: string) => Promise<void>;
     validateReceipt: (orderId: number) => Promise<{ success: boolean; receipt_status?: string; error?: string }>;
     getStockCountsBatch: (locationIds: number[]) => Promise<Record<number, number>>;
@@ -857,6 +859,31 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         }
     }, [session]);
 
+    const getReceptionInfo = useCallback(async (orderId: number) => {
+        try {
+            const response = await fetch(`${ENTRYPOINT}/odoo/purchase-order/${orderId}/reception-info`, {
+                headers: authHeaders(),
+            });
+            return await response.json();
+        } catch {
+            return { has_picking: false, receipt_status: 'unknown' };
+        }
+    }, [session]);
+
+    const checkReceptionStatusBatch = useCallback(async (orderIds: number[]) => {
+        if (orderIds.length === 0) return {};
+        try {
+            const response = await fetch(
+                `${ENTRYPOINT}/odoo/check-reception-status?order_ids=${orderIds.join(',')}`,
+                { headers: authHeaders() },
+            );
+            if (!response.ok) return {};
+            return await response.json();
+        } catch {
+            return {};
+        }
+    }, [session]);
+
     const updateTransitStatus = useCallback(async (orderId: number, statusCode: string): Promise<void> => {
         try {
             await fetch(`${ENTRYPOINT}/odoo/purchase-order/${orderId}/transit-status`, {
@@ -993,6 +1020,8 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         checkPickingState,
         syncTransitStatus,
         clearTransitStock,
+        getReceptionInfo,
+        checkReceptionStatusBatch,
         updateTransitStatus,
         validateReceipt,
         getStockCountsBatch,
