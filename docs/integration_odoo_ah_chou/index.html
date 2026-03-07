@@ -1075,9 +1075,10 @@ PR EUR = 5.00 × 0.92 × 1.35 = 6.21 EUR</div>
                 <table>
                     <tr><th>Paramètre</th><th>Valeur</th><th>Justification</th></tr>
                     <tr><td>Multi-entrepôts</td><td>☑ Activé</td><td>6 emplacements</td></tr>
-                    <tr><td>Emplacements de stockage</td><td>☑ Activé</td><td>Gestion zones</td></tr>
-                    <tr><td>Numéros de série / lots</td><td>☑ Activé</td><td>Traçabilité</td></tr>
-                    <tr><td>Dates d'expiration</td><td>☑ Activé</td><td>DLC/DLUO</td></tr>
+                    <tr><td>Emplacements de stockage</td><td>☑ Activé</td><td>Gestion zones (<code>group_stock_multi_locations</code>)</td></tr>
+                    <tr><td>Numéros de série / lots</td><td>☑ Activé</td><td>Traçabilité (<code>group_stock_production_lot</code>) — activé le 03/03/2026</td></tr>
+                    <tr><td>Tracking par lots</td><td>☑ Activé</td><td><code>group_stock_tracking_lot</code> — 299/299 produits en <code>tracking=lot</code></td></tr>
+                    <tr><td>Dates d'expiration</td><td>☑ Activé</td><td><code>use_expiration_date=true</code> sur 299/299 produits — activé le 03/03/2026</td></tr>
                 </table>
                 
                 <h2>Méthode de valorisation</h2>
@@ -1107,7 +1108,7 @@ PR EUR = 5.00 × 0.92 × 1.35 = 6.21 EUR</div>
             
             <!-- TRACABILITE -->
             <div id="tracabilite" class="section">
-                <h1>Traçabilité - Lots et Dates d'Expiration</h1>
+                <h1>Traçabilité - Lots, Dates de Péremption et Lieux de Stockage</h1>
                 
                 <h2>Exigences cahier des charges</h2>
                 <ul>
@@ -1115,18 +1116,91 @@ PR EUR = 5.00 × 0.92 × 1.35 = 6.21 EUR</div>
                     <li>Gestion des <strong>DLC</strong> (Date Limite de Consommation)</li>
                     <li>Suivi par <strong>tranches de péremption</strong> : 1-3 mois, 4-6 mois, ... +24 mois</li>
                     <li><strong>Zone de pêche</strong> et <strong>nom scientifique</strong> pour les produits de la mer</li>
+                    <li><strong>Lieu de stockage</strong> : emplacement physique de chaque produit/lot</li>
                 </ul>
-                
+
+                <h2>Paramétrage Odoo — État actuel</h2>
+                <div class="alert alert-info">
+                    <strong>Activé le 03/03/2026</strong> via API JSON-RPC (script <code>activate_traceability.php</code>)
+                </div>
+                <table>
+                    <tr><th>Paramètre</th><th>Chemin Odoo</th><th>Statut</th><th>Détail</th></tr>
+                    <tr>
+                        <td>Lots &amp; Numéros de série</td>
+                        <td>Inventaire → Configuration → Paramètres → Traçabilité</td>
+                        <td><span class="badge badge-success">✅ ACTIVÉ</span></td>
+                        <td><code>group_stock_production_lot = true</code></td>
+                    </tr>
+                    <tr>
+                        <td>Suivi par lots (Tracking)</td>
+                        <td>Inventaire → Configuration → Paramètres → Traçabilité</td>
+                        <td><span class="badge badge-success">✅ ACTIVÉ</span></td>
+                        <td><code>group_stock_tracking_lot = true</code></td>
+                    </tr>
+                    <tr>
+                        <td>Dates de péremption</td>
+                        <td>Chaque produit → use_expiration_date</td>
+                        <td><span class="badge badge-success">✅ ACTIVÉ</span></td>
+                        <td>Activé sur <strong>299/299 produits</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Multi-emplacements</td>
+                        <td>Inventaire → Configuration → Paramètres → Entrepôt</td>
+                        <td><span class="badge badge-success">✅ ACTIVÉ</span></td>
+                        <td><code>group_stock_multi_locations = true</code></td>
+                    </tr>
+                </table>
+
+                <h2>Configuration produits — 299 articles</h2>
+                <table>
+                    <tr><th>Champ</th><th>Valeur</th><th>Description</th></tr>
+                    <tr><td><code>is_storable</code></td><td><code>true</code></td><td>Produit stockable (gestion stock réel)</td></tr>
+                    <tr><td><code>tracking</code></td><td><code>lot</code></td><td>Suivi par numéro de lot</td></tr>
+                    <tr><td><code>use_expiration_date</code></td><td><code>true</code></td><td>Gestion dates de péremption activée</td></tr>
+                    <tr><td><code>purchase_ok</code></td><td><code>true</code></td><td>Peut être acheté</td></tr>
+                    <tr><td><code>sale_ok</code></td><td><code>true</code></td><td>Peut être vendu</td></tr>
+                </table>
+
+                <h2>Fonctionnement à la réception</h2>
+                <p>Lors de la validation d'un picking de réception dans Odoo, l'utilisateur doit saisir :</p>
+                <ol>
+                    <li><strong>Numéro de lot</strong> — identifiant unique du lot (ex: <code>LOT-2026-001</code>)</li>
+                    <li><strong>Date d'expiration (DLC)</strong> — calculée automatiquement ou saisie manuellement</li>
+                    <li><strong>Emplacement de destination</strong> — où ranger physiquement (ex: <code>WH/CONGELATEUR/ZONE-A</code>)</li>
+                </ol>
+                <p>Ces informations sont ensuite rattachées au <code>stock.quant</code> et consultables via les rapports Odoo.</p>
+
+                <h2>Dates gérées par lot (modèle <code>stock.lot</code>)</h2>
+                <table>
+                    <tr><th>Champ</th><th>Champ Odoo</th><th>Description</th></tr>
+                    <tr><td>Date d'expiration</td><td><code>expiration_date</code></td><td>DLC — date après laquelle le produit ne doit plus être vendu</td></tr>
+                    <tr><td>Date limite d'utilisation</td><td><code>use_date</code></td><td>Date après laquelle le produit ne doit plus être consommé</td></tr>
+                    <tr><td>Date de retrait</td><td><code>removal_date</code></td><td>Date à laquelle le produit doit être retiré des rayons</td></tr>
+                    <tr><td>Date d'alerte</td><td><code>alert_date</code></td><td>Date d'alerte pour action préventive</td></tr>
+                </table>
+
                 <h2>Tranches de péremption</h2>
                 <table>
                     <tr><th>Tranche</th><th>Critère</th></tr>
                     <tr><td>1 à 3 mois</td><td>DLC ≤ 90 jours</td></tr>
-                    <tr><td>4 à 6 mois</td><td>90 < DLC ≤ 180 jours</td></tr>
-                    <tr><td>7 à 12 mois</td><td>180 < DLC ≤ 365 jours</td></tr>
-                    <tr><td>13 à 24 mois</td><td>365 < DLC ≤ 730 jours</td></tr>
-                    <tr><td>+24 mois</td><td>DLC > 730 jours</td></tr>
+                    <tr><td>4 à 6 mois</td><td>90 &lt; DLC ≤ 180 jours</td></tr>
+                    <tr><td>7 à 12 mois</td><td>180 &lt; DLC ≤ 365 jours</td></tr>
+                    <tr><td>13 à 24 mois</td><td>365 &lt; DLC ≤ 730 jours</td></tr>
+                    <tr><td>+24 mois</td><td>DLC &gt; 730 jours</td></tr>
                 </table>
-                
+
+                <h2>Emplacements de stockage</h2>
+                <table>
+                    <tr><th>Emplacement</th><th>ID</th><th>Type</th><th>Usage</th></tr>
+                    <tr><td>WH/TRANSIT MARITIME/DEPART</td><td>28</td><td>Internal</td><td>Marchandise expédiée</td></tr>
+                    <tr><td>WH/TRANSIT MARITIME/EN MER</td><td>22</td><td>Internal</td><td>Marchandise en transit</td></tr>
+                    <tr><td>WH/TRANSIT MARITIME/PORT ARRIVEE</td><td>23</td><td>Internal</td><td>Arrivée au port</td></tr>
+                    <tr><td>WH/TRANSIT MARITIME/DEDOUANEMENT</td><td>24</td><td>Internal</td><td>En cours de dédouanement</td></tr>
+                    <tr><td>WH/RECEPTION</td><td>—</td><td>Internal</td><td>Zone de réception physique</td></tr>
+                    <tr><td>WH/CONGELATEUR</td><td>—</td><td>Internal</td><td>Stockage froid (FEFO recommandé)</td></tr>
+                    <tr><td>WH/LOGISTISUD</td><td>—</td><td>Internal</td><td>Prestataire logistique</td></tr>
+                </table>
+
                 <h2>Champs traçabilité produits de la mer</h2>
                 <table>
                     <tr><th>Champ</th><th>Champ Odoo</th><th>Exemple</th></tr>
@@ -1134,6 +1208,21 @@ PR EUR = 5.00 × 0.92 × 1.35 = 6.21 EUR</div>
                     <tr><td>Nom scientifique</td><td>x_nom_scientifique</td><td>STOLEPHORUS COMMERSONII</td></tr>
                     <tr><td>Origine</td><td>x_origine</td><td>INDE</td></tr>
                 </table>
+
+                <h2>Script d'activation (référence technique)</h2>
+                <pre style="background:#1e1e1e; color:#d4d4d4; padding:15px; border-radius:8px; font-size:0.85rem; overflow-x:auto;">
+<span style="color:#6a9955;">// Activation via res.config.settings (JSON-RPC)</span>
+res.config.settings → create({
+    group_stock_production_lot: true,   <span style="color:#6a9955;">// Lots &amp; séries</span>
+    group_stock_tracking_lot: true,     <span style="color:#6a9955;">// Tracking par lot</span>
+    group_stock_multi_locations: true,  <span style="color:#6a9955;">// Multi-emplacements</span>
+}) → execute()
+
+<span style="color:#6a9955;">// Mise à jour des 299 produits (product.template)</span>
+product.template → write([all_ids], {
+    tracking: 'lot',              <span style="color:#6a9955;">// Suivi par lot</span>
+    use_expiration_date: true,    <span style="color:#6a9955;">// Dates de péremption</span>
+})</pre>
             </div>
             
             <!-- COMPTA -->
@@ -3765,13 +3854,14 @@ python3 import_odoo.py --type produits --dry-run</pre>
                         <tr><td>Emplacements Odoo (RECEPTION, CONGELATEUR, LOGISTISUD)</td><td>Odoo</td><td><span class="badge badge-success">✅ Créés</span></td></tr>
                     </table>
 
-                    <h4 style="margin-top:20px; color:var(--warning);">À vérifier (paramétrage Odoo)</h4>
+                    <h4 style="margin-top:20px; color:var(--success);">Paramétrage Odoo (activé le 03/03/2026)</h4>
                     <table>
                         <tr><th style="width:40%;">Paramètre</th><th>Chemin Odoo</th><th>Statut</th></tr>
-                        <tr><td>Traçabilité par lots activée</td><td>Stock → Configuration → Paramètres</td><td><span class="badge badge-warning">⚠️ À vérifier</span></td></tr>
-                        <tr><td>Dates d'expiration activées</td><td>Stock → Configuration → Paramètres</td><td><span class="badge badge-warning">⚠️ À vérifier</span></td></tr>
-                        <tr><td>Produits configurés "Suivi par lot"</td><td>Chaque fiche produit → Onglet Stock</td><td><span class="badge badge-warning">⚠️ À vérifier</span></td></tr>
-                        <tr><td>Stratégie FEFO sur congélateurs</td><td>Emplacements → Stratégie d'enlèvement</td><td><span class="badge badge-warning">⚠️ À vérifier</span></td></tr>
+                        <tr><td>Traçabilité par lots activée</td><td>Stock → Configuration → Paramètres</td><td><span class="badge badge-success">✅ Activé</span></td></tr>
+                        <tr><td>Dates d'expiration activées</td><td>use_expiration_date sur 299 produits</td><td><span class="badge badge-success">✅ Activé</span></td></tr>
+                        <tr><td>Produits configurés "Suivi par lot"</td><td>tracking=lot sur 299/299 produits</td><td><span class="badge badge-success">✅ Activé</span></td></tr>
+                        <tr><td>Multi-emplacements</td><td>Stock → Configuration → Paramètres</td><td><span class="badge badge-success">✅ Activé</span></td></tr>
+                        <tr><td>Stratégie FEFO sur congélateurs</td><td>Emplacements → Stratégie d'enlèvement</td><td><span class="badge badge-warning">⚠️ À configurer</span></td></tr>
                         <tr><td>Champs x_zone_peche, x_nom_scientifique</td><td>Studio → Champs personnalisés</td><td><span class="badge badge-warning">⚠️ À créer</span></td></tr>
                     </table>
 

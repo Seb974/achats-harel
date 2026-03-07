@@ -712,11 +712,14 @@ class OdooApiService
         foreach ($moveIds as $moveId) {
             $this->write('stock.move', [$moveId], ['quantity' => 0]);
         }
-        $moves = $this->read('stock.move', $moveIds, ['id', 'product_uom_qty']);
+        $moves = $this->read('stock.move', $moveIds, ['id', 'product_id', 'product_uom_qty']);
         foreach ($moves as $move) {
             $this->write('stock.move', [$move['id']], [
                 'quantity' => $move['product_uom_qty'],
             ]);
+
+            $productId = is_array($move['product_id']) ? $move['product_id'][0] : $move['product_id'];
+            $this->assignTransitLotToMoveLines($move['id'], $productId);
         }
 
         $this->safeExecute('stock.picking', 'button_validate', [[$picking]]);
@@ -750,6 +753,32 @@ class OdooApiService
     }
 
     /**
+     * Assigns (or creates) a transit lot to all move lines of a stock.move.
+     * Required when tracking=lot is enabled on products to avoid validation errors.
+     * Uses a reusable "TRANSIT" lot per product to avoid lot proliferation.
+     */
+    private function assignTransitLotToMoveLines(int $moveId, int $productId): void
+    {
+        $moveLines = $this->searchRead('stock.move.line', [
+            ['move_id', '=', $moveId],
+        ], ['id', 'lot_id']);
+
+        if (empty($moveLines)) {
+            return;
+        }
+
+        $lotId = $this->getOrCreateTransitLot($productId);
+
+        foreach ($moveLines as $ml) {
+            if (empty($ml['lot_id']) || $ml['lot_id'] === false) {
+                $this->write('stock.move.line', [$ml['id']], [
+                    'lot_id' => $lotId,
+                ]);
+            }
+        }
+    }
+
+    /**
      * Ensures products have sufficient stock at source before a transfer.
      * Uses inventory adjustments to create stock if missing.
      */
@@ -761,10 +790,20 @@ class OdooApiService
             $productId = $p['product_id'];
             $requiredQty = $p['qty'];
 
+            $lotId = $this->getOrCreateTransitLot($productId);
+
             $quants = $this->searchRead('stock.quant', [
                 ['product_id', '=', $productId],
                 ['location_id', '=', $locationId],
+                ['lot_id', '=', $lotId],
             ], ['id', 'quantity'], 1);
+
+            if (empty($quants)) {
+                $quants = $this->searchRead('stock.quant', [
+                    ['product_id', '=', $productId],
+                    ['location_id', '=', $locationId],
+                ], ['id', 'quantity'], 1);
+            }
 
             $currentQty = $quants[0]['quantity'] ?? 0;
 
@@ -775,12 +814,12 @@ class OdooApiService
             try {
                 if (!empty($quants)) {
                     $this->execute('stock.quant', 'write', [
-                        [$quants[0]['id']], ['inventory_quantity' => $requiredQty],
+                        [$quants[0]['id']], ['inventory_quantity' => $requiredQty, 'lot_id' => $lotId],
                     ], $ctx);
                     $this->safeExecute('stock.quant', 'action_apply_inventory', [[$quants[0]['id']]], $ctx);
                 } else {
                     $qId = $this->execute('stock.quant', 'create', [
-                        ['product_id' => $productId, 'location_id' => $locationId, 'inventory_quantity' => $requiredQty],
+                        ['product_id' => $productId, 'location_id' => $locationId, 'inventory_quantity' => $requiredQty, 'lot_id' => $lotId],
                     ], $ctx);
                     $this->safeExecute('stock.quant', 'action_apply_inventory', [[$qId]], $ctx);
                 }
@@ -791,6 +830,30 @@ class OdooApiService
                 ]);
             }
         }
+    }
+
+    /**
+     * Gets or creates the reusable "TRANSIT" lot for a product.
+     */
+    private function getOrCreateTransitLot(int $productId): int
+    {
+        $existing = $this->searchRead('stock.lot', [
+            ['name', '=', 'TRANSIT'],
+            ['product_id', '=', $productId],
+        ], ['id'], 1);
+
+        if (!empty($existing)) {
+            return $existing[0]['id'];
+        }
+
+        $companyIds = $this->searchRead('res.company', [], ['id'], 1);
+        $companyId = $companyIds[0]['id'] ?? 1;
+
+        return $this->create('stock.lot', [
+            'name' => 'TRANSIT',
+            'product_id' => $productId,
+            'company_id' => $companyId,
+        ]);
     }
 
     private const TRANSIT_LOCATION_IDS = [28, 22, 23, 24]; // DEPART, EN MER, PORT ARRIVEE, DEDOUANEMENT
@@ -842,8 +905,9 @@ class OdooApiService
             }
             if (!$destExists) {
                 try {
+                    $lotId = $this->getOrCreateTransitLot($productId);
                     $qId = $this->execute('stock.quant', 'create', [
-                        ['product_id' => $productId, 'location_id' => $destLocationId, 'inventory_quantity' => $expectedQty],
+                        ['product_id' => $productId, 'location_id' => $destLocationId, 'inventory_quantity' => $expectedQty, 'lot_id' => $lotId],
                     ], $ctx);
                     $this->safeExecute('stock.quant', 'action_apply_inventory', [[$qId]], $ctx);
                 } catch (\Throwable $e) {
