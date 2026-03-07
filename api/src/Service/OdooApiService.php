@@ -1179,6 +1179,60 @@ class OdooApiService
     }
 
     /**
+     * Returns the incoming picking ID/URL for a PO (for opening reception in Odoo).
+     */
+    public function getReceptionPickingInfo(int $orderId): array
+    {
+        $order = $this->read('purchase.order', [$orderId], ['name', 'receipt_status']);
+        $poName = $order[0]['name'] ?? "PO#$orderId";
+        $receiptStatus = $order[0]['receipt_status'] ?? 'unknown';
+
+        $pickings = $this->searchRead(
+            'stock.picking',
+            [['origin', '=', $poName], ['picking_type_id.code', '=', 'incoming']],
+            ['id', 'name', 'state'],
+            5
+        );
+
+        if (empty($pickings)) {
+            return [
+                'has_picking' => false,
+                'receipt_status' => $receiptStatus,
+            ];
+        }
+
+        $picking = $pickings[0];
+        return [
+            'has_picking' => true,
+            'picking_id' => $picking['id'],
+            'picking_name' => $picking['name'],
+            'picking_state' => $picking['state'],
+            'receipt_status' => $receiptStatus,
+        ];
+    }
+
+    /**
+     * Checks receipt status for multiple POs at once (batch).
+     * Returns an array of PO statuses without performing any validation.
+     */
+    public function checkReceptionStatusBatch(array $orderIds): array
+    {
+        if (empty($orderIds)) return [];
+
+        $orders = $this->read('purchase.order', $orderIds, ['id', 'name', 'receipt_status', 'x_statut_transit']);
+
+        $results = [];
+        foreach ($orders as $o) {
+            $results[$o['id']] = [
+                'receipt_status' => $o['receipt_status'] ?? 'unknown',
+                'x_statut_transit' => $o['x_statut_transit'] ?? 'unknown',
+                'is_received' => ($o['receipt_status'] ?? '') === 'full',
+            ];
+        }
+        return $results;
+    }
+
+    /**
      * Récupère l'historique des mouvements pour un emplacement
      */
     public function getMovementHistory(int $locationId, int $limit = 50): array

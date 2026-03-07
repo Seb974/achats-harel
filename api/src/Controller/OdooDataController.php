@@ -593,6 +593,47 @@ class OdooDataController extends AbstractController
     }
 
     /**
+     * Retourne les infos du picking de réception d'un PO (sans valider)
+     */
+    #[Route('/purchase-order/{id}/reception-info', name: 'reception_picking_info', methods: ['GET'])]
+    public function getReceptionPickingInfo(int $id): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+            return $this->json($this->odooService->getReceptionPickingInfo($id));
+        } catch (\Throwable $e) {
+            return $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Vérifie le receipt_status de plusieurs PO en batch (lecture seule)
+     */
+    #[Route('/check-reception-status', name: 'check_reception_status_batch', methods: ['GET'])]
+    public function checkReceptionStatusBatch(Request $request): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $idsParam = $request->query->get('order_ids', '');
+            $ids = array_filter(array_map('intval', explode(',', $idsParam)));
+            if (empty($ids)) {
+                return $this->json(['error' => 'order_ids requis'], 400);
+            }
+
+            return $this->json($this->odooService->checkReceptionStatusBatch($ids));
+        } catch (\Throwable $e) {
+            return $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Valide le picking de réception d'un PO (passage receipt_status → full)
      */
     #[Route('/purchase-order/{id}/validate-receipt', name: 'validate_purchase_order_receipt', methods: ['POST'])]

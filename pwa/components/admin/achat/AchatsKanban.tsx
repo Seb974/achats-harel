@@ -11,6 +11,8 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import InventoryIcon from '@mui/icons-material/Inventory';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import DownloadDoneIcon from '@mui/icons-material/DownloadDone';
 import { useOdoo } from '../../../hooks/useOdoo';
 
 const KANBAN_ORDER = [
@@ -30,14 +32,16 @@ interface KanbanColumnProps {
     achats: any[];
     onDrop: (achatId: string, targetStatus: any) => void;
     onShowOdoo: (achat: any) => void;
-    onCheckReception: (achat: any) => void;
+    onOpenReception: (achat: any) => void;
+    onRefreshReception?: () => void;
+    receptionChecking?: boolean;
     onHeaderClick?: (status: any) => void;
 }
 
-const KanbanCard = ({ achat, onShowOdoo, onCheckReception }: {
+const KanbanCard = ({ achat, onShowOdoo, onOpenReception }: {
     achat: any;
     onShowOdoo: (achat: any) => void;
-    onCheckReception: (achat: any) => void;
+    onOpenReception: (achat: any) => void;
 }) => {
     const redirect = useRedirect();
     const statusCode = achat.status?.code;
@@ -96,17 +100,17 @@ const KanbanCard = ({ achat, onShowOdoo, onCheckReception }: {
                     </Typography>
                 )}
 
-                {isReceptionnable && (
+                {isReceptionnable && achat.odooPurchaseOrderId && (
                     <Button
                         size="small"
-                        variant="outlined"
+                        variant="contained"
                         color="success"
-                        startIcon={<CheckCircleIcon />}
-                        onClick={() => onCheckReception(achat)}
+                        startIcon={<DownloadDoneIcon />}
+                        onClick={() => onOpenReception(achat)}
                         sx={{ mt: 0.5, fontSize: '0.7rem' }}
                         fullWidth
                     >
-                        Vérifier réception Odoo
+                        Réceptionner dans Odoo
                     </Button>
                 )}
             </CardContent>
@@ -114,7 +118,7 @@ const KanbanCard = ({ achat, onShowOdoo, onCheckReception }: {
     );
 };
 
-const KanbanColumn = ({ status, achats, onDrop, onShowOdoo, onCheckReception, onHeaderClick }: KanbanColumnProps) => {
+const KanbanColumn = ({ status, achats, onDrop, onShowOdoo, onOpenReception, onRefreshReception, receptionChecking, onHeaderClick }: KanbanColumnProps) => {
     const [isDragOver, setIsDragOver] = useState(false);
 
     const handleDragOver = (e: React.DragEvent) => {
@@ -173,19 +177,35 @@ const KanbanColumn = ({ status, achats, onDrop, onShowOdoo, onCheckReception, on
                         {status.label}
                     </Typography>
                 </Box>
-                <Chip
-                    label={achats.length}
-                    size="small"
-                    sx={{
-                        height: 22,
-                        minWidth: 22,
-                        fontSize: '0.75rem',
-                        fontWeight: 'bold',
-                        bgcolor: 'rgba(255,255,255,0.3)',
-                        color: 'white',
-                        '& .MuiChip-label': { px: 0.5 },
-                    }}
-                />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    {status.code === 'A_RECEPTIONNER' && onRefreshReception && (
+                        <Tooltip title="Vérifier les réceptions Odoo">
+                            <IconButton
+                                size="small"
+                                onClick={(e) => { e.stopPropagation(); onRefreshReception(); }}
+                                disabled={receptionChecking}
+                                sx={{ color: 'white', p: 0.25 }}
+                            >
+                                {receptionChecking
+                                    ? <CircularProgress size={16} sx={{ color: 'white' }} />
+                                    : <RefreshIcon fontSize="small" />}
+                            </IconButton>
+                        </Tooltip>
+                    )}
+                    <Chip
+                        label={achats.length}
+                        size="small"
+                        sx={{
+                            height: 22,
+                            minWidth: 22,
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            bgcolor: 'rgba(255,255,255,0.3)',
+                            color: 'white',
+                            '& .MuiChip-label': { px: 0.5 },
+                        }}
+                    />
+                </Box>
             </Box>
 
             <Box sx={{ p: 1, overflowY: 'auto', flex: 1 }}>
@@ -194,7 +214,7 @@ const KanbanColumn = ({ status, achats, onDrop, onShowOdoo, onCheckReception, on
                         key={achat.id}
                         achat={achat}
                         onShowOdoo={onShowOdoo}
-                        onCheckReception={onCheckReception}
+                        onOpenReception={onOpenReception}
                     />
                 ))}
             </Box>
@@ -215,9 +235,10 @@ export const AchatsKanban = () => {
         updatePurchaseOrderPrices,
         cancelPurchaseOrder,
         calculateCostPrices,
-        validateReceipt,
         updateTransitStatus,
         clearTransitStock,
+        getReceptionInfo,
+        checkReceptionStatusBatch,
         createPurchaseOrder,
         convertAchatToPurchaseOrder,
         findSupplierByName,
@@ -249,6 +270,8 @@ export const AchatsKanban = () => {
         steps: TransitionStep[];
         error?: string;
     }>({ open: false, achat: null, fromStatus: null, targetStatus: null, phase: 'confirm', steps: [] });
+
+    const [receptionChecking, setReceptionChecking] = useState(false);
 
     const data = useMemo(() => rawData ?? [], [rawData]);
 
@@ -712,44 +735,105 @@ export const AchatsKanban = () => {
         }
     };
 
-    const handleCheckReception = async (achat: any) => {
-        if (!achat.odooPurchaseOrderId) {
-            notify('Aucune commande Odoo liée', { type: 'warning' });
-            return;
-        }
-
-        setProcessing(true);
-        try {
-            const result = await validateReceipt(achat.odooPurchaseOrderId);
-
-            if (result.success) {
-                const recuStatus = getStatusByCode('RECU');
-                if (recuStatus) {
-                    const statusIri = recuStatus['@id'] || `/statuses/${recuStatus.id}`;
-                    await patchAchat(achat.id, { status: statusIri });
-                    await updateTransitStatus(achat.odooPurchaseOrderId, 'RECU');
-                    postPOMessage(achat.odooPurchaseOrderId,
-                        `<p><strong>✅ RÉCEPTION COMPLÈTE</strong><br/>Marchandises reçues et validées le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}<br/>Statut réception Odoo : ${result.receipt_status}</p>`
-                    );
-                    notify(`Réception validée — receipt_status: ${result.receipt_status}`, { type: 'success' });
-                    refresh();
-                }
-            } else {
-                notify(result.error || 'Aucun picking à valider', { type: 'info' });
-            }
-        } catch (e: any) {
-            notify(e.message || 'Erreur validation réception', { type: 'error' });
-        } finally {
-            setProcessing(false);
-        }
-    };
-
     const handleShowOdoo = (achat: any) => {
         if (achat.odooPurchaseOrderId) {
             const odooBase = 'https://ah-chou1.odoo.com';
             window.open(`${odooBase}/odoo/purchase/${achat.odooPurchaseOrderId}`, '_blank');
         }
     };
+
+    const handleOpenReception = useCallback(async (achat: any) => {
+        if (!achat.odooPurchaseOrderId) {
+            notify('Aucune commande Odoo liée', { type: 'warning' });
+            return;
+        }
+        const info = await getReceptionInfo(achat.odooPurchaseOrderId);
+        if (info.has_picking) {
+            window.open(
+                `https://ah-chou1.odoo.com/web#id=${info.picking_id}&model=stock.picking&view_type=form`,
+                '_blank'
+            );
+        } else {
+            notify('Aucun bon de réception trouvé pour ce PO', { type: 'warning' });
+        }
+    }, [getReceptionInfo, notify]);
+
+    const handleRefreshReception = useCallback(async () => {
+        const aReceptionner = data.filter(
+            (a: any) => a.status?.code === 'A_RECEPTIONNER' && a.odooPurchaseOrderId
+        );
+        if (aReceptionner.length === 0) return;
+
+        setReceptionChecking(true);
+        try {
+            const orderIds = aReceptionner.map((a: any) => a.odooPurchaseOrderId);
+            const statuses = await checkReceptionStatusBatch(orderIds);
+
+            let receivedCount = 0;
+            for (const achat of aReceptionner) {
+                const poStatus = statuses[achat.odooPurchaseOrderId];
+                if (poStatus?.is_received) {
+                    const recuStatus = getStatusByCode('RECU');
+                    if (recuStatus) {
+                        const statusIri = recuStatus['@id'] || `/statuses/${recuStatus.id}`;
+                        await patchAchat(achat.id, { status: statusIri });
+                        await updateTransitStatus(achat.odooPurchaseOrderId, 'RECU');
+                        postPOMessage(achat.odooPurchaseOrderId,
+                            `<p><strong>✅ RÉCEPTION COMPLÈTE</strong><br/>Détectée automatiquement le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>`
+                        );
+                        receivedCount++;
+                    }
+                }
+            }
+
+            if (receivedCount > 0) {
+                notify(`${receivedCount} commande(s) réceptionnée(s)`, { type: 'success' });
+                refresh();
+            } else {
+                notify('Aucune réception détectée dans Odoo', { type: 'info' });
+            }
+        } catch (e: any) {
+            notify(e.message || 'Erreur vérification réceptions', { type: 'error' });
+        } finally {
+            setReceptionChecking(false);
+        }
+    }, [data, checkReceptionStatusBatch, getStatusByCode, patchAchat, updateTransitStatus, postPOMessage, notify, refresh]);
+
+    // Polling: check reception status every 60s when there are items in A_RECEPTIONNER
+    useEffect(() => {
+        const aReceptionner = data.filter(
+            (a: any) => a.status?.code === 'A_RECEPTIONNER' && a.odooPurchaseOrderId
+        );
+        if (aReceptionner.length === 0 || !isOdooConfigured) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const orderIds = aReceptionner.map((a: any) => a.odooPurchaseOrderId);
+                const statuses = await checkReceptionStatusBatch(orderIds);
+
+                for (const achat of aReceptionner) {
+                    const poStatus = statuses[achat.odooPurchaseOrderId];
+                    if (poStatus?.is_received) {
+                        const recuStatus = getStatusByCode('RECU');
+                        if (recuStatus) {
+                            const statusIri = recuStatus['@id'] || `/statuses/${recuStatus.id}`;
+                            await patchAchat(achat.id, { status: statusIri });
+                            await updateTransitStatus(achat.odooPurchaseOrderId, 'RECU');
+                            postPOMessage(achat.odooPurchaseOrderId,
+                                `<p><strong>✅ RÉCEPTION COMPLÈTE</strong><br/>Détectée automatiquement le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>`
+                            );
+                            notify('Réception détectée dans Odoo — carte déplacée vers REÇU', { type: 'success' });
+                            refresh();
+                        }
+                    }
+                }
+            } catch {
+                // Silent fail for polling
+            }
+        }, 60000);
+
+        return () => clearInterval(interval);
+    }, [data, isOdooConfigured, checkReceptionStatusBatch, getStatusByCode, patchAchat, updateTransitStatus, postPOMessage, notify, refresh]);
 
     if (isLoading) {
         return <Box p={4} textAlign="center"><CircularProgress /></Box>;
@@ -775,7 +859,9 @@ export const AchatsKanban = () => {
                         achats={achatsByStatus[status.code] || []}
                         onDrop={handleDrop}
                         onShowOdoo={handleShowOdoo}
-                        onCheckReception={handleCheckReception}
+                        onOpenReception={handleOpenReception}
+                        onRefreshReception={handleRefreshReception}
+                        receptionChecking={receptionChecking}
                         onHeaderClick={handleHeaderClick}
                     />
                 ))}
