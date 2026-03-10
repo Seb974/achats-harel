@@ -407,12 +407,16 @@ class OdooApiService
      */
     public function getSuppliers(int $limit = 1000, int $offset = 0): array
     {
+        $excludeTagIds = $this->getPartnerTagIdsByName('Client');
+
+        $domain = [['is_company', '=', true]];
+        if (!empty($excludeTagIds)) {
+            $domain[] = ['category_id', 'not in', $excludeTagIds];
+        }
+
         $suppliers = $this->searchRead(
             'res.partner',
-            [
-                ['is_company', '=', true],
-                ['category_id.name', 'not ilike', 'Client'],
-            ],
+            $domain,
             [
                 'id',
                 'name',
@@ -1492,9 +1496,16 @@ class OdooApiService
      */
     public function findSupplierByName(string $name): ?array
     {
+        $excludeTagIds = $this->getPartnerTagIdsByName('Client');
+
+        $domain = [['name', 'ilike', trim($name)], ['is_company', '=', true]];
+        if (!empty($excludeTagIds)) {
+            $domain[] = ['category_id', 'not in', $excludeTagIds];
+        }
+
         $suppliers = $this->searchRead(
             'res.partner',
-            [['name', 'ilike', trim($name)], ['is_company', '=', true], ['category_id.name', 'not ilike', 'Client']],
+            $domain,
             ['id', 'name'],
             5
         );
@@ -1507,6 +1518,21 @@ class OdooApiService
         }
 
         return !empty($suppliers) ? ['id' => $suppliers[0]['id'], 'name' => $suppliers[0]['name']] : null;
+    }
+
+    /**
+     * Récupère les IDs des étiquettes partenaire par nom
+     */
+    private function getPartnerTagIdsByName(string $name): array
+    {
+        $tags = $this->searchRead(
+            'res.partner.category',
+            [['name', 'ilike', $name]],
+            ['id'],
+            10
+        );
+
+        return array_column($tags, 'id');
     }
 
     /**
