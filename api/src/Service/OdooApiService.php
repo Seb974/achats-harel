@@ -407,11 +407,11 @@ class OdooApiService
      */
     public function getSuppliers(int $limit = 1000, int $offset = 0): array
     {
-        $excludeTagIds = $this->getPartnerTagIdsByName('Client');
+        $excludePartnerIds = $this->getPartnerIdsByTag('Client');
 
         $domain = [['is_company', '=', true]];
-        if (!empty($excludeTagIds)) {
-            $domain[] = ['category_id', 'not in', $excludeTagIds];
+        if (!empty($excludePartnerIds)) {
+            $domain[] = ['id', 'not in', $excludePartnerIds];
         }
 
         $suppliers = $this->searchRead(
@@ -1496,11 +1496,11 @@ class OdooApiService
      */
     public function findSupplierByName(string $name): ?array
     {
-        $excludeTagIds = $this->getPartnerTagIdsByName('Client');
+        $excludePartnerIds = $this->getPartnerIdsByTag('Client');
 
         $domain = [['name', 'ilike', trim($name)], ['is_company', '=', true]];
-        if (!empty($excludeTagIds)) {
-            $domain[] = ['category_id', 'not in', $excludeTagIds];
+        if (!empty($excludePartnerIds)) {
+            $domain[] = ['id', 'not in', $excludePartnerIds];
         }
 
         $suppliers = $this->searchRead(
@@ -1521,18 +1521,31 @@ class OdooApiService
     }
 
     /**
-     * Récupère les IDs des étiquettes partenaire par nom
+     * Récupère les IDs des partenaires portant une étiquette donnée
      */
-    private function getPartnerTagIdsByName(string $name): array
+    private function getPartnerIdsByTag(string $tagName): array
     {
         $tags = $this->searchRead(
             'res.partner.category',
-            [['name', 'ilike', $name]],
+            [['name', 'ilike', $tagName]],
             ['id'],
             10
         );
 
-        return array_column($tags, 'id');
+        if (empty($tags)) {
+            return [];
+        }
+
+        $tagIds = array_column($tags, 'id');
+
+        $partners = $this->searchRead(
+            'res.partner',
+            [['category_id', 'in', $tagIds]],
+            ['id'],
+            1000
+        );
+
+        return array_column($partners, 'id');
     }
 
     /**
