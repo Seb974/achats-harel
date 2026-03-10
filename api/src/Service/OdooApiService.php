@@ -403,18 +403,15 @@ class OdooApiService
 
     /**
      * Récupère la liste des fournisseurs
+     * Filtre : entreprises uniquement, sans l'étiquette "Client"
      */
     public function getSuppliers(int $limit = 1000, int $offset = 0): array
     {
-        // Récupérer tous les partenaires qui peuvent être utilisés comme fournisseurs
-        // On inclut les entreprises ET les contacts avec supplier_rank > 0
-        // Le filtre '|' est un OR dans Odoo
         $suppliers = $this->searchRead(
             'res.partner',
             [
-                '|',
-                ['supplier_rank', '>', 0],  // Partenaires marqués comme fournisseurs
-                ['is_company', '=', true],  // Ou toutes les entreprises
+                ['is_company', '=', true],
+                ['category_id.name', 'not ilike', 'Client'],
             ],
             [
                 'id',
@@ -1497,7 +1494,7 @@ class OdooApiService
     {
         $suppliers = $this->searchRead(
             'res.partner',
-            [['name', 'ilike', trim($name)], '|', ['supplier_rank', '>', 0], ['is_company', '=', true]],
+            [['name', 'ilike', trim($name)], ['is_company', '=', true], ['category_id.name', 'not ilike', 'Client']],
             ['id', 'name'],
             5
         );
