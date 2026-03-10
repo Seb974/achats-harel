@@ -9,6 +9,7 @@ import { Box, Button, Link, Paper, Typography, useMediaQuery, Divider } from "@m
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
+import TuneIcon from '@mui/icons-material/Tune';
 import { useEffect, useMemo, useState } from "react";
 import GlobalTaxInput from "./GlobalTaxes";
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -83,7 +84,16 @@ const ExchangeRateInput = ({ client }) => {
     fetchExchangeRate();
   }, [date, baseCurrency, targetCurrency]);
 
-  return <NumberInput source="exchangeRate" label="Taux de change" readOnly={ !(client?.rateEditable ?? false) }/>
+  const isReadOnly = !(client?.rateEditable ?? false);
+  return <NumberInput 
+    source="exchangeRate" 
+    label="Taux de change" 
+    readOnly={isReadOnly}
+    sx={ isReadOnly ? { 
+      '& .MuiInputBase-root': { backgroundColor: '#f5f5f5' },
+      '& .MuiInputBase-input': { fontStyle: 'italic', color: '#757575' }
+    } : {}}
+  />
 };
 
 const TotalInput = ({ client, totalCurrency, setTotalCurrency }) => {
@@ -107,8 +117,15 @@ const TotalInput = ({ client, totalCurrency, setTotalCurrency }) => {
       fullWidth
       sx={{ 
         '& .MuiInputBase-input': { 
-          fontSize: '1.2rem', 
-          fontWeight: 'bold' 
+          fontSize: '1.3rem', 
+          fontWeight: 700,
+          color: '#1b5e20',
+          textAlign: 'right',
+        },
+        '& .MuiFormHelperText-root': {
+          textAlign: 'right',
+          fontWeight: 500,
+          fontSize: '0.8rem',
         }
       }}
     />
@@ -194,12 +211,17 @@ const OutgoingPriceInput = ({ exchangeRate, rowValues, targetCurrency, client })
   const totalDisplay = (quantity * convertedPrice);
   const showTotal = isFinite(totalDisplay) && totalDisplay > 0;
 
+  const isReadOnly = !(client?.convertedPriceEditable ?? false);
   return <NumberInput 
           source="outGoingUnitPriceHT" 
           label={`Prix ${currency}`}
-          readOnly={ !(client?.convertedPriceEditable ?? false) }
-          helperText={ showTotal ? `${totalDisplay.toFixed(2)} ${currency}` : '' }
+          readOnly={isReadOnly}
+          helperText={ showTotal ? `= ${totalDisplay.toFixed(2)} ${currency}` : '' }
           fullWidth
+          sx={ isReadOnly ? { 
+            '& .MuiInputBase-root': { backgroundColor: '#f5f5f5' },
+            '& .MuiInputBase-input': { fontStyle: 'italic', color: '#757575' }
+          } : {}}
         />;
 };
 
@@ -277,8 +299,15 @@ const IncomingPriceInput = ({ formData, rowValues, client }) => {
     <NumberInput 
       source="incomingUnitPrice" 
       label={`Prix ${baseCurrency}`}
-      helperText={ showTotal ? `${total.toFixed(2)} ${baseCurrency}` : '' }
+      helperText={ showTotal ? `= ${total.toFixed(2)} ${baseCurrency}` : '' }
       fullWidth
+      sx={{
+        '& .MuiFormHelperText-root': {
+          color: '#2e7d32',
+          fontWeight: 500,
+          fontSize: '0.75rem',
+        }
+      }}
     />
   );
 };
@@ -684,18 +713,21 @@ export const AchatsCreate = () => {
               <Paper 
                 elevation={0} 
                 sx={{ 
-                  p: 2, 
+                  p: 2.5, 
                   mb: 3, 
                   border: '1px solid #e0e0e0', 
+                  borderLeft: '4px solid #8b4513',
                   borderRadius: 2,
                   backgroundColor: '#fafafa',
                   width: '100%',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  transition: 'box-shadow 0.2s ease',
+                  '&:hover': { boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }
                 }}
               >
                 <Box display="flex" alignItems="center" gap={1} mb={2}>
-                  <LocalShippingIcon sx={{ color: '#8b4513' }} />
-                  <Typography variant="subtitle1" fontWeight="bold" color="#8b4513">
+                  <LocalShippingIcon sx={{ color: '#8b4513', fontSize: 22 }} />
+                  <Typography variant="subtitle1" fontWeight={600} color="#8b4513" sx={{ letterSpacing: '0.02em' }}>
                     Informations commande
                   </Typography>
                 </Box>
@@ -741,14 +773,14 @@ export const AchatsCreate = () => {
                       <ExchangeRateInput client={client}/>
                     </Box>
                     <Box flex={1}>
-                      <TextInput source="targetCurrency" label="Devise locale" defaultValue={ client?.mainCurrency ?? 'EUR' } readOnly sx={{ '& .MuiInputBase-input': { color: '#666' } }}/>
+                      <TextInput source="targetCurrency" label="Devise locale" defaultValue={ client?.mainCurrency ?? 'EUR' } readOnly sx={{ '& .MuiInputBase-root': { backgroundColor: '#f5f5f5' }, '& .MuiInputBase-input': { color: '#757575', fontStyle: 'italic' } }}/>
                     </Box>
                   </Box>
                   :
                   <Box width="100%">
                     <CurrencySelect currencies={currencies} setCurrencies={setCurrencies}/>
                     <ExchangeRateInput client={client}/>
-                    <TextInput source="targetCurrency" label="Devise locale" defaultValue={ client?.mainCurrency ?? 'EUR' } readOnly/>
+                    <TextInput source="targetCurrency" label="Devise locale" defaultValue={ client?.mainCurrency ?? 'EUR' } readOnly sx={{ '& .MuiInputBase-root': { backgroundColor: '#f5f5f5' }, '& .MuiInputBase-input': { color: '#757575', fontStyle: 'italic' } }}/>
                   </Box>
                 }
               </Paper>
@@ -759,19 +791,22 @@ export const AchatsCreate = () => {
               <Paper 
                 elevation={0} 
                 sx={{ 
-                  p: 2, 
+                  p: 2.5, 
                   mb: 3, 
                   border: '1px solid #e0e0e0', 
+                  borderLeft: '4px solid #2e7d32',
                   borderRadius: 2,
                   backgroundColor: '#fff',
                   width: '100%',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  transition: 'box-shadow 0.2s ease',
+                  '&:hover': { boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }
                 }}
               >
                 <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
                   <Box display="flex" alignItems="center" gap={1}>
-                    <InventoryIcon sx={{ color: '#2e7d32' }} />
-                    <Typography variant="subtitle1" fontWeight="bold" color="#2e7d32">
+                    <InventoryIcon sx={{ color: '#2e7d32', fontSize: 22 }} />
+                    <Typography variant="subtitle1" fontWeight={600} color="#2e7d32" sx={{ letterSpacing: '0.02em' }}>
                       Produits commandés
                     </Typography>
                   </Box>
@@ -783,9 +818,16 @@ export const AchatsCreate = () => {
                     disableAdd={false}
                     sx={{
                       '& .RaSimpleFormIterator-line': {
-                        borderBottom: '1px solid #f0f0f0',
-                        paddingBottom: 1,
-                        marginBottom: 1,
+                        borderBottom: '1px solid #e8e8e8',
+                        paddingBottom: 1.5,
+                        paddingTop: 1,
+                        marginBottom: 0,
+                        transition: 'background-color 0.15s ease',
+                        borderRadius: 1,
+                        px: 1,
+                        '&:hover': { backgroundColor: '#f0faf0' },
+                        '&:nth-of-type(even)': { backgroundColor: '#fafcfa' },
+                        '&:nth-of-type(even):hover': { backgroundColor: '#f0faf0' },
                       },
                       '& .RaSimpleFormIterator-form': {
                         display: 'flex',
@@ -794,9 +836,12 @@ export const AchatsCreate = () => {
                         alignItems: 'flex-start',
                       },
                       '& .RaSimpleFormIterator-add button': {
-                        marginTop: 1,
+                        marginTop: 2,
                         borderColor: '#2e7d32',
                         color: '#2e7d32',
+                        fontWeight: 500,
+                        borderRadius: 2,
+                        px: 3,
                         '&:hover': { borderColor: '#1b5e20', backgroundColor: '#e8f5e9' }
                       }
                     }}
@@ -841,16 +886,18 @@ export const AchatsCreate = () => {
 
                 <Divider sx={{ my: 2 }} />
                 
-                {/* Total bien visible */}
                 <Box 
                   display="flex" 
                   justifyContent="flex-end" 
                   alignItems="center"
                   sx={{ 
-                    backgroundColor: '#f5f5f5', 
-                    p: 2, 
-                    borderRadius: 1,
-                    border: '1px solid #e0e0e0'
+                    background: 'linear-gradient(135deg, #f1f8e9 0%, #e8f5e9 100%)',
+                    p: 2.5, 
+                    borderRadius: 1.5,
+                    border: '1px solid #c8e6c9',
+                    position: 'sticky',
+                    bottom: 0,
+                    zIndex: 1,
                   }}
                 >
                   <TotalInput client={client} totalCurrency={totalCurrency} setTotalCurrency={setTotalCurrency}/>
@@ -863,15 +910,24 @@ export const AchatsCreate = () => {
               <Paper 
                 elevation={0} 
                 sx={{ 
-                  p: 2, 
+                  p: 2.5, 
                   mb: 3, 
                   border: '1px solid #e0e0e0', 
+                  borderLeft: '4px solid #6d4c9e',
                   borderRadius: 2,
                   backgroundColor: '#fafafa',
                   width: '100%',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  transition: 'box-shadow 0.2s ease',
+                  '&:hover': { boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }
                 }}
               >
+                <Box display="flex" alignItems="center" gap={1} mb={2}>
+                  <TuneIcon sx={{ color: '#6d4c9e', fontSize: 22 }} />
+                  <Typography variant="subtitle1" fontWeight={600} color="#6d4c9e" sx={{ letterSpacing: '0.02em' }}>
+                    Statut & Options
+                  </Typography>
+                </Box>
                 <Box display="flex" gap={2} flexWrap="wrap" alignItems="flex-start">
                   <Box sx={{ minWidth: 200, flex: '1 1 200px' }}>
                     <StatusInput statuses={statuses}/>
@@ -890,17 +946,20 @@ export const AchatsCreate = () => {
               <Paper 
                 elevation={0} 
                 sx={{ 
-                  p: 2, 
+                  p: 2.5, 
                   border: '1px solid #e0e0e0', 
+                  borderLeft: '4px solid #1976d2',
                   borderRadius: 2,
                   backgroundColor: '#fff',
                   width: '100%',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  transition: 'box-shadow 0.2s ease',
+                  '&:hover': { boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }
                 }}
               >
                 <Box display="flex" alignItems="center" gap={1} mb={2}>
-                  <AttachFileIcon sx={{ color: '#1976d2' }} />
-                  <Typography variant="subtitle1" fontWeight="bold" color="#1976d2">
+                  <AttachFileIcon sx={{ color: '#1976d2', fontSize: 22 }} />
+                  <Typography variant="subtitle1" fontWeight={600} color="#1976d2" sx={{ letterSpacing: '0.02em' }}>
                     Documents & Commentaires
                   </Typography>
                 </Box>
@@ -912,16 +971,24 @@ export const AchatsCreate = () => {
                   placeholder={
                     <Box 
                       sx={{ 
-                        border: '2px dashed #ccc', 
+                        border: '2px dashed #bbdefb', 
                         borderRadius: 2, 
                         p: 3, 
                         textAlign: 'center',
                         cursor: 'pointer',
-                        '&:hover': { borderColor: '#1976d2', backgroundColor: '#f5f9ff' }
+                        backgroundColor: '#fafcff',
+                        transition: 'all 0.2s ease',
+                        '&:hover': { 
+                          borderColor: '#1976d2', 
+                          backgroundColor: '#e3f2fd',
+                          transform: 'translateY(-1px)',
+                          boxShadow: '0 2px 6px rgba(25,118,210,0.12)'
+                        }
                       }}
                     >
-                      <Typography color="textSecondary">
-                        📎 Glissez vos fichiers ici ou cliquez pour sélectionner
+                      <AttachFileIcon sx={{ color: '#90caf9', fontSize: 28, mb: 0.5 }} />
+                      <Typography color="textSecondary" sx={{ fontSize: '0.9rem' }}>
+                        Glissez vos fichiers ici ou cliquez pour sélectionner
                       </Typography>
                     </Box>
                   }
