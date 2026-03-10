@@ -403,13 +403,13 @@ class OdooApiService
 
     /**
      * Récupère la liste des fournisseurs
-     * Filtre : entreprises uniquement, sans l'étiquette "Client"
+     * Exclut les contacts tagués "Client" et leurs contacts enfants
      */
     public function getSuppliers(int $limit = 1000, int $offset = 0): array
     {
-        $excludePartnerIds = $this->getPartnerIdsByTag('Client');
+        $excludePartnerIds = $this->getPartnerIdsByTag('Client', true);
 
-        $domain = [['is_company', '=', true]];
+        $domain = [['parent_id', '=', false]];
         if (!empty($excludePartnerIds)) {
             $domain[] = ['id', 'not in', $excludePartnerIds];
         }
@@ -1496,9 +1496,9 @@ class OdooApiService
      */
     public function findSupplierByName(string $name): ?array
     {
-        $excludePartnerIds = $this->getPartnerIdsByTag('Client');
+        $excludePartnerIds = $this->getPartnerIdsByTag('Client', true);
 
-        $domain = [['name', 'ilike', trim($name)], ['is_company', '=', true]];
+        $domain = [['name', 'ilike', trim($name)], ['parent_id', '=', false]];
         if (!empty($excludePartnerIds)) {
             $domain[] = ['id', 'not in', $excludePartnerIds];
         }
@@ -1522,8 +1522,9 @@ class OdooApiService
 
     /**
      * Récupère les IDs des partenaires portant une étiquette donnée
+     * Si $includeChildren, inclut aussi les contacts rattachés (parent_id)
      */
-    private function getPartnerIdsByTag(string $tagName): array
+    private function getPartnerIdsByTag(string $tagName, bool $includeChildren = false): array
     {
         $tags = $this->searchRead(
             'res.partner.category',
@@ -1545,7 +1546,19 @@ class OdooApiService
             1000
         );
 
-        return array_column($partners, 'id');
+        $ids = array_column($partners, 'id');
+
+        if ($includeChildren && !empty($ids)) {
+            $children = $this->searchRead(
+                'res.partner',
+                [['parent_id', 'in', $ids]],
+                ['id'],
+                5000
+            );
+            $ids = array_merge($ids, array_column($children, 'id'));
+        }
+
+        return $ids;
     }
 
     /**
