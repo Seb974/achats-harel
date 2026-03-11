@@ -1294,18 +1294,18 @@
   <hr class="section-divider">
 
   <!-- ═══════════════════════════════════════════════════════════
-       SECTION 3 — FLUX DE VENTE : COMMANDE → BL → FACTURE
+       SECTION 3 — FLUX DE VENTE : BON DE COMMANDE → PRÉPARATION → BL → FACTURE
        ═══════════════════════════════════════════════════════════ -->
   <div class="guide-section" id="section-3">
 
     <div class="section-header">
       <span class="section-number">Section 3</span>
-      <h2>Flux de vente : Commande → BL → Facture</h2>
+      <h2>Flux de vente : Commande → Préparation → BL → Facture</h2>
       <p>Le processus complet de vente chez AH CHOU</p>
     </div>
 
     <p>
-      Ce chapitre décrit le processus complet de vente, depuis la création d'un devis
+      Ce chapitre décrit le processus complet de vente, depuis la saisie du bon de commande
       jusqu'au règlement du client. Chaque vente suit un enchaînement précis dans Odoo :
     </p>
 
@@ -1313,13 +1313,11 @@
     <div class="s3-flow-diagram">
       <h4>Parcours complet d'une vente</h4>
       <div class="flow-main">
-        <div class="flow-node draft">📝 Devis</div>
+        <div class="flow-node order">📋 Bon de commande</div>
         <span class="s3-flow-arrow">→</span>
-        <div class="flow-node order">✅ Commande</div>
+        <div class="flow-node" style="background:#f3e8ff;border-color:#a855f7;color:#6b21a8;">🛒 Bon de préparation</div>
         <span class="s3-flow-arrow">→</span>
-        <div class="flow-node" style="background:#f3e8ff;border-color:#a855f7;color:#6b21a8;">🛒 Pick</div>
-        <span class="s3-flow-arrow">→</span>
-        <div class="flow-node delivery">🚚 Livraison (BL)</div>
+        <div class="flow-node delivery">🚚 Bon de livraison</div>
         <span class="s3-flow-arrow">→</span>
         <div class="flow-node invoice">🧾 Facture</div>
         <span class="s3-flow-arrow">→</span>
@@ -1340,26 +1338,68 @@
       </div>
     </div>
 
-    <div class="info-box info">
-      <span class="box-icon">ℹ️</span>
-      <p><strong>Flux de stock associé (picking) :</strong> CONGÉLATEUR → <strong>PICKING</strong> (préparation) → <strong>EXPÉDITION</strong> (chargement) → Client (BL signé). Ce flux est déclenché automatiquement par la confirmation de commande. Voir détails en section 3.2.</p>
+    <!-- Correspondance docs / Odoo -->
+    <div style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin:1rem 0 1.5rem;">
+      <h4 style="color:var(--primary);margin:0 0 0.75rem;">Correspondance documents / opérations Odoo</h4>
+      <div style="overflow-x:auto;">
+        <table class="dlc-table" style="font-size:0.88rem;">
+          <thead>
+            <tr><th>Document</th><th>Module Odoo</th><th>Référence</th><th>Mouvement de stock</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Bon de commande</strong></td>
+              <td>Ventes → Commandes</td>
+              <td>S00xxx</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><strong>Bon de préparation</strong> (Pick)</td>
+              <td>Inventaire → Opérations → Pick</td>
+              <td>WH/PICK/xxxxx</td>
+              <td>Congélateur → WH/Output</td>
+            </tr>
+            <tr>
+              <td><strong>Bon de livraison</strong> (Ship)</td>
+              <td>Inventaire → Opérations → Bons de livraison</td>
+              <td>WH/OUT/xxxxx</td>
+              <td>WH/Output → Client</td>
+            </tr>
+            <tr>
+              <td><strong>Facture</strong></td>
+              <td>Comptabilité → Factures clients</td>
+              <td>INV/xxxx/xxxxx</td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
-    <!-- 3.1 CRÉER UNE COMMANDE -->
-    <h3 id="s3-1" style="font-size:1.35rem;color:var(--primary);margin:2.5rem 0 1rem;border-bottom:2px solid var(--primary);padding-bottom:0.5rem;">3.1 Créer une commande client (Devis)</h3>
+    <div class="info-box info">
+      <span class="box-icon">ℹ️</span>
+      <p><strong>Flux en 2 étapes (Pick + Ship) :</strong> la confirmation du bon de commande crée automatiquement <strong>2 opérations</strong> : un bon de préparation (WH/PICK) et un bon de livraison (WH/OUT). Le magasinier valide d'abord la préparation, puis le livreur valide la livraison.</p>
+    </div>
+
+    <!-- 3.1 CRÉER UN BON DE COMMANDE -->
+    <h3 id="s3-1" style="font-size:1.35rem;color:var(--primary);margin:2.5rem 0 1rem;border-bottom:2px solid var(--primary);padding-bottom:0.5rem;">3.1 Créer un bon de commande</h3>
 
     <div class="s3-card">
       <div class="s3-card-header">
-        <div class="s3-card-icon sale">🛒</div>
-        <div class="s3-card-title">Saisie d'un devis / commande</div>
+        <div class="s3-card-icon sale">📋</div>
+        <div class="s3-card-title">Saisie du bon de commande client</div>
       </div>
       <ol class="s3-steps">
         <li><div class="s3-step-num"></div><div>Accédez au module <span class="nav-path">Ventes <span class="sep">→</span> Commandes <span class="sep">→</span> Créer</span>.</div></li>
         <li><div class="s3-step-num"></div><div><strong>Sélectionnez le client</strong> dans le champ <em>Client</em>. Utilisez la recherche rapide par nom, code ou zone de livraison.</div></li>
         <li><div class="s3-step-num"></div><div>La <strong>liste de prix</strong> s'applique automatiquement en fonction du client. Vérifiez que la bonne liste est affichée (ex : CHR +15 %, SUPER +30 %).</div></li>
-        <li><div class="s3-step-num"></div><div><strong>Ajoutez les lignes de produits</strong> : sélectionnez le produit, indiquez la quantité. Le prix unitaire est calculé automatiquement.</div></li>
-        <li><div class="s3-step-num"></div><div>Cliquez sur <strong>Enregistrer</strong>. Le document reste en état <span class="s3-badge s3-badge-blue">Devis (brouillon)</span>.</div></li>
-        <li><div class="s3-step-num"></div><div>Cliquez sur <strong>Confirmer</strong> pour transformer le devis en <span class="s3-badge s3-badge-green">Commande confirmée</span>. Un bon de livraison est automatiquement créé.</div></li>
+        <li><div class="s3-step-num"></div><div><strong>Ajoutez les lignes de produits</strong> : sélectionnez le produit, indiquez la quantité. Le prix unitaire est calculé automatiquement selon la liste de prix du client.</div></li>
+        <li><div class="s3-step-num"></div><div>Cliquez sur <strong>Confirmer</strong> pour valider le bon de commande. Odoo crée automatiquement :<br>
+          <ul style="margin:0.3rem 0 0 1rem;font-size:0.9rem;">
+            <li>Un <strong>bon de préparation</strong> (WH/PICK/xxxxx) — pour le magasinier</li>
+            <li>Un <strong>bon de livraison</strong> (WH/OUT/xxxxx) — pour le livreur</li>
+          </ul>
+        </div></li>
       </ol>
       <div class="screenshot-container">
         <img src="images/07_odoo_ventes_vue.png" alt="Module Ventes dans Odoo">
@@ -1369,7 +1409,7 @@
 
     <div class="info-box tip">
       <span class="box-icon">💡</span>
-      <p><strong>Astuce — Listes de prix</strong><br>AH CHOU utilise 7 listes de prix. Chaque client est rattaché à une liste lors de sa création. Le commercial n'a pas besoin de calculer les prix manuellement.</p>
+      <p><strong>Pas d'étape « Devis »</strong> — Le commercial saisit directement le bon de commande et le confirme. Il n'y a pas de phase de devis/validation client. Les prix sont calculés automatiquement selon les 7 listes de prix.</p>
     </div>
 
     <div class="s3-table-wrap">
@@ -1402,22 +1442,20 @@
 
     <!-- Schéma visuel du flux picking -->
     <div style="background:linear-gradient(135deg,#f0f4f8,#e8eef5);border-radius:12px;padding:1.5rem;margin:1.5rem 0;border:1px solid var(--border);">
-      <h4 style="text-align:center;color:var(--primary);margin:0 0 1rem;">Flux physique de la marchandise</h4>
+      <h4 style="text-align:center;color:var(--primary);margin:0 0 1rem;">Flux physique de la marchandise (2 étapes : Pick + Ship)</h4>
       <div style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:0.5rem;font-size:0.9rem;">
         <div style="background:#dbeafe;border:2px solid #3b82f6;border-radius:10px;padding:0.6rem 1rem;text-align:center;font-weight:600;color:#1e40af;">
-          ❄️ Congélateur<br><small style="font-weight:400;opacity:0.7;">CONGELATEUR 1/2/3</small>
+          ❄️ Congélateur<br><small style="font-weight:400;opacity:0.7;">WH/Stock</small>
         </div>
-        <div style="font-size:1.5rem;color:var(--primary);font-weight:700;">→</div>
+        <div style="font-size:1.5rem;color:#a855f7;font-weight:700;">→</div>
         <div style="background:#f3e8ff;border:2px solid #a855f7;border-radius:10px;padding:0.6rem 1rem;text-align:center;font-weight:600;color:#6b21a8;">
-          🛒 Picking<br><small style="font-weight:400;opacity:0.7;">WH/Stock/PICKING</small>
+          🛒 Zone de sortie<br><small style="font-weight:400;opacity:0.7;">WH/Output</small><br>
+          <span style="font-size:0.7rem;background:#a855f7;color:#fff;padding:2px 8px;border-radius:10px;margin-top:4px;display:inline-block;">WH/PICK/xxxxx</span>
         </div>
-        <div style="font-size:1.5rem;color:var(--primary);font-weight:700;">→</div>
-        <div style="background:#fef3c7;border:2px solid #f59e0b;border-radius:10px;padding:0.6rem 1rem;text-align:center;font-weight:600;color:#92400e;">
-          📤 Expédition<br><small style="font-weight:400;opacity:0.7;">WH/EXPEDITION</small>
-        </div>
-        <div style="font-size:1.5rem;color:var(--primary);font-weight:700;">→</div>
+        <div style="font-size:1.5rem;color:#f59e0b;font-weight:700;">→</div>
         <div style="background:#d1fae5;border:2px solid #10b981;border-radius:10px;padding:0.6rem 1rem;text-align:center;font-weight:600;color:#065f46;">
-          🚚 Client<br><small style="font-weight:400;opacity:0.7;">Livré + BL signé</small>
+          🚚 Client<br><small style="font-weight:400;opacity:0.7;">Livré + BL signé</small><br>
+          <span style="font-size:0.7rem;background:#10b981;color:#fff;padding:2px 8px;border-radius:10px;margin-top:4px;display:inline-block;">WH/OUT/xxxxx</span>
         </div>
       </div>
     </div>
@@ -1428,27 +1466,27 @@
       <div class="caption">Vue d'ensemble des opérations : Réceptions, Transferts internes (picking), Bons de livraison</div>
     </div>
 
-    <!-- ÉTAPE 1 : PRÉPARATION (PICK) -->
+    <!-- ÉTAPE 1 : BON DE PRÉPARATION (PICK) -->
     <div class="s3-card" style="border-left:4px solid #a855f7;">
       <div class="s3-card-header">
         <div class="s3-card-icon" style="background:#f3e8ff;color:#6b21a8;">🛒</div>
-        <div class="s3-card-title">Étape 1 — Préparation de commande (Pick)</div>
+        <div class="s3-card-title">Étape 1 — Bon de préparation (Pick)</div>
       </div>
       <div style="overflow-x:auto;margin-bottom:1rem;">
         <table class="dlc-table" style="font-size:0.88rem;">
           <tbody>
-            <tr><td style="width:30%;font-weight:600;">Qui</td><td>Préparateur / magasinier</td></tr>
-            <tr><td style="font-weight:600;">Où dans Odoo</td><td><code>Inventaire → Opérations → Transferts internes</code></td></tr>
-            <tr><td style="font-weight:600;">Mouvement stock</td><td>CONGELATEUR 1/2/3 → <strong>WH/Stock/PICKING</strong></td></tr>
-            <tr><td style="font-weight:600;">Document Odoo</td><td><code>stock.picking</code> (type : Pick / Transfert interne)</td></tr>
+            <tr><td style="width:30%;font-weight:600;">Qui</td><td>Préparateur / magasinier (Marc Hareng)</td></tr>
+            <tr><td style="font-weight:600;">Où dans Odoo</td><td><code>Inventaire → Opérations → Pick</code></td></tr>
+            <tr><td style="font-weight:600;">Référence</td><td><code>WH/PICK/xxxxx</code></td></tr>
+            <tr><td style="font-weight:600;">Mouvement stock</td><td>WH/Stock (congélateurs) → <strong>WH/Output</strong> (zone de sortie)</td></tr>
           </tbody>
         </table>
       </div>
       <ol class="s3-steps">
-        <li><div class="s3-step-num"></div><div>Accédez à <span class="nav-path">Inventaire <span class="sep">→</span> Opérations <span class="sep">→</span> Transferts internes</span>. Ouvrez le bon de préparation assigné à la tournée du jour.</div></li>
+        <li><div class="s3-step-num"></div><div>Accédez à <span class="nav-path">Inventaire <span class="sep">→</span> Opérations <span class="sep">→</span> Pick</span>. Ouvrez le bon de préparation correspondant à la commande du jour.</div></li>
         <li><div class="s3-step-num"></div><div>Pour chaque ligne de produit, <strong>sélectionnez le lot</strong>. Odoo propose automatiquement le lot avec la <strong>date de péremption la plus proche</strong> (stratégie FEFO — First Expired, First Out).</div></li>
-        <li><div class="s3-step-num"></div><div><strong>Vérifiez les quantités</strong> à prélever. Si un produit est en rupture, vous pouvez ajuster la quantité (Odoo créera un reliquat).</div></li>
-        <li><div class="s3-step-num"></div><div>Cliquez sur <strong>Valider</strong> pour confirmer le picking. Le stock est <strong>décrémenté du congélateur</strong> et déplacé vers la <strong>zone PICKING</strong>.</div></li>
+        <li><div class="s3-step-num"></div><div><strong>Vérifiez les quantités</strong> à prélever dans les congélateurs. Si un produit est en rupture, vous pouvez ajuster la quantité (Odoo créera un reliquat).</div></li>
+        <li><div class="s3-step-num"></div><div>Cliquez sur <strong>Valider</strong> pour confirmer la préparation. Le stock est <strong>décrémenté du congélateur</strong> et déplacé vers la <strong>zone de sortie</strong> (WH/Output).</div></li>
       </ol>
       <div class="info-box tip" style="margin-top:1rem;">
         <span class="box-icon">💡</span>
@@ -1456,19 +1494,19 @@
       </div>
     </div>
 
-    <!-- ÉTAPE 2 : LIVRAISON (SHIP) -->
+    <!-- ÉTAPE 2 : BON DE LIVRAISON (SHIP) -->
     <div class="s3-card" style="border-left:4px solid #f59e0b;">
       <div class="s3-card-header">
         <div class="s3-card-icon" style="background:#fef3c7;color:#92400e;">🚚</div>
-        <div class="s3-card-title">Étape 2 — Livraison (Ship) &amp; Bon de Livraison</div>
+        <div class="s3-card-title">Étape 2 — Bon de livraison (Ship)</div>
       </div>
       <div style="overflow-x:auto;margin-bottom:1rem;">
         <table class="dlc-table" style="font-size:0.88rem;">
           <tbody>
             <tr><td style="width:30%;font-weight:600;">Qui</td><td>Chauffeur / livreur</td></tr>
             <tr><td style="font-weight:600;">Où dans Odoo</td><td><code>Inventaire → Opérations → Bons de livraison</code></td></tr>
-            <tr><td style="font-weight:600;">Mouvement stock</td><td>WH/EXPEDITION → <strong>Clients</strong> (sortie de stock définitive)</td></tr>
-            <tr><td style="font-weight:600;">Document Odoo</td><td><code>stock.picking</code> (type : Ship) → BL papier imprimé</td></tr>
+            <tr><td style="font-weight:600;">Référence</td><td><code>WH/OUT/xxxxx</code></td></tr>
+            <tr><td style="font-weight:600;">Mouvement stock</td><td>WH/Output → <strong>Clients</strong> (sortie de stock définitive)</td></tr>
           </tbody>
         </table>
       </div>
@@ -1477,11 +1515,11 @@
         <li><div class="s3-step-num"></div><div><strong>Imprimez le BL</strong> depuis Odoo (bouton « Imprimer → Bon de livraison »). Ce document accompagne la marchandise.</div></li>
         <li><div class="s3-step-num"></div><div><strong>Chargez le camion</strong> selon la tournée du jour.</div></li>
         <li><div class="s3-step-num"></div><div><strong>Livrez le client</strong> et faites <strong>signer le BL papier</strong>.</div></li>
-        <li><div class="s3-step-num"></div><div>Au retour, <strong>validez le picking dans Odoo</strong>. Le stock est définitivement sorti. La commande est marquée « Livré ».</div></li>
+        <li><div class="s3-step-num"></div><div>Au retour, <strong>validez le bon de livraison dans Odoo</strong>. Le stock est définitivement sorti. La commande est marquée « Livré ».</div></li>
       </ol>
     </div>
 
-    <!-- Résumé des 3 opérations -->
+    <!-- Résumé des opérations -->
     <div style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin:1.5rem 0;">
       <h4 style="color:var(--primary);margin:0 0 0.75rem;">Récapitulatif des opérations de stock liées à une vente</h4>
       <div style="overflow-x:auto;">
@@ -1489,26 +1527,26 @@
           <thead>
             <tr>
               <th>Opération</th>
+              <th>Référence</th>
               <th>De</th>
               <th>Vers</th>
               <th>Responsable</th>
-              <th>Dans Odoo</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td><span class="s3-badge" style="background:#f3e8ff;color:#6b21a8;">Pick</span></td>
-              <td>Congélateur</td>
-              <td>PICKING</td>
+              <td><span class="s3-badge" style="background:#f3e8ff;color:#6b21a8;">Bon de préparation</span></td>
+              <td>WH/PICK/xxxxx</td>
+              <td>WH/Stock (congélateur)</td>
+              <td>WH/Output</td>
               <td>Magasinier</td>
-              <td>Transferts internes</td>
             </tr>
             <tr>
-              <td><span class="s3-badge" style="background:#fef3c7;color:#92400e;">Ship</span></td>
-              <td>EXPEDITION</td>
+              <td><span class="s3-badge" style="background:#fef3c7;color:#92400e;">Bon de livraison</span></td>
+              <td>WH/OUT/xxxxx</td>
+              <td>WH/Output</td>
               <td>Client</td>
               <td>Livreur</td>
-              <td>Bons de livraison</td>
             </tr>
           </tbody>
         </table>

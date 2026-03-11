@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Achats Harel 4.0 — Dossier Technique de Déploiement</title>
+    <style>
+        :root {
+            --primary: #714B67;
+            --primary-light: #9c7a91;
+            --secondary: #017e84;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
+        }
+
+        .container { display: flex; min-height: 100vh; }
+
+        .sidebar {
+            width: 300px;
+            background: var(--primary);
+            color: white;
+            padding: 30px 20px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar h1 {
+            font-size: 1.3rem;
+            margin-bottom: 5px;
+            border: none;
+            color: white;
+        }
+
+        .sidebar h1 span {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: normal;
+            opacity: 0.8;
+            margin-top: 3px;
+        }
+
+        .sidebar .version {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            margin-bottom: 25px;
+            display: block;
+        }
+
+        .nav-section { margin-bottom: 15px; }
+
+        .nav-section-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            opacity: 0.6;
+            margin-bottom: 8px;
+            padding-left: 10px;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 8px 10px;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover { background: rgba(255,255,255,0.15); color: white; }
+        .nav-item.active { background: rgba(255,255,255,0.2); color: white; font-weight: 600; }
+        .nav-item.sub { padding-left: 25px; font-size: 0.8rem; }
+
+        .main {
+            margin-left: 300px;
+            padding: 30px 40px;
+            flex: 1;
+            max-width: 1100px;
+        }
+
+        .section { display: none; }
+        .section.active { display: block; }
+
+        h1 { color: var(--primary); font-size: 1.8rem; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--primary); }
+        h2 { color: var(--secondary); font-size: 1.4rem; margin: 25px 0 15px 0; }
+        h3 { color: var(--primary); font-size: 1.15rem; margin: 20px 0 10px 0; }
+        h4 { margin: 15px 0 8px 0; }
+        p { margin-bottom: 12px; }
+        ul, ol { margin: 0 0 15px 25px; }
+        li { margin-bottom: 5px; }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 12px 20px;
+            font-weight: 600;
+            color: var(--primary);
+            border-bottom: 1px solid #eee;
+            font-size: 1rem;
+        }
+
+        .card-body { padding: 20px; }
+
+        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        th { background: var(--primary); color: white; font-weight: 600; }
+        tr:hover { background: #f5f5f5; }
+
+        code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.85rem;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+
+        .code-block {
+            background: #1e1e2e;
+            color: #cdd6f4;
+            padding: 18px 20px;
+            border-radius: 6px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.82rem;
+            line-height: 1.7;
+            overflow-x: auto;
+            margin-bottom: 15px;
+            white-space: pre;
+            position: relative;
+        }
+
+        .code-block .lang {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            font-size: 0.7rem;
+            color: #6c7086;
+            text-transform: uppercase;
+        }
+
+        .code-block .comment { color: #6c7086; }
+        .code-block .key { color: #cba6f7; }
+        .code-block .value { color: #a6e3a1; }
+        .code-block .cmd { color: #89b4fa; }
+        .code-block .flag { color: #f9e2af; }
+        .code-block .output { color: #6c7086; font-style: italic; }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            border-left: 4px solid;
+        }
+
+        .alert-info { background: #e8f4f8; border-color: var(--secondary); }
+        .alert-warning { background: #fff8e1; border-color: var(--warning); }
+        .alert-danger { background: #fce4ec; border-color: var(--danger); }
+        .alert-success { background: #e8f5e9; border-color: var(--success); }
+
+        .alert strong { display: block; margin-bottom: 5px; }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-success { background: #e8f5e9; color: var(--success); }
+        .badge-warning { background: #fff8e1; color: #e65100; }
+        .badge-danger { background: #fce4ec; color: var(--danger); }
+        .badge-info { background: #e3f2fd; color: #1565c0; }
+        .badge-primary { background: #f3e5f5; color: var(--primary); }
+
+        .grid { display: grid; gap: 15px; margin-bottom: 20px; }
+        .grid-2 { grid-template-columns: 1fr 1fr; }
+        .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        .stat-card .icon { font-size: 2rem; margin-bottom: 8px; }
+        .stat-card .value { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+        .stat-card .label { font-size: 0.8rem; color: var(--gray); margin-top: 5px; }
+
+        .checklist { list-style: none; padding: 0; margin: 0 0 15px 0; }
+        .checklist li { padding: 8px 0; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        .checklist li:last-child { border: none; }
+
+        .diagram {
+            background: #1e1e2e;
+            color: #cdd6f4;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.78rem;
+            line-height: 1.5;
+            overflow-x: auto;
+            white-space: pre;
+            margin-bottom: 15px;
+        }
+
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        .step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            padding: 15px 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .step-content { flex: 1; }
+        .step-content h4 { margin: 0 0 5px 0; }
+
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 13px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--primary-light);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+            padding: 15px 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -23px;
+            top: 20px;
+            width: 10px;
+            height: 10px;
+            background: var(--primary);
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 40px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #6c7086;
+            padding: 3px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+        .copy-btn:hover { background: rgba(255,255,255,0.2); color: #cdd6f4; }
+
+        .env-table td:first-child { font-family: 'SF Mono', monospace; font-size: 0.8rem; color: var(--primary); font-weight: 600; white-space: nowrap; }
+        .env-table td:nth-child(2) { font-family: 'SF Mono', monospace; font-size: 0.8rem; color: var(--gray); }
+
+        .troubleshoot-item {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        .troubleshoot-item summary {
+            padding: 15px 20px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--dark);
+            list-style: none;
+            display: flex;
+            align-items: center;
+        }
+
+        .troubleshoot-item summary::before {
+            content: '>';
+            display: inline-block;
+            margin-right: 10px;
+            transition: transform 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .troubleshoot-item[open] summary::before { transform: rotate(90deg); }
+        .troubleshoot-item .detail { padding: 0 20px 20px 20px; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .main { margin-left: 0; padding: 20px; }
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+        }
+
+        @media print {
+            .sidebar { display: none; }
+            .main { margin-left: 0; }
+            .section { display: block !important; page-break-after: always; }
+            .card, .step, .timeline-item { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <h1>Achats Harel 4.0 <span>Dossier Technique de Deploiement</span></h1>
+            <span class="version">v1.0 — Mars 2026</span>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Vue d'ensemble</div>
+                <a class="nav-item active" onclick="showSection('overview')">Architecture globale</a>
+                <a class="nav-item" onclick="showSection('stack')">Stack technique</a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Pre-requis</div>
+                <a class="nav-item" onclick="showSection('prereqs-infra')">Infrastructure</a>
+                <a class="nav-item" onclick="showSection('prereqs-dns')">DNS & Domaine</a>
+                <a class="nav-item" onclick="showSection('prereqs-db')">Base de donnees</a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Installation</div>
+                <a class="nav-item" onclick="showSection('install-quick')">Deploiement rapide</a>
+                <a class="nav-item" onclick="showSection('install-env')">Configuration .env</a>
+                <a class="nav-item" onclick="showSection('install-build')">Build & Lancement</a>
+                <a class="nav-item" onclick="showSection('install-keycloak')">Configuration Keycloak</a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Verification</div>
+                <a class="nav-item" onclick="showSection('verify')">Checklist post-deploiement</a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Troubleshooting</div>
+                <a class="nav-item" onclick="showSection('troubleshoot')">Diagnostic des erreurs</a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Reference</div>
+                <a class="nav-item" onclick="showSection('ref-compose')">Docker Compose</a>
+                <a class="nav-item" onclick="showSection('ref-caddy')">Caddyfile</a>
+                <a class="nav-item" onclick="showSection('ref-ports')">Ports & Reseaux</a>
+                <a class="nav-item" onclick="showSection('retex')">Retour d'experience</a>
+            </div>
+        </nav>
+
+        <main class="main">
+
+            <!-- ==================== ARCHITECTURE ==================== -->
+            <div class="section active" id="overview">
+                <h1>Architecture globale</h1>
+                <p>L'application Achats Harel 4.0 est containerisee avec Docker et utilise 4 services principaux orchestres par Docker Compose.</p>
+
+                <div class="grid grid-4">
+                    <div class="stat-card">
+                        <div class="icon">PHP</div>
+                        <div class="value">FrankenPHP</div>
+                        <div class="label">API Symfony + Caddy</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon">PWA</div>
+                        <div class="value">Next.js</div>
+                        <div class="label">Frontend React</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon">KC</div>
+                        <div class="value">Keycloak</div>
+                        <div class="label">Auth OIDC</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon">PG</div>
+                        <div class="value">PostgreSQL</div>
+                        <div class="label">Base de donnees</div>
+                    </div>
+                </div>
+
+                <h2>Schema d'architecture</h2>
+                <div class="diagram">
+                        Internet
+                           |
+                     [ DNS: domaine.com ] ──> [ IP du VPS ]
+                           |
+                    ┌──────┴──────┐
+                    │   Port 80   │  ← Redirection HTTP → HTTPS
+                    │   Port 443  │  ← TLS (Let's Encrypt auto)
+                    └──────┬──────┘
+                           |
+                 ┌─────────┴─────────────────────────────┐
+                 │          CADDY (FrankenPHP)            │
+                 │   Reverse proxy + PHP + TLS auto       │
+                 │                                        │
+                 │  /oidc/*    ──> Keycloak:8080          │
+                 │  @pwa       ──> PWA:3000 (Next.js)     │
+                 │  php_server ──> Symfony API             │
+                 │  /images/*  ──> fichiers statiques      │
+                 │  /media/*   ──> fichiers uploads        │
+                 └───┬──────────────┬────────────────┬────┘
+                     │              │                │
+              ┌──────┴──┐   ┌──────┴──┐    ┌────────┴────────┐
+              │ Keycloak │   │   PWA   │    │   PostgreSQL    │
+              │  :8080   │   │  :3000  │    │  (managed DB    │
+              │          │   │ Next.js │    │   ou local)     │
+              └────┬─────┘   └─────────┘    └─────────────────┘
+                   │
+            ┌──────┴──────┐
+            │  KC Postgres │
+            │  (interne)   │
+            └─────────────┘</div>
+
+                <h2>Flux des requetes</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <ol>
+                            <li><strong>Navigateur</strong> → <code>https://domaine.com</code> → Caddy (port 443)</li>
+                            <li><strong>Caddy</strong> verifie le type de requete :
+                                <ul>
+                                    <li>HTML demande → <strong>PWA</strong> (Next.js SSR)</li>
+                                    <li>API (<code>/docs</code>, <code>/graphql</code>, JSON) → <strong>Symfony</strong> (php_server)</li>
+                                    <li><code>/oidc/*</code> → <strong>Keycloak</strong> (authentification)</li>
+                                </ul>
+                            </li>
+                            <li><strong>Symfony</strong> communique avec PostgreSQL via <code>DATABASE_URL</code></li>
+                            <li><strong>Keycloak</strong> gere l'authentification OIDC avec son propre PostgreSQL interne</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== STACK ==================== -->
+            <div class="section" id="stack">
+                <h1>Stack technique</h1>
+                <div class="card">
+                    <div class="card-header">Technologies utilisees</div>
+                    <div class="card-body">
+                        <table>
+                            <tr><th>Composant</th><th>Technologie</th><th>Version</th><th>Role</th></tr>
+                            <tr><td>API</td><td>Symfony + FrankenPHP</td><td>PHP 8.3 / Caddy</td><td>Backend API REST + serveur web</td></tr>
+                            <tr><td>Frontend</td><td>Next.js + React</td><td>14.x</td><td>Interface utilisateur (SSR)</td></tr>
+                            <tr><td>Auth</td><td>Keycloak</td><td>24.0.5</td><td>Serveur OIDC / SSO</td></tr>
+                            <tr><td>BDD App</td><td>PostgreSQL</td><td>16.4</td><td>Stockage des donnees metier</td></tr>
+                            <tr><td>BDD Keycloak</td><td>PostgreSQL</td><td>16.4 Alpine</td><td>Stockage Keycloak (interne)</td></tr>
+                            <tr><td>Reverse Proxy</td><td>Caddy (integre FrankenPHP)</td><td>-</td><td>TLS auto, routing, compression</td></tr>
+                            <tr><td>Real-time</td><td>Mercure</td><td>-</td><td>Push notifications (SSE)</td></tr>
+                            <tr><td>Package mgr</td><td>pnpm</td><td>9.x</td><td>Gestion deps PWA</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <h2>Fichiers Docker Compose</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <table>
+                            <tr><th>Fichier</th><th>Utilisation</th></tr>
+                            <tr><td><code>compose.yaml</code></td><td>Configuration de base (services, ports, volumes, variables)</td></tr>
+                            <tr><td><code>compose.prod.yaml</code></td><td>Override production (build targets, images taguees, env prod)</td></tr>
+                            <tr><td><code>compose.override.yaml</code></td><td>Override dev local (volumes montes, hot-reload, xdebug)</td></tr>
+                            <tr><td><code>compose.e2e.yaml</code></td><td>Override pour tests end-to-end</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning">
+                    <strong>Important</strong>
+                    En production, toujours utiliser <code>-f compose.yaml -f compose.prod.yaml</code> pour eviter que le <code>compose.override.yaml</code> (dev) ne soit charge automatiquement.
+                </div>
+            </div>
+
+            <!-- ==================== PREREQS INFRA ==================== -->
+            <div class="section" id="prereqs-infra">
+                <h1>Pre-requis : Infrastructure</h1>
+
+                <h2>Serveur VPS minimum</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <table>
+                            <tr><th>Ressource</th><th>Minimum</th><th>Recommande</th></tr>
+                            <tr><td>CPU</td><td>2 vCPU</td><td>4 vCPU</td></tr>
+                            <tr><td>RAM</td><td>4 Go</td><td>8 Go</td></tr>
+                            <tr><td>Stockage</td><td>40 Go SSD</td><td>80 Go SSD</td></tr>
+                            <tr><td>OS</td><td colspan="2">Ubuntu 22.04+ / Debian 12+</td></tr>
+                            <tr><td>Acces</td><td colspan="2">Root SSH avec cle ED25519</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <h2>Logiciels a installer sur le VPS</h2>
+                <div class="code-block"><span class="comment"># Mise a jour systeme</span>
+<span class="cmd">apt update</span> && <span class="cmd">apt upgrade</span> -y
+
+<span class="comment"># Docker Engine</span>
+<span class="cmd">curl</span> -fsSL https://get.docker.com | sh
+
+<span class="comment"># Docker Compose (inclus avec Docker Engine moderne)</span>
+<span class="cmd">docker compose</span> version
+
+<span class="comment"># Git</span>
+<span class="cmd">apt install</span> -y git
+
+<span class="comment"># Outils de diagnostic (optionnel mais utile)</span>
+<span class="cmd">apt install</span> -y curl netcat-openbsd postgresql-client</div>
+
+                <h2>Configuration SSH</h2>
+                <p>Ajouter dans <code>~/.ssh/config</code> sur votre machine locale :</p>
+                <div class="code-block"><span class="key">Host</span> <span class="value">staging-ahchou</span>
+    <span class="key">HostName</span> <span class="value">&lt;IP_DU_VPS&gt;</span>
+    <span class="key">User</span> <span class="value">root</span>
+    <span class="key">IdentityFile</span> <span class="value">~/.ssh/id_ed25519</span></div>
+
+                <div class="alert alert-info">
+                    <strong>Cle SSH</strong>
+                    Ajouter votre cle publique (<code>~/.ssh/id_ed25519.pub</code>) dans le panneau DigitalOcean → Settings → Security → SSH Keys <strong>avant</strong> de creer le Droplet.
+                </div>
+            </div>
+
+            <!-- ==================== PREREQS DNS ==================== -->
+            <div class="section" id="prereqs-dns">
+                <h1>Pre-requis : DNS & Domaine</h1>
+
+                <div class="alert alert-danger">
+                    <strong>Critique — A faire AVANT le deploiement</strong>
+                    Le certificat SSL Let's Encrypt ne sera emis que si le DNS pointe deja vers l'IP du serveur. Configurer le DNS en premier.
+                </div>
+
+                <h2>Configuration DNS</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <table>
+                            <tr><th>Type</th><th>Nom</th><th>Valeur</th><th>TTL</th></tr>
+                            <tr><td><code>A</code></td><td><code>staging.creazot.com</code></td><td><code>&lt;IP_DU_VPS&gt;</code></td><td>300</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <h2>Verification DNS</h2>
+                <div class="code-block"><span class="comment"># Depuis votre machine locale</span>
+<span class="cmd">nslookup</span> staging.creazot.com
+<span class="comment"># Doit retourner l'IP du VPS</span>
+
+<span class="comment"># Depuis le VPS</span>
+<span class="cmd">nslookup</span> staging.creazot.com
+<span class="comment"># Meme IP</span></div>
+
+                <h2>SSL / HTTPS</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <p>Caddy obtient automatiquement un certificat Let's Encrypt si :</p>
+                        <ul class="checklist">
+                            <li>&#9745; Le DNS pointe vers l'IP du serveur</li>
+                            <li>&#9745; Les ports <strong>80</strong> et <strong>443</strong> sont ouverts et mappes directement (pas 8081→80)</li>
+                            <li>&#9745; <code>SERVER_NAME</code> contient le domaine <strong>sans</strong> prefixe <code>http://</code></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning">
+                    <strong>Piege frequent</strong>
+                    <code>SERVER_NAME=http://staging.creazot.com</code> → force HTTP seulement, pas de certificat SSL.<br>
+                    <code>SERVER_NAME=staging.creazot.com</code> → Caddy active HTTPS automatiquement.
+                </div>
+            </div>
+
+            <!-- ==================== PREREQS DB ==================== -->
+            <div class="section" id="prereqs-db">
+                <h1>Pre-requis : Base de donnees</h1>
+
+                <h2>Option A : PostgreSQL local (Docker)</h2>
+                <p>Le <code>compose.yaml</code> inclut un service <code>database</code> PostgreSQL. Rien a configurer en externe.</p>
+
+                <h2>Option B : PostgreSQL manage (DigitalOcean)</h2>
+                <p>Si vous utilisez une base de donnees geree par DigitalOcean :</p>
+
+                <div class="alert alert-danger">
+                    <strong>3 verifications obligatoires</strong>
+                </div>
+
+                <div class="step">
+                    <span class="step-number">1</span>
+                    <div class="step-content">
+                        <h4>Trusted Sources</h4>
+                        <p>Ajouter l'IP du Droplet dans <strong>Databases → Settings → Trusted Sources</strong>. Sans cela, la connexion sera refusee.</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <span class="step-number">2</span>
+                    <div class="step-content">
+                        <h4>Hostname correct</h4>
+                        <p>Copier le hostname <strong>exact</strong> depuis <strong>Databases → Connection Details → host</strong>. Il ressemble a :</p>
+                        <div class="code-block"><span class="value">db-postgresql-xxx-do-user-xxxxx-0.x.db.ondigitalocean.com</span></div>
+                        <p>Verifier que ce hostname est <strong>resolvable</strong> depuis le VPS :</p>
+                        <div class="code-block"><span class="cmd">nc</span> <span class="flag">-zv -w 5</span> <span class="value">&lt;HOSTNAME&gt;</span> <span class="value">25060</span></div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <span class="step-number">3</span>
+                    <div class="step-content">
+                        <h4>Mot de passe reel</h4>
+                        <p>Dans le dashboard DigitalOcean, cliquer sur <strong>Show</strong> pour reveler le vrai mot de passe. Ne pas copier le texte <code>show-password</code> qui est un placeholder.</p>
+                    </div>
+                </div>
+
+                <h2>DATABASE_URL pour une BDD managee</h2>
+                <div class="code-block"><span class="key">DATABASE_URL</span>=<span class="value">postgresql://USER:PASSWORD@HOSTNAME:PORT/DBNAME?serverVersion=16&charset=utf8&sslmode=require</span></div>
+
+                <div class="alert alert-warning">
+                    <strong>sslmode=require</strong>
+                    Obligatoire pour les bases de donnees managees DigitalOcean. Sans cela, la connexion est refusee.
+                </div>
+            </div>
+
+            <!-- ==================== DEPLOIEMENT RAPIDE ==================== -->
+            <div class="section" id="install-quick">
+                <h1>Deploiement rapide</h1>
+
+                <div class="alert alert-success">
+                    <strong>Objectif : deployer en moins de 2 minutes</strong>
+                    Ce guide suppose que les pre-requis (VPS, DNS, base de donnees) sont deja en place.
+                </div>
+
+                <h2>Commandes de deploiement</h2>
+                <div class="code-block"><span class="comment"># 1. Se connecter au VPS</span>
+<span class="cmd">ssh</span> root@&lt;IP_DU_VPS&gt;
+
+<span class="comment"># 2. Cloner le depot (premiere fois uniquement)</span>
+<span class="cmd">git clone</span> https://github.com/Seb974/achats-harel.git ~/achats-harel
+<span class="cmd">cd</span> ~/achats-harel
+<span class="cmd">git checkout</span> 4.0
+
+<span class="comment"># 3. Copier et configurer le .env (voir section suivante)</span>
+<span class="cmd">cp</span> .env.example .env
+<span class="cmd">nano</span> .env
+
+<span class="comment"># 4. Supprimer le compose.override.yaml (DEV) pour la prod</span>
+<span class="cmd">rm</span> -f compose.override.yaml
+
+<span class="comment"># 5. Build des images</span>
+<span class="cmd">docker compose</span> <span class="flag">-f compose.yaml -f compose.prod.yaml</span> build
+
+<span class="comment"># 6. Lancer les conteneurs</span>
+<span class="cmd">docker compose</span> <span class="flag">-f compose.yaml -f compose.prod.yaml</span> up -d
+
+<span class="comment"># 7. Verifier</span>
+<span class="cmd">docker compose</span> ps</div>
+
+                <div class="alert alert-info">
+                    <strong>Re-deploiement (mise a jour)</strong>
+                    Pour mettre a jour une installation existante :
+                </div>
+                <div class="code-block"><span class="cmd">cd</span> ~/achats-harel
+<span class="cmd">git pull</span> origin 4.0
+<span class="cmd">docker compose</span> <span class="flag">-f compose.yaml -f compose.prod.yaml</span> build --no-cache
+<span class="cmd">docker compose</span> <span class="flag">-f compose.yaml -f compose.prod.yaml</span> up -d --force-recreate</div>
+            </div>
+
+            <!-- ==================== CONFIGURATION .ENV ==================== -->
+            <div class="section" id="install-env">
+                <h1>Configuration .env</h1>
+
+                <div class="alert alert-danger">
+                    <strong>Le .env est le fichier le plus critique du deploiement</strong>
+                    La majorite des erreurs de deploiement proviennent de variables mal configurees. Verifier chaque valeur.
+                </div>
+
+                <h2>Variables essentielles</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <table class="env-table">
+                            <tr><th>Variable</th><th>Exemple de valeur</th><th>Description</th></tr>
+                            <tr>
+                                <td>SERVER_NAME</td>
+                                <td>staging.creazot.com</td>
+                                <td>Domaine du site. <strong>PAS de http:// ou https://</strong></td>
+                            </tr>
+                            <tr>
+                                <td>APP_NAME</td>
+                                <td>staging.creazot.com</td>
+                                <td>Nom de l'application</td>
+                            </tr>
+                            <tr>
+                                <td>APP_SECRET</td>
+                                <td>(generer aleatoirement)</td>
+                                <td>Secret Symfony. Generer avec <code>openssl rand -hex 32</code></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <h3>Base de donnees</h3>
+                <div class="card">
+                    <div class="card-body">
+                        <table class="env-table">
+                            <tr><th>Variable</th><th>Valeur</th><th>Piege</th></tr>
+                            <tr>
+                                <td>DATABASE_URL</td>
+                                <td>postgresql://user:pass@host:port/db?...</td>
+                                <td>Doit contenir le vrai hostname ET le vrai mot de passe</td>
+                            </tr>
+                            <tr>
+                                <td>POSTGRES_DB</td>
+                                <td>defaultdb</td>
+                                <td>Nom de la BDD, <strong>PAS le hostname</strong></td>
+                            </tr>
+                            <tr>
+                                <td>POSTGRES_USER</td>
+                                <td>doadmin</td>
+                                <td>Utilisateur PostgreSQL</td>
+                            </tr>
+                            <tr>
+                                <td>POSTGRES_PASSWORD</td>
+                                <td>(mot de passe reel)</td>
+                                <td>Doit correspondre au mot de passe dans DATABASE_URL</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <h3>Authentification (Keycloak / OIDC)</h3>
+                <div class="card">
+                    <div class="card-body">
+                        <table class="env-table">
+                            <tr><th>Variable</th><th>Valeur</th><th>Notes</th></tr>
+                            <tr>
+                                <td>OIDC_SERVER_URL</td>
+                                <td>https://staging.creazot.com/oidc/realms/creazot</td>
+                                <td>URL publique du realm Keycloak</td>
+                            </tr>
+                            <tr>
+                                <td>OIDC_SERVER_URL_INTERNAL</td>
+                                <td>http://keycloak:8080/realms/creazot</td>
+                                <td>URL interne Docker (pas de DNS externe)</td>
+                            </tr>
+                            <tr>
+                                <td>KEYCLOAK_HOSTNAME</td>
+                                <td>https://staging.creazot.com/oidc</td>
+                                <td>Hostname Keycloak avec prefixe /oidc</td>
+                            </tr>
+                            <tr>
+                                <td>AUTH_URL</td>
+                                <td>https://staging.creazot.com</td>
+                                <td>URL de callback d'authentification</td>
+                            </tr>
+                            <tr>
+                                <td>TRUSTED_HOSTS</td>
+                                <td>^(staging.creazot.com|localhost|keycloak|php)$</td>
+                                <td>Regex des hosts autorises</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <h3>Keycloak interne</h3>
+                <div class="card">
+                    <div class="card-body">
+                        <table class="env-table">
+                            <tr><th>Variable</th><th>Valeur</th></tr>
+                            <tr><td>KEYCLOAK_POSTGRES_DB</td><td>keycloak</td></tr>
+                            <tr><td>KEYCLOAK_POSTGRES_USER</td><td>keycloak</td></tr>
+                            <tr><td>KEYCLOAK_POSTGRES_PASSWORD</td><td>(generer)</td></tr>
+                            <tr><td>KEYCLOAK_ADMIN_USER</td><td>admin</td></tr>
+                            <tr><td>KEYCLOAK_ADMIN_PASSWORD</td><td>(generer)</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <h3>Images Docker</h3>
+                <div class="card">
+                    <div class="card-body">
+                        <table class="env-table">
+                            <tr><th>Variable</th><th>Valeur</th></tr>
+                            <tr><td>PHP_DOCKER_IMAGE</td><td>app-php:2025.10.22</td></tr>
+                            <tr><td>PWA_DOCKER_IMAGE</td><td>app-pwa:2025.10.22</td></tr>
+                            <tr><td>KEYCLOAK_DOCKER_IMAGE</td><td>app_keycloak:2025.10.22</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <h2>Template .env complet</h2>
+                <div class="code-block"><span class="comment"># ============================================</span>
+<span class="comment"># ACHATS HAREL 4.0 — CONFIGURATION PRODUCTION</span>
+<span class="comment"># ============================================</span>
+
+<span class="comment"># --- Images Docker ---</span>
+<span class="key">PHP_DOCKER_IMAGE</span>=<span class="value">app-php:2025.10.22</span>
+<span class="key">PWA_DOCKER_IMAGE</span>=<span class="value">app-pwa:2025.10.22</span>
+<span class="key">KEYCLOAK_DOCKER_IMAGE</span>=<span class="value">app_keycloak:2025.10.22</span>
+
+<span class="comment"># --- Domaine & Serveur ---</span>
+<span class="key">SERVER_NAME</span>=<span class="value">staging.creazot.com</span>
+<span class="key">APP_NAME</span>=<span class="value">staging.creazot.com</span>
+<span class="key">APP_SECRET</span>=<span class="value">&lt;openssl rand -hex 32&gt;</span>
+<span class="key">CADDY_MERCURE_JWT_SECRET</span>=<span class="value">&lt;openssl rand -hex 32&gt;</span>
+
+<span class="comment"># --- Base de donnees applicative ---</span>
+<span class="key">POSTGRES_USER</span>=<span class="value">doadmin</span>
+<span class="key">POSTGRES_PASSWORD</span>=<span class="value">&lt;MOT_DE_PASSE_REEL&gt;</span>
+<span class="key">POSTGRES_DB</span>=<span class="value">defaultdb</span>
+<span class="key">DATABASE_URL</span>=<span class="value">postgresql://doadmin:MOT_DE_PASSE@host:25060/defaultdb?serverVersion=16&charset=utf8&sslmode=require</span>
+
+<span class="comment"># --- OIDC / Keycloak ---</span>
+<span class="key">OIDC_SERVER_URL</span>=<span class="value">https://staging.creazot.com/oidc/realms/creazot</span>
+<span class="key">OIDC_SERVER_URL_INTERNAL</span>=<span class="value">http://keycloak:8080/realms/creazot</span>
+<span class="key">KEYCLOAK_HOSTNAME</span>=<span class="value">https://staging.creazot.com/oidc</span>
+<span class="key">AUTH_URL</span>=<span class="value">https://staging.creazot.com</span>
+<span class="key">AUTH_SECRET</span>=<span class="value">&lt;openssl rand -hex 32&gt;</span>
+<span class="key">TRUSTED_HOSTS</span>=<span class="value">^(staging.creazot.com|localhost|keycloak|php)$</span>
+
+<span class="comment"># --- Keycloak interne ---</span>
+<span class="key">KEYCLOAK_POSTGRES_DB</span>=<span class="value">keycloak</span>
+<span class="key">KEYCLOAK_POSTGRES_USER</span>=<span class="value">keycloak</span>
+<span class="key">KEYCLOAK_POSTGRES_PASSWORD</span>=<span class="value">&lt;GENERER&gt;</span>
+<span class="key">KEYCLOAK_ADMIN_USER</span>=<span class="value">admin</span>
+<span class="key">KEYCLOAK_ADMIN_PASSWORD</span>=<span class="value">&lt;GENERER&gt;</span></div>
+            </div>
+
+            <!-- ==================== BUILD & LANCEMENT ==================== -->
+            <div class="section" id="install-build">
+                <h1>Build & Lancement</h1>
+
+                <h2>Commandes de build</h2>
+                <div class="code-block"><span class="comment"># Build complet (premiere installation ou changement Dockerfile)</span>
+<span class="cmd">docker compose</span> <span class="flag">-f compose.yaml -f compose.prod.yaml</span> build --no-cache
+
+<span class="comment"># Build avec cache (mises a jour de code)</span>
+<span class="cmd">docker compose</span> <span class="flag">-f compose.yaml -f compose.prod.yaml</span> build
+
+<span class="comment"># Lancement</span>
+<span class="cmd">docker compose</span> <span class="flag">-f compose.yaml -f compose.prod.yaml</span> up -d</div>
+
+                <div class="alert alert-warning">
+                    <strong>Temps de build</strong>
+                    Un build <code>--no-cache</code> prend <strong>30-40 minutes</strong> sur un VPS 2 vCPU (compilation des extensions PHP : intl, imagick, etc.). Avec cache, c'est beaucoup plus rapide.
+                </div>
+
+                <h2>Gestion des conteneurs</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <table>
+                            <tr><th>Action</th><th>Commande</th></tr>
+                            <tr><td>Voir les statuts</td><td><code>docker compose ps</code></td></tr>
+                            <tr><td>Voir les logs</td><td><code>docker compose logs php --tail 50</code></td></tr>
+                            <tr><td>Redemarrer un service</td><td><code>docker compose restart php</code></td></tr>
+                            <tr><td>Recreer (charge nouveau .env)</td><td><code>docker compose up -d --force-recreate php</code></td></tr>
+                            <tr><td>Tout arreter</td><td><code>docker compose down</code></td></tr>
+                            <tr><td>Entrer dans un conteneur</td><td><code>docker compose exec php bash</code></td></tr>
+                            <tr><td>Variables d'env dans conteneur</td><td><code>docker compose exec php env | grep DATABASE</code></td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="alert alert-danger">
+                    <strong>restart vs force-recreate</strong>
+                    <code>docker compose restart</code> ne recharge <strong>PAS</strong> le fichier <code>.env</code>. Pour appliquer un changement de variable d'environnement, il faut <code>docker compose up -d --force-recreate &lt;service&gt;</code>.
+                </div>
+            </div>
+
+            <!-- ==================== KEYCLOAK ==================== -->
+            <div class="section" id="install-keycloak">
+                <h1>Configuration Keycloak</h1>
+
+                <h2>Acces a la console admin</h2>
+                <div class="code-block"><span class="value">https://staging.creazot.com/oidc/admin/master/console/</span>
+<span class="comment"># Login: valeur de KEYCLOAK_ADMIN_USER / KEYCLOAK_ADMIN_PASSWORD</span></div>
+
+                <h2>Creation du realm</h2>
+                <ol>
+                    <li>Se connecter a la console admin Keycloak</li>
+                    <li>Cliquer sur le menu en haut a gauche → <strong>Create Realm</strong></li>
+                    <li>Importer le fichier <code>helm/api-platform/keycloak/config/realm-demo.json</code> ou creer manuellement avec le nom <strong>creazot</strong></li>
+                </ol>
+
+                <h2>Mode de demarrage</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <p>Le mode est controle par la variable <code>KEYCLOAK_MODE</code> dans le <code>compose.override.yaml</code> (dev) ou <code>compose.prod.yaml</code>.</p>
+                        <table>
+                            <tr><th>Mode</th><th>Commande interne</th><th>Usage</th></tr>
+                            <tr><td><code>dev</code> (defaut)</td><td><code>kc.sh start-dev</code></td><td>Developpement, pas de HTTPS strict</td></tr>
+                            <tr><td><code>prod</code></td><td><code>kc.sh start --hostname-strict</code></td><td>Production</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <strong>KC_PROXY_HEADERS</strong>
+                    En production derriere Caddy, utiliser <code>KC_PROXY_HEADERS: xforwarded</code> dans le compose.prod.yaml. L'ancienne valeur <code>KC_PROXY: edge</code> est depreciee.
+                </div>
+            </div>
+
+            <!-- ==================== CHECKLIST ==================== -->
+            <div class="section" id="verify">
+                <h1>Checklist post-deploiement</h1>
+
+                <h2>Verification des services</h2>
+                <div class="code-block"><span class="comment"># 1. Tous les conteneurs sont "Up" et "healthy"</span>
+<span class="cmd">docker compose</span> ps
+
+<span class="comment"># 2. PHP peut joindre la BDD</span>
+<span class="cmd">docker compose</span> exec php php bin/console dbal:run-sql "SELECT 1"
+
+<span class="comment"># 3. Caddy sert le bon certificat SSL</span>
+<span class="cmd">echo</span> | <span class="cmd">openssl</span> s_client -connect localhost:443 -servername staging.creazot.com 2>/dev/null | \
+  <span class="cmd">openssl</span> x509 -noout -issuer -subject -dates
+<span class="comment"># issuer doit contenir "Let's Encrypt"</span>
+
+<span class="comment"># 4. Keycloak repond en interne</span>
+<span class="cmd">curl</span> -sI http://localhost:8080/admin/master/console/
+<span class="comment"># Doit retourner HTTP 200</span>
+
+<span class="comment"># 5. Keycloak repond via Caddy</span>
+<span class="cmd">curl</span> -sk https://staging.creazot.com/oidc/admin/master/console/ | head -3
+<span class="comment"># Doit retourner du HTML</span>
+
+<span class="comment"># 6. La PWA repond</span>
+<span class="cmd">curl</span> -sk -o /dev/null -w '%{http_code}' https://staging.creazot.com/
+<span class="comment"># Doit retourner 200</span>
+
+<span class="comment"># 7. L'API repond</span>
+<span class="cmd">curl</span> -sk https://staging.creazot.com/docs.jsonld
+<span class="comment"># Doit retourner du JSON-LD</span></div>
+
+                <h2>Checklist complete</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <ul class="checklist">
+                            <li>&#9744; DNS pointe vers l'IP du VPS</li>
+                            <li>&#9744; Ports 80 et 443 mappes directement (pas 8081/8443)</li>
+                            <li>&#9744; <code>SERVER_NAME</code> sans prefixe http://</li>
+                            <li>&#9744; <code>compose.override.yaml</code> supprime ou renomme</li>
+                            <li>&#9744; <code>DATABASE_URL</code> avec le bon hostname, bon mot de passe, <code>sslmode=require</code></li>
+                            <li>&#9744; <code>POSTGRES_DB</code> = nom de la BDD (pas le hostname !)</li>
+                            <li>&#9744; Trusted Sources configure sur DigitalOcean (si BDD managee)</li>
+                            <li>&#9744; Tous les conteneurs <code>Up</code> et <code>healthy</code></li>
+                            <li>&#9744; Certificat SSL = Let's Encrypt (verifier depuis le serveur)</li>
+                            <li>&#9744; Realm Keycloak cree (<code>creazot</code>)</li>
+                            <li>&#9744; Console admin Keycloak accessible via <code>/oidc/admin/</code></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== TROUBLESHOOTING ==================== -->
+            <div class="section" id="troubleshoot">
+                <h1>Diagnostic des erreurs</h1>
+                <p>Guide base sur les erreurs reellement rencontrees lors du deploiement de mars 2026.</p>
+
+                <details class="troubleshoot-item">
+                    <summary><span class="badge badge-danger">PHP</span> &nbsp; Conteneur en boucle "Tentative X/30..."</summary>
+                    <div class="detail">
+                        <h4>Symptome</h4>
+                        <p>Le conteneur PHP redemarre en boucle, les logs montrent des tentatives de connexion a PostgreSQL.</p>
+                        <h4>Causes possibles (dans l'ordre de frequence)</h4>
+                        <ol>
+                            <li><strong>Hostname de la BDD incorrect</strong> dans <code>DATABASE_URL</code> — verifier avec <code>nc -zv -w 5 HOSTNAME PORT</code></li>
+                            <li><strong>Trusted Sources</strong> non configure sur DigitalOcean — ajouter l'IP du VPS</li>
+                            <li><strong>Mot de passe incorrect</strong> — copier le vrai mot de passe (cliquer "Show")</li>
+                            <li><strong>sslmode=require manquant</strong> — obligatoire pour les BDD managees</li>
+                        </ol>
+                        <h4>Commandes de diagnostic</h4>
+                        <div class="code-block"><span class="comment"># Tester la resolution DNS du hostname</span>
+<span class="cmd">nc</span> -zv -w 5 &lt;DB_HOSTNAME&gt; &lt;PORT&gt;
+
+<span class="comment"># Verifier les variables dans le conteneur</span>
+<span class="cmd">docker compose</span> exec php env | grep DATABASE
+
+<span class="comment"># Verifier les logs</span>
+<span class="cmd">docker compose</span> logs php --tail 30</div>
+                    </div>
+                </details>
+
+                <details class="troubleshoot-item">
+                    <summary><span class="badge badge-danger">PHP</span> &nbsp; "password authentication failed for user"</summary>
+                    <div class="detail">
+                        <h4>Symptome</h4>
+                        <p>PostgreSQL est joignable mais refuse l'authentification.</p>
+                        <h4>Solution</h4>
+                        <ol>
+                            <li>Verifier que <code>POSTGRES_PASSWORD</code> et le mot de passe dans <code>DATABASE_URL</code> sont identiques</li>
+                            <li>Verifier que c'est le <strong>vrai</strong> mot de passe (pas "show-password")</li>
+                            <li>Apres modification du <code>.env</code>, <strong>recreer</strong> le conteneur avec <code>--force-recreate</code></li>
+                        </ol>
+                    </div>
+                </details>
+
+                <details class="troubleshoot-item">
+                    <summary><span class="badge badge-warning">ENV</span> &nbsp; Modification du .env non prise en compte</summary>
+                    <div class="detail">
+                        <h4>Symptome</h4>
+                        <p>Vous modifiez le <code>.env</code> mais le conteneur utilise toujours les anciennes valeurs.</p>
+                        <h4>Cause</h4>
+                        <p><code>docker compose restart</code> ne recharge pas le <code>.env</code>. Il faut recreer le conteneur.</p>
+                        <h4>Solution</h4>
+                        <div class="code-block"><span class="comment"># Recreer le conteneur pour charger le nouveau .env</span>
+<span class="cmd">docker compose</span> <span class="flag">-f compose.yaml -f compose.prod.yaml</span> up -d --force-recreate php
+
+<span class="comment"># Verifier que les nouvelles valeurs sont bien chargees</span>
+<span class="cmd">docker compose</span> exec php env | grep DATABASE</div>
+                    </div>
+                </details>
+
+                <details class="troubleshoot-item">
+                    <summary><span class="badge badge-danger">SSL</span> &nbsp; HTTPS barre en rouge / certificat invalide</summary>
+                    <div class="detail">
+                        <h4>Diagnostic</h4>
+                        <div class="code-block"><span class="comment"># Verifier le certificat directement sur le serveur</span>
+<span class="cmd">echo</span> | <span class="cmd">openssl</span> s_client -connect localhost:443 -servername DOMAINE 2>/dev/null | \
+  <span class="cmd">openssl</span> x509 -noout -issuer
+
+<span class="comment"># Si issuer = "Let's Encrypt" → le serveur est OK, probleme cote client</span>
+<span class="comment"># Si issuer = "Caddy Local Authority" → SSL auto pas active</span></div>
+                        <h4>Si le certificat est auto-signe (Caddy Local Authority)</h4>
+                        <ul>
+                            <li>Verifier que <code>SERVER_NAME</code> ne commence pas par <code>http://</code></li>
+                            <li>Verifier que les ports 80 et 443 sont mappes directement</li>
+                            <li>Verifier que le DNS pointe vers le serveur</li>
+                        </ul>
+                        <h4>Si le certificat est Let's Encrypt mais le navigateur montre une erreur</h4>
+                        <p>Un pare-feu d'entreprise (Fortinet, Palo Alto, etc.) intercepte le trafic SSL et remplace le certificat. Tester depuis un autre reseau (4G, VPN).</p>
+                    </div>
+                </details>
+
+                <details class="troubleshoot-item">
+                    <summary><span class="badge badge-danger">502</span> &nbsp; Bad Gateway sur Keycloak (/oidc/*)</summary>
+                    <div class="detail">
+                        <h4>Diagnostic</h4>
+                        <div class="code-block"><span class="comment"># Keycloak tourne-t-il ?</span>
+<span class="cmd">docker compose</span> ps keycloak
+
+<span class="comment"># Keycloak repond-il en interne ?</span>
+<span class="cmd">curl</span> -sI http://localhost:8080/admin/master/console/
+
+<span class="comment"># Keycloak repond-il via Caddy ?</span>
+<span class="cmd">curl</span> -sk https://DOMAINE/oidc/admin/master/console/ | head -3
+
+<span class="comment"># Verifier les erreurs Keycloak</span>
+<span class="cmd">docker compose</span> logs keycloak --tail 20 | grep -i error</div>
+                        <h4>Causes frequentes</h4>
+                        <ul>
+                            <li><strong>Keycloak pas encore demarre</strong> — prend ~15s, attendre</li>
+                            <li><strong>KC_PROXY: edge</strong> (deprecie) — remplacer par <code>KC_PROXY_HEADERS: xforwarded</code></li>
+                            <li><strong>Erreur "Failed to parse port"</strong> — probleme de forwarded headers</li>
+                            <li><strong>Firewall SSL (Fortinet)</strong> — le serveur repond OK mais le client recoit un 502 a cause de l'interception SSL</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="troubleshoot-item">
+                    <summary><span class="badge badge-warning">DNS</span> &nbsp; "Name or service not known"</summary>
+                    <div class="detail">
+                        <h4>Symptome</h4>
+                        <p>Le hostname de la base de donnees ne se resout pas depuis le VPS.</p>
+                        <h4>Solution</h4>
+                        <ul>
+                            <li>Verifier que le hostname est <strong>exactement</strong> celui indique dans le dashboard DigitalOcean</li>
+                            <li>Tester la resolution : <code>nc -zv -w 5 HOSTNAME PORT</code></li>
+                            <li>Si la BDD vient d'etre creee, attendre quelques minutes pour la propagation DNS</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="troubleshoot-item">
+                    <summary><span class="badge badge-info">PERF</span> &nbsp; Build Docker extremement lent</summary>
+                    <div class="detail">
+                        <h4>Explication</h4>
+                        <p>Le build <code>--no-cache</code> compile les extensions PHP (intl, imagick, pdo_pgsql) depuis les sources. Cela prend 30-40 minutes sur un petit VPS.</p>
+                        <h4>Optimisations</h4>
+                        <ul>
+                            <li>Ne pas utiliser <code>--no-cache</code> sauf si necessaire</li>
+                            <li>Utiliser un VPS avec plus de CPU pour le build</li>
+                            <li>Envisager de pre-builder les images et les pousser sur un registry</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="troubleshoot-item">
+                    <summary><span class="badge badge-warning">SSH</span> &nbsp; Timeout de connexion SSH</summary>
+                    <div class="detail">
+                        <h4>Cause</h4>
+                        <p>Le VPS est surcharge (CPU 100%, build en cours, conteneurs qui redemarrent en boucle).</p>
+                        <h4>Solutions</h4>
+                        <ul>
+                            <li>Attendre 30-60 secondes et reessayer</li>
+                            <li>Verifier avec <code>ping &lt;IP&gt;</code> que le serveur repond</li>
+                            <li>Acceder via la console web DigitalOcean si SSH est impossible</li>
+                        </ul>
+                    </div>
+                </details>
+            </div>
+
+            <!-- ==================== REF COMPOSE ==================== -->
+            <div class="section" id="ref-compose">
+                <h1>Reference : Docker Compose</h1>
+
+                <h2>Services et roles</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <table>
+                            <tr><th>Service</th><th>Image</th><th>Role</th><th>Ports exposes</th></tr>
+                            <tr><td><code>php</code></td><td><code>app-php:*</code></td><td>FrankenPHP + Symfony + Caddy</td><td>80, 443</td></tr>
+                            <tr><td><code>pwa</code></td><td><code>app-pwa:*</code></td><td>Next.js (SSR)</td><td>3000 (interne)</td></tr>
+                            <tr><td><code>keycloak</code></td><td><code>app_keycloak:*</code></td><td>Serveur OIDC</td><td>8080</td></tr>
+                            <tr><td><code>keycloak-database</code></td><td><code>postgres:16.4-alpine</code></td><td>BDD Keycloak</td><td>5432 (interne)</td></tr>
+                            <tr><td><code>database</code></td><td><code>postgres:16.4-alpine</code></td><td>BDD App (dev/local)</td><td>5432 (interne)</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <strong>BDD managee vs locale</strong>
+                    En production avec une BDD managee (DigitalOcean), le service <code>database</code> n'est pas utilise. Le <code>DATABASE_URL</code> pointe directement vers la BDD externe. Le service <code>database</code> dans <code>compose.prod.yaml</code> devrait etre desactive ou supprime.
+                </div>
+
+                <h2>Volumes</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <table>
+                            <tr><th>Volume</th><th>Chemin conteneur</th><th>Usage</th></tr>
+                            <tr><td><code>caddy_data</code></td><td><code>/data/caddy</code></td><td>Certificats SSL Let's Encrypt</td></tr>
+                            <tr><td><code>caddy_config</code></td><td><code>/config</code></td><td>Configuration Caddy</td></tr>
+                            <tr><td><code>keycloak_db_data</code></td><td><code>/var/lib/postgresql/data</code></td><td>Donnees Keycloak</td></tr>
+                            <tr><td><code>db_data</code></td><td><code>/var/lib/postgresql/data</code></td><td>Donnees app (si BDD locale)</td></tr>
+                            <tr><td>Bind: <code>./api/public/images</code></td><td><code>/srv/api/public/images</code></td><td>Images produits</td></tr>
+                            <tr><td>Bind: <code>./api/public/media</code></td><td><code>/app/public/media</code></td><td>Fichiers uploades</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== REF CADDY ==================== -->
+            <div class="section" id="ref-caddy">
+                <h1>Reference : Caddyfile</h1>
+                <p>Le Caddyfile est situe dans <code>api/frankenphp/Caddyfile</code>.</p>
+
+                <h2>Routing principal</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <table>
+                            <tr><th>Route</th><th>Destination</th><th>Methode</th></tr>
+                            <tr><td><code>/oidc/*</code></td><td>Keycloak (<code>http://keycloak:8080</code>)</td><td><code>handle_path</code> (strip /oidc)</td></tr>
+                            <tr><td><code>@pwa</code> (HTML)</td><td>PWA (<code>http://pwa:3000</code>)</td><td><code>reverse_proxy</code></td></tr>
+                            <tr><td><code>/images/*</code></td><td>Fichiers statiques</td><td><code>file_server</code></td></tr>
+                            <tr><td><code>/media/*</code></td><td>Fichiers uploades</td><td><code>file_server</code></td></tr>
+                            <tr><td>Tout le reste</td><td>Symfony API</td><td><code>php_server</code></td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <h2>Fonctionnalites integrees</h2>
+                <ul>
+                    <li><strong>TLS automatique</strong> — Let's Encrypt via ACME</li>
+                    <li><strong>Mercure</strong> — Push Server-Sent Events</li>
+                    <li><strong>Vulcain</strong> — Server Push pour Hydra</li>
+                    <li><strong>Compression</strong> — zstd, brotli, gzip</li>
+                    <li><strong>Redirection HTTP→HTTPS</strong> — automatique</li>
+                </ul>
+            </div>
+
+            <!-- ==================== REF PORTS ==================== -->
+            <div class="section" id="ref-ports">
+                <h1>Reference : Ports & Reseaux</h1>
+
+                <h2>Mapping des ports (production)</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <table>
+                            <tr><th>Port hote</th><th>Port conteneur</th><th>Service</th><th>Usage</th></tr>
+                            <tr><td><strong>80</strong></td><td>80</td><td>php (Caddy)</td><td>HTTP (redirection vers HTTPS)</td></tr>
+                            <tr><td><strong>443</strong></td><td>443</td><td>php (Caddy)</td><td>HTTPS (trafic principal)</td></tr>
+                            <tr><td>8080</td><td>8080</td><td>keycloak</td><td>Admin Keycloak (acces direct, optionnel)</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="alert alert-danger">
+                    <strong>Ports 80 et 443 obligatoires</strong>
+                    <ul>
+                        <li>Le port <strong>80</strong> est necessaire pour le challenge ACME (Let's Encrypt)</li>
+                        <li>Les mappings type <code>8081:80</code> ou <code>8443:443</code> empechent l'obtention du certificat SSL</li>
+                        <li>Toujours utiliser <code>80:80</code> et <code>443:443</code> en production</li>
+                    </ul>
+                </div>
+
+                <h2>Reseau interne Docker</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <table>
+                            <tr><th>Depuis</th><th>Vers</th><th>Adresse</th></tr>
+                            <tr><td>php</td><td>PWA</td><td><code>http://pwa:3000</code></td></tr>
+                            <tr><td>php</td><td>Keycloak</td><td><code>http://keycloak:8080</code></td></tr>
+                            <tr><td>php</td><td>BDD locale</td><td><code>database:5432</code></td></tr>
+                            <tr><td>keycloak</td><td>BDD Keycloak</td><td><code>keycloak-database:5432</code></td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== RETEX ==================== -->
+            <div class="section" id="retex">
+                <h1>Retour d'experience — Mars 2026</h1>
+                <p>Chronologie des problemes rencontres lors du premier deploiement sur DigitalOcean et lecons apprises.</p>
+
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <h4><span class="badge badge-danger">Erreur 1</span> Mauvais hostname de base de donnees</h4>
+                        <p><strong>Probleme :</strong> Le hostname PostgreSQL dans <code>DATABASE_URL</code> (<code>staging-database-do-user-...</code>) ne correspondait pas au vrai hostname de la BDD managee (<code>ah-chou-database-do-user-...</code>).</p>
+                        <p><strong>Symptome :</strong> <code>nc: getaddrinfo: Name or service not known</code></p>
+                        <p><strong>Lecon :</strong> Toujours copier le hostname depuis le dashboard DigitalOcean → Databases → Connection Details et tester avec <code>nc -zv</code>.</p>
+                    </div>
+
+                    <div class="timeline-item">
+                        <h4><span class="badge badge-danger">Erreur 2</span> POSTGRES_DB confondu avec le hostname</h4>
+                        <p><strong>Probleme :</strong> <code>POSTGRES_DB</code> a ete rempli avec le hostname de la BDD au lieu du nom de la base (<code>defaultdb</code>).</p>
+                        <p><strong>Lecon :</strong> <code>POSTGRES_DB</code> = nom de la base (ex: <code>defaultdb</code>, <code>app</code>). Ce n'est <strong>jamais</strong> une URL ou un hostname.</p>
+                    </div>
+
+                    <div class="timeline-item">
+                        <h4><span class="badge badge-danger">Erreur 3</span> Faux mot de passe ("show-password")</h4>
+                        <p><strong>Probleme :</strong> Le mot de passe copie depuis le dashboard DigitalOcean etait le placeholder <code>show-password</code> au lieu du vrai mot de passe.</p>
+                        <p><strong>Symptome :</strong> <code>FATAL: password authentication failed for user "doadmin"</code></p>
+                        <p><strong>Lecon :</strong> Toujours cliquer sur "Show" ou l'icone oeil pour reveler le vrai mot de passe avant de le copier.</p>
+                    </div>
+
+                    <div class="timeline-item">
+                        <h4><span class="badge badge-warning">Erreur 4</span> restart au lieu de force-recreate</h4>
+                        <p><strong>Probleme :</strong> Apres modification du <code>.env</code>, un <code>docker compose restart</code> a ete utilise. Les anciennes variables etaient toujours actives dans le conteneur.</p>
+                        <p><strong>Lecon :</strong> <code>restart</code> ≠ <code>up -d --force-recreate</code>. Seul <code>force-recreate</code> recharge les variables d'environnement.</p>
+                    </div>
+
+                    <div class="timeline-item">
+                        <h4><span class="badge badge-warning">Erreur 5</span> SERVER_NAME avec prefixe http://</h4>
+                        <p><strong>Probleme :</strong> <code>SERVER_NAME=http://staging.creazot.com</code> empechait Caddy d'activer HTTPS et d'obtenir un certificat Let's Encrypt.</p>
+                        <p><strong>Lecon :</strong> <code>SERVER_NAME</code> ne doit contenir que le domaine, sans protocole : <code>staging.creazot.com</code>.</p>
+                    </div>
+
+                    <div class="timeline-item">
+                        <h4><span class="badge badge-warning">Erreur 6</span> Ports 8081/8443 au lieu de 80/443</h4>
+                        <p><strong>Probleme :</strong> Les ports etaient mappes <code>8081:80</code> et <code>8443:443</code>, empechant Let's Encrypt de valider le domaine via le challenge HTTP sur le port 80.</p>
+                        <p><strong>Lecon :</strong> En production, toujours mapper <code>80:80</code> et <code>443:443</code>.</p>
+                    </div>
+
+                    <div class="timeline-item">
+                        <h4><span class="badge badge-info">Erreur 7</span> HTTPS barre malgre un certificat valide</h4>
+                        <p><strong>Probleme :</strong> Le certificat Let's Encrypt etait valide sur le serveur, mais un pare-feu Fortinet sur le reseau local remplacait le certificat (SSL inspection).</p>
+                        <p><strong>Lecon :</strong> Toujours verifier le certificat <strong>depuis le serveur</strong> (<code>openssl s_client</code>) pour isoler un probleme serveur vs. reseau. Tester depuis un reseau different si necessaire.</p>
+                    </div>
+                </div>
+
+                <h2>Regles d'or du deploiement</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <ol>
+                            <li><strong>DNS d'abord</strong> — Toujours configurer le DNS avant de deployer</li>
+                            <li><strong>Tester la BDD avant de lancer les conteneurs</strong> — <code>nc -zv HOSTNAME PORT</code></li>
+                            <li><strong>Verifier le .env 3 fois</strong> — La majorite des erreurs viennent de la</li>
+                            <li><strong>force-recreate apres tout changement de .env</strong> — restart ne suffit pas</li>
+                            <li><strong>Diagnostiquer depuis le serveur</strong> — <code>openssl</code>, <code>curl</code>, <code>docker exec env</code></li>
+                            <li><strong>Pas de compose.override.yaml en prod</strong> — Le supprimer ou le renommer</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        function showSection(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            event.target.classList.add('active');
+            window.scrollTo(0, 0);
+        }
+    </script>
+</body>
+</html>

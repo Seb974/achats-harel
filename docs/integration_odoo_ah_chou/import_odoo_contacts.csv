@@ -1,0 +1,9 @@
+name,parent_id/id,is_company,type,title,phone,mobile,email,function
+Jean Paul LAI ONG TEUNG,__import__.partner_01stelot,FALSE,contact,M.,,0692 21 74 56,,Responsable
+Gabrielle Castor,__import__.partner_01stelot,FALSE,invoice,,0262 30 35 13,0693 62 48 75,admin@coccimarket.re,Comptabilité
+Alexandre LAI ONG TEUNG,__import__.partner_01disnov,FALSE,contact,M.,,0692 37 22 07,,Responsable
+Gabrielle Castor,__import__.partner_01disnov,FALSE,invoice,,0262 30 35 13,0693 62 48 75,admin@coccimarket.re,Comptabilité
+ZHU Yumin Simon,__import__.partner_081sai00,FALSE,contact,,,,,Responsable
+CHEN Hongmei,__import__.partner_081sai00,FALSE,contact,,,,,Contact
+Woayki David,__import__.partner_01trk000,FALSE,contact,,,,,Responsable
+Courtois Charles,__import__.partner_01zico,FALSE,contact,,,0692 64 32 65,,Responsable

@@ -1,0 +1,391 @@
+code,name,account_type,reconcile
+10100000,Capital,equity,FALSE
+10610000,Réserve légale,equity,FALSE
+10680000,Autres réserves,equity,FALSE
+11000000,Report à nouveau,equity,FALSE
+12000000,Résultat (bénéfice),equity,FALSE
+13100000,Subvention équipement,equity,FALSE
+13900000,Subvention d'investissement,equity,FALSE
+14500000,Amortissements dérogatoires,equity,FALSE
+15150000,Prov pour pertes de change,liability_non_current,FALSE
+16400001,Emprunts bfc - 1an nø 831101,liability_non_current,FALSE
+16400003,Emprunts bfc -1an nø 1224101,liability_non_current,FALSE
+16400140,Emprunts bred - 1an nø 861803,liability_non_current,FALSE
+16400160,Emprunts bred - 1an nø 869539,liability_non_current,FALSE
+16400190,Emprunts bred - 1an nø 869443,liability_non_current,FALSE
+16410140,Emprunts bred - 5ans nø 861803,liability_non_current,FALSE
+16420000,Emprunt BPIFRANCE,liability_non_current,FALSE
+16430000,Emprunt CA camion Iveco 71100€,liability_non_current,FALSE
+16440000,Emprunt CA cam. Iveco 116100€,liability_non_current,FALSE
+16450000,Emprunt CAM/KIA FX-066-HN,liability_non_current,FALSE
+16460000,Emprunt CAM/Toyota GA-287-WV,liability_non_current,FALSE
+16470000,Emprunt CAM/Kia GC-407-FV,liability_non_current,FALSE
+16480000,Emprunt CAM/Kia GF-066-KL,liability_non_current,FALSE
+16490000,Emprunt CAM camion Iveco GL067,liability_non_current,FALSE
+16500000,Dépôts&cautionnements recus,liability_non_current,FALSE
+16884000,Int cou:rempr ets crédit,liability_current,FALSE
+20300000,Frais d'études& développement,asset_non_current,FALSE
+20500000,"Concessions, brevets, licences",asset_non_current,FALSE
+20800000,Titres scpi,asset_non_current,FALSE
+20810000,Part scpi eurofonciere 2,asset_non_current,FALSE
+20811001,SCPI Epargne Pierre 203 parts,asset_non_current,FALSE
+20811002,SCPI Epargne Pierre 661 parts,asset_non_current,FALSE
+20811003,SCPI Epargne Pierre 678 parts,asset_non_current,FALSE
+20811004,SCPI Pierval Santé 1520 parts,asset_non_current,FALSE
+20811005,SCPI Epargne Pierre 1073 parts,asset_non_current,FALSE
+20811006,SCPI Pierval Santé 1480 parts,asset_non_current,FALSE
+20811007,SCPI Epargne Pierre éch 310127,asset_non_current,FALSE
+20811008,SCPI Epargne Pierre éch 280227,asset_non_current,FALSE
+20811009,SCPI Eparg.Foncière éch.311226,asset_non_current,FALSE
+20812000,SCPI LF Europimmo éch.28022027,asset_non_current,FALSE
+20813000,SCPI Pierval Santé ech31122026,asset_non_current,FALSE
+20814000,SCPI Vendôme Régions 790 parts,asset_non_current,FALSE
+20815000,SCPI Vendôme Régions 650 parts,asset_non_current,FALSE
+20816000,SCPI NEO 2040 parts,asset_non_current,FALSE
+20817000,SCPI Epargne Pierre éch.05/29,asset_non_current,FALSE
+20818000,SCPI Epargne Pierre éch.06/29,asset_non_current,FALSE
+20819000,SCPI Epargne Pierre éch.310730,asset_non_current,FALSE
+20820000,Titres scpi épargne foncière,asset_non_current,FALSE
+20821001,SCPI Epargne Pierre éch.310830,asset_non_current,FALSE
+20830000,Corum 218 parts éch.31/10/2020,asset_non_current,FALSE
+20831000,Corum 355 parts éch.31/10/2022,asset_non_current,FALSE
+20840000,Corum 216  parts éch. 30/11/22,asset_non_current,FALSE
+20850000,Corum 401 parts éch. 31/12/22,asset_non_current,FALSE
+20860000,Corum 240 parts éch. 31/01/23,asset_non_current,FALSE
+20870000,Corum 229 parts éch. 31/10/25,asset_non_current,FALSE
+20880000,Corum 195 parts éch. 31/10/26,asset_non_current,FALSE
+20890000,Corum 100 parts éch. 31/10/27,asset_non_current,FALSE
+21100000,Terrains,asset_non_current,FALSE
+21310000,Bâtiments,asset_non_current,FALSE
+21400000,Constructions sur sol d'autrui,asset_non_current,FALSE
+21450000,Inst. gnrale. agenct. construc,asset_non_current,FALSE
+21540000,Matériel industriel,asset_non_current,FALSE
+21540100,Materiel immeubles loués,asset_non_current,FALSE
+21810000,Installations générales,asset_non_current,FALSE
+21812000,Aménagement en cours Cafrine,asset_non_current,FALSE
+21820000,Matériel de transport,asset_non_current,FALSE
+21830000,Matériel bureau & informatique,asset_non_current,FALSE
+21840000,Mobilier,asset_non_current,FALSE
+23100000,Immob. corporelles en cours,asset_non_current,FALSE
+27100000,Titres immobilisés,asset_non_current,FALSE
+27500000,Dépôts & cautionnements versés,asset_non_current,FALSE
+28050000,"Amort.conc, brev & droits simi",asset_non_current,FALSE
+28080000,Amort. autres immo. incorporel,asset_non_current,FALSE
+28081000,Amort scpi eurofoncière 2,asset_non_current,FALSE
+28081600,Amort scpi Néo,asset_non_current,FALSE
+28081700,Amortissement E Pierre éh05-29,asset_non_current,FALSE
+28081800,Amort Ep Pierre éch 06-29,asset_non_current,FALSE
+28082000,Aut immob incorporelles,asset_non_current,FALSE
+28083000,Amort scpi corum convictions,asset_non_current,FALSE
+28084000,Amort scpi Vendôme Régions/Las,asset_non_current,FALSE
+28085000,Amort scpi Vendôme Régions,asset_non_current,FALSE
+28131000,Amort batiments,asset_non_current,FALSE
+28140000,Amort. construction sur sol d',asset_non_current,FALSE
+28145000,Amort. inst.gén/sol d'autrui,asset_non_current,FALSE
+28154000,"Amort instal tech, matériel",asset_non_current,FALSE
+28154010,Amort. matériel,asset_non_current,FALSE
+28181000,Amort inst agencement,asset_non_current,FALSE
+28181200,Amenagement Cafrine,asset_non_current,FALSE
+28182000,Amort mat de transport,asset_non_current,FALSE
+28183000,Amort. matériel bureau & info,asset_non_current,FALSE
+28184000,Amort mobilier,asset_non_current,FALSE
+32200000,Fournitures consommables,asset_current,FALSE
+32600000,Emballages,asset_current,FALSE
+37000000,Stocks de marchandises,asset_current,FALSE
+39700000,Provisions dépr. marchandises,asset_current,FALSE
+40100000,Fournisseurs,liability_payable,TRUE
+40810000,Fournisseurs fact à recevoir,liability_current,FALSE
+40910000,Fourn-av/com,liability_current,FALSE
+40960000,Frs/créances emballages à rend,liability_current,FALSE
+40970000,Fourn-autres avoirs,liability_current,FALSE
+40980000,Rrr à obtenir non reçus,liability_current,FALSE
+41100000,Clients,asset_receivable,TRUE
+41600000,CLIENST DOUTEUX,asset_receivable,TRUE
+41810000,Clts-factures à établir,asset_current,FALSE
+41910000,Clts-av/com,liability_current,FALSE
+41980000,Rrr à établir,liability_current,FALSE
+42100000,Personnel rémunérations dûes,liability_current,FALSE
+42500000,Personnel - avances & acomptes,liability_current,FALSE
+42700000,Personnel - oppositions,liability_current,FALSE
+42820000,Dettes prov pour congés,liability_current,FALSE
+42860000,Autres charges à payer,liability_current,FALSE
+42870000,Personnel produits à recevoir,liability_current,FALSE
+43100000,Sécurité sociale,liability_current,FALSE
+43720000,Mutuelle,liability_current,FALSE
+43730000,Caisse retraite réunionnaise,liability_current,FALSE
+43750000,Capimmec,liability_current,FALSE
+43820000,Provisions charges sociales,liability_current,FALSE
+43860000,Autres charges à payer,liability_current,FALSE
+43870000,Produits à recevoir,asset_current,FALSE
+44000000,Créance à l'égard de l'état,asset_current,FALSE
+44100000,Etat subventions à recevoir,asset_current,FALSE
+44210000,Etat Prelvt à la source,liability_current,FALSE
+44263511,Etat cfe,liability_current,FALSE
+44263512,Etat-cvae,liability_current,FALSE
+44400000,Etat impôts sur les bénéfices,liability_current,FALSE
+44550000,TVA à décaisser (collectif),liability_current,FALSE
+44551000,Tva à décaisser,liability_current,FALSE
+44560000,TVA déductible (collectif),asset_current,FALSE
+44562000,Tva sur immobilisations,asset_current,FALSE
+44562100,Tva npr sur immibilisations,asset_current,FALSE
+44563000,Tva sur achats marh,asset_current,FALSE
+44566000,TVA sur achats,asset_current,FALSE
+44566200,TVA déductible sur ABS,asset_current,FALSE
+44566800,Tva déduct/importat° (autoliqu,asset_current,FALSE
+44567000,Crédit de t.v.a. à reporter,asset_current,FALSE
+44570000,Tva collectée,liability_current,FALSE
+44571500,TVA collectée (taux réduit),liability_current,FALSE
+44579800,Tva due/importat° (autoliquida,liability_current,FALSE
+44580000,Tva à régularis. ou en attente,liability_current,FALSE
+44583000,Rembours de taxes sur le ca,asset_current,FALSE
+44586000,Taxes sur ca sur fact non parv,asset_current,FALSE
+44587000,Tva sur fact à établir,asset_current,FALSE
+44700000,"Autres impôts, taxes",liability_current,FALSE
+44860000,Autres charges à payer,liability_current,FALSE
+44870000,Etat-produits à recevoir,asset_current,FALSE
+45513000,Compte courant wttyr,liability_current,FALSE
+45514000,Compte courant wty marie,liability_current,FALSE
+45515000,Compte courant wtyjp,liability_current,FALSE
+45516000,Compte courant wty philippe,liability_current,FALSE
+45517000,Compte courant lung song patri,liability_current,FALSE
+45518000,Compte courant lung song guy,liability_current,FALSE
+45519000,Compte courant lung song ah ch,liability_current,FALSE
+45520000,Compte courant Soui Mine Jacqu,liability_current,FALSE
+45521000,Compte courant Barbe Elise,liability_current,FALSE
+45522000,Compte courant Barbe Sarah,liability_current,FALSE
+45700000,Associés - dividendes à payer,liability_current,FALSE
+46700000,Débit crédit,asset_current,FALSE
+46710200,Débiteurs créditeurs empl.MQ,asset_current,FALSE
+46710300,Débiteur/créditeu empl. Hélène,asset_current,FALSE
+46730000,Autres comptes débit ou crédit,asset_current,FALSE
+46770000,Débit ou crédit sci marin,asset_current,FALSE
+46775000,Débit ou crédit gel oi,asset_current,FALSE
+46860000,Charges à payer,asset_current,FALSE
+46870000,Produits à recevoir,asset_current,FALSE
+47100000,Compte d'attente,liability_current,FALSE
+47200000,Comptes transitoires,liability_current,FALSE
+47600000,Différences de conv-actif,liability_current,FALSE
+47700000,Différences de conv-passif,liability_current,FALSE
+48600000,Charges constatées d'avance,asset_current,FALSE
+49100000,Provisions dépréciat. clients,asset_current,FALSE
+50710000,DAT CAM,asset_current,FALSE
+50720000,DAT BRED,asset_current,FALSE
+50730000,Placement IFC/CAM,asset_current,FALSE
+50802010,Valeurs mobilières cie 1818,asset_current,FALSE
+50802020,Val. mob. tres.(1818)cpteA0124,asset_current,FALSE
+50802030,Compte transitoire,asset_current,FALSE
+50802040,NORTIA INVEST (ex1818 Natixis),asset_current,FALSE
+50802050,NORTIA - CAM cpte titre ord.,asset_current,FALSE
+50803010,Valeurs mobilières prymatys,asset_current,FALSE
+50804000,"Natixis ""fonds général""",asset_current,FALSE
+50805000,"Natixis ""léonardo invest miura",asset_current,FALSE
+50806000,"Natixis ""eurose""",asset_current,FALSE
+50807000,Valeurs mobilières Sunny,asset_current,FALSE
+50808000,Valeurs mobilières Hmg rend.,asset_current,FALSE
+50810100,Valeurs mobilières oddo,asset_current,FALSE
+50810200,Valeurs mobilières oddo tres.,asset_current,FALSE
+51100000,Valeurs à l'encaissement,asset_cash,FALSE
+51120000,Chèques à encaisser,asset_cash,FALSE
+51230000,Bfc,asset_cash,FALSE
+51231000,Dat,asset_cash,FALSE
+51234000,Fcp,asset_cash,FALSE
+51236000,Bfc cpte dollards,asset_cash,FALSE
+51240000,Credit agricole,asset_cash,FALSE
+51241000,"Cam ""excedent entreprise""",asset_cash,FALSE
+51242000,Cam/encours devises,asset_cash,FALSE
+51243000,Rationalfx,asset_cash,FALSE
+51244000,CAM DAT $,asset_cash,FALSE
+51245000,"CAM ""Cpte Excédent Entreprise""",asset_cash,FALSE
+51246000,CAM DAT,asset_cash,FALSE
+51247100,Diff de change banques,asset_cash,FALSE
+51250000,Bred,asset_cash,FALSE
+51251000,BRED DAT,asset_cash,FALSE
+51252000,Bred /provisions/devise,asset_cash,FALSE
+51800000,Intérêts courus,asset_current,FALSE
+51860000,Intérêts courus à payer,liability_current,FALSE
+51870000,Intérêts courus dat,asset_current,FALSE
+51900000,Concours bancaires courants,liability_current,FALSE
+53000000,Caisse,asset_cash,FALSE
+58000000,Virements internes,asset_cash,FALSE
+58010000,Virement interne espèces,asset_cash,FALSE
+58020000,Virement interne chèques,asset_cash,FALSE
+58030000,Virement interne cb,asset_cash,FALSE
+58040000,"Virement interne ""virement""",asset_cash,FALSE
+58050000,"Virement interne ""effets""",asset_cash,FALSE
+59000000,Provisions dépréciation vmp,asset_current,FALSE
+59080000,Deprec. autres vmp et créances,asset_current,FALSE
+60220000,Achats stockés-fournit.consomm,expense,FALSE
+60310000,Variat° des stocks matières 1è,expense,FALSE
+60320000,Var des stocks aut approv,expense,FALSE
+60370000,Var des stocks de marchandises,expense,FALSE
+60610000,Fournitures non stock eau,expense,FALSE
+60611000,Fourn.non stockables cafrine,expense,FALSE
+60611200,Four.non stockables TC,expense,FALSE
+60611300,Fourn.non stockables Cafrine,expense,FALSE
+60613000,Four non stock carb cafrine,expense,FALSE
+60630000,Fournitures d'entretien cafrin,expense,FALSE
+60640000,Fournitures administratives ca,expense,FALSE
+60680000,Autres matières et fournitures,expense,FALSE
+60681000,Emballages cafrine,expense,FALSE
+60710000,Achats march exo,expense,FALSE
+60720000,Achats march 2.1%,expense,FALSE
+60721000,Achats import 2.1%,expense,FALSE
+60730000,Achats  march 8.5%,expense,FALSE
+60870000,Frais accessoires d'achat,expense,FALSE
+60871000,Transit / douane,expense,FALSE
+60871010,Transit/frais annexes,expense,FALSE
+60871020,Transit/frêt,expense,FALSE
+60871200,Transport,expense,FALSE
+60871300,Frais branch élect containers,expense,FALSE
+60872000,Transit/O.M + O.M.R,expense,FALSE
+60873000,Transit/TSM,expense,FALSE
+60900000,RRR obtenus/achats,expense,FALSE
+61100000,Sous-traitance générale,expense,FALSE
+61220000,Crédit-bail mobilier,expense,FALSE
+61320000,Locations immobilières cafrine,expense,FALSE
+61321000,Location gérance,expense,FALSE
+61350000,Locations mobilières,expense,FALSE
+61351000,Locations chambres froides,expense,FALSE
+61352000,locations frais surestaries,expense,FALSE
+61353000,Location véhicules,expense,FALSE
+61354000,Location copieur,expense,FALSE
+61400000,Charges locatives-copropriété,expense,FALSE
+61500000,Travaux d'entretien,expense,FALSE
+61520000,Ent rep sur biens immobiliers,expense,FALSE
+61550000,Ent rep sur biens mobiliers,expense,FALSE
+61551000,Ent répa auto,expense,FALSE
+61551200,Ent réparation auto,expense,FALSE
+61552000,Entre rép autres cafrine,expense,FALSE
+61560000,Maintenance,expense,FALSE
+61600000,Primes d'assurance,expense,FALSE
+61700000,Etudes et recherches,expense,FALSE
+61810000,Documentation générale,expense,FALSE
+61850000,Frais colloques-semin-conféren,expense,FALSE
+62100000,Personnel extérieur à l'entrep,expense,FALSE
+62220000,Rémunérations d'intermédiaires,expense,FALSE
+62260000,Honoraires,expense,FALSE
+62270000,Frais d'actes et contentieux,expense,FALSE
+62280000,Divers,expense,FALSE
+62300000,Participation publicitaire,expense,FALSE
+62310000,Annonces et insertions,expense,FALSE
+62320000,Echantillons,expense,FALSE
+62340000,Cadeaux à la clientèle,expense,FALSE
+62360000,Catalogues et imprimés,expense,FALSE
+62380000,"Divers-pourboires, dons",expense,FALSE
+62400000,Transports biens & personnel,expense,FALSE
+62500000,"Déplac., missions, réceptions",expense,FALSE
+62570000,Réceptions,expense,FALSE
+62610000,Frais postaux,expense,FALSE
+62650000,Frais télécom cafrine,expense,FALSE
+62700000,Frais bancaires/,expense,FALSE
+62730000,Frais bancaires bfc,expense,FALSE
+62731000,Frais bancaires/credoc Bfc,expense,FALSE
+62740000,Frais bancaires cam,expense,FALSE
+62741000,Frais bancaires/credoc Cam,expense,FALSE
+62750000,Frais bancaires bred,expense,FALSE
+62751000,Frais bancaires/credoc Bred,expense,FALSE
+62800000,Divers (autre charge externe),expense,FALSE
+62810000,Cotisations diverses,expense,FALSE
+62830000,Gardiennage cafrine,expense,FALSE
+63330000,Part employeurs à formation co,expense,FALSE
+63350000,Taxe apprentissage organisme,expense,FALSE
+63511100,Cot foncières des entreprises,expense,FALSE
+63511200,Cot/valeur ajoutée,expense,FALSE
+63512000,Taxes foncières,expense,FALSE
+63514000,Taxe sur véhicule de sté,expense,FALSE
+63540000,Droits d'enregist & timbre,expense,FALSE
+63710000,Contribution sociale,expense,FALSE
+63780000,Taxes diverses,expense,FALSE
+64110000,Salaires,expense,FALSE
+64120000,Congés payés,expense,FALSE
+64140000,Indemnités et avantages divers,expense,FALSE
+64170000,Avantages en nature,expense,FALSE
+64180000,Avantages en nature,expense,FALSE
+64400000,Rémun. travail de l'exploitant,expense,FALSE
+64500000,Charges de sécu soc &prévoyanc,expense,FALSE
+64510000,Cotisations à l'ursaff,expense,FALSE
+64520000,Cotisations aux mutuelles,expense,FALSE
+64530000,Cotisations caisses retraites,expense,FALSE
+64550000,Cotisations caisses ret cadres,expense,FALSE
+64580000,Cotisations aut org sociaux,expense,FALSE
+64582000,Charges sociale/ c payés,expense,FALSE
+64583000,Charges/primes,expense,FALSE
+64600000,Cotis.mondiale,expense,FALSE
+64610000,Cot axa,expense,FALSE
+64620000,Cot agf,expense,FALSE
+64630000,Vieillesse,expense,FALSE
+64660000,Assur maladie + urssaf (rsi),expense,FALSE
+64661000,Prov rsi,expense,FALSE
+64670000,Assurance vieillesse  expl,expense,FALSE
+64700000,Autres charges sociales,expense,FALSE
+64750000,Médecine du travail,expense,FALSE
+64800000,Autres charges de personnel,expense,FALSE
+64900000,Cice,expense,FALSE
+65100000,"Redevances concep., brevets",expense,FALSE
+65400000,Pertes / créances irrécouvrab.,expense,FALSE
+65800000,Charges div. gestion courante,expense,FALSE
+66116000,Intérêts des emprunts,expense,FALSE
+66116100,Intérêts des emprunts Bred,expense,FALSE
+66116200,Intérêts des emprunts Cam,expense,FALSE
+66160000,Intérêts bancaires,expense,FALSE
+66163000,Intérêts bancaires bfc,expense,FALSE
+66164000,Intérêts bancaires cam,expense,FALSE
+66165000,Intérêts bancaires Bred,expense,FALSE
+66600000,Pertes de change,expense,FALSE
+66700000,Chrages nettes/vessions VMP,expense,FALSE
+66880000,Autres charges financières,expense,FALSE
+67120000,Pénalités et amends fiscales,expense,FALSE
+67180000,Aut charges exceptio oper gest,expense,FALSE
+67200000,Cpte régul charges exer.antéri,expense,FALSE
+67500000,Val. compt. elém. actifs cédés,expense,FALSE
+68111000,Dot amort-immo. incorporelles,expense,FALSE
+68112000,Dot amort immo corporelles,expense,FALSE
+68170000,Dot. dépréc. actifs circulants,expense,FALSE
+68171000,Dot prov stock,expense,FALSE
+68174000,Proc créances douteuses,expense,FALSE
+68650000,Dot prov risques & charge fin,expense,FALSE
+68665000,Valeurs mobilières de placemen,expense,FALSE
+68710000,Dot amort except s/immo,expense,FALSE
+68725000,Amortissements dérogatoires,expense,FALSE
+69500000,Impôts sur les bénéfices,expense,FALSE
+69510000,Impôts dus en France,expense,FALSE
+70600000,Prestations de services,income,FALSE
+70680000,Prestations diverses,income,FALSE
+70700000,Ventes exo libre service,income,FALSE
+70710000,Ventes 2.10% libre service,income,FALSE
+70720000,Ventes 8.50% libre service,income,FALSE
+70721000,Ventes import 2.1% ht,income,FALSE
+70730000,Ventes  8.50%,income,FALSE
+70800000,Produits des activités annexes,income,FALSE
+70810000,Locations jade,income,FALSE
+70820000,Locations marodon,income,FALSE
+70830000,Locations hauts de st pierre,income,FALSE
+70840000,Locations pierre & paul,income,FALSE
+70850000,Locations le st françois,income,FALSE
+70910000,Rrr accordés/participation pub,income,FALSE
+70970000,Rrr ac/ventes de marchandises,income,FALSE
+70971000,Rrr accordés/part pub,income,FALSE
+74000000,Subventions d'exploitation,income,FALSE
+75800000,Produits div. gestion courante,income,FALSE
+76100000,Produits de participations,income,FALSE
+76200000,Produits autres immob. financ.,income,FALSE
+76600000,Gains de change,income,FALSE
+76700000,Prod net cession vmp,income,FALSE
+76800000,Autres produits financiers,income,FALSE
+76820000,Produits bons capitalisation,income,FALSE
+76830000,Produits financiers divers,income,FALSE
+77100000,Produits exceptionnels gestion,income,FALSE
+77170000,Dégrèvements d'impôts (hors is,income,FALSE
+77171000,Tva non perçue récup sur immo,income,FALSE
+77177000,Produits exceptionnels,income,FALSE
+77180000,Aut pdts excep opér gestion,income,FALSE
+77200000,Produits sur ex./antérieurs,income,FALSE
+77500000,Produits cessions actif,income,FALSE
+77700000,Qp subv invest virée résult ex,income,FALSE
+78170000,Rép. / prov. dép. actifs circ.,income,FALSE
+78171000,Reprises sur prov stoc(actifs),income,FALSE
+78174000,Repr/prov dep act;ci créances,income,FALSE
+78650000,Reprises sur prov (risques),income,FALSE
+78665000,Repr/prov dep el fin vmp,income,FALSE
+78725000,Repr/amort derogatoires,income,FALSE
+79100000,Transferts charges expl,income,FALSE

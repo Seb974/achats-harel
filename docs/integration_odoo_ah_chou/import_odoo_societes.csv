@@ -1,0 +1,6 @@
+id,name,ref,is_company,customer_rank,phone,email,website,company_registry,credit_limit,x_groupe_client,x_typologie,x_enseigne,x_taux_remise,x_taux_rfa,street,zip,city,country_id,comment
+__import__.partner_01stelot,SOCIETE LOT,01STELOT,TRUE,1,0262 30 35 13,direction.providence@coccimarket.re,,440728509,1000.0,GMS,MARCHE,COCCI MARKET,0.0,0.0,,,,FR,Facturation: PLUSIEURS BL UNE FACTURE | Blocage: Oui si dépassement
+__import__.partner_01disnov,DISTRINOV,01DISNOV,TRUE,1,,direction.providence@coccimarket.re,,847929809,1000.0,GMS,MARCHE,COCCI MARKET,0.0,0.0,,,,FR,Facturation: PLUSIEURS BL UNE FACTURE | Blocage: Non dans tous les cas
+__import__.partner_081sai00,SAINTE MARIE BAZAR,081SAI00,TRUE,1,0692 61 75 70,stm-trader@hotmail.com,,931980866000,0.0,DIVERS,,,0.0,0.0,,,,FR,Facturation: UNE FACTURE 1 BL
+__import__.partner_01trk000,TRADITION REUNION KALA,01TRK000,TRUE,1,0692 64 95 64,davidwoayki@gmail.com,,93175657100010,800.0,DIVERS,TRAITEUR,,0.0,0.0,,,,FR,Code APE: 1085Z | Facturation: PLUSIEURS BL UNE FACTURE | Blocage: Oui si dépassement
+__import__.partner_01zico,ZICO MAT - CAP VANILLE,01ZICO,TRUE,1,0262 54 61 69,zicomat.run@gmail.com,,78929394100025,1500.0,CHR,,,0.0,0.0,,,,FR,Code APE: 4690Z | Blocage: Oui si dépassement
