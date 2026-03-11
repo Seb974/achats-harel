@@ -2,7 +2,7 @@ import { Menu, MenuItemLink, useSidebarState } from "react-admin";
 import { useClient } from '../../admin/ClientProvider';
 import { isDefined } from "../../../app/lib/utils";
 import { useState } from 'react';
-import { Collapse } from '@mui/material';
+import { Collapse, ListItemIcon, ListItemText, MenuItem } from '@mui/material';
 import TuneIcon from '@mui/icons-material/Tune';
 import PaymentsIcon from '@mui/icons-material/Payments';
 import PersonIcon from '@mui/icons-material/Person';
@@ -53,13 +53,16 @@ const CustomMenu = () => {
           leftIcon={<PaymentsIcon />}
         />
 
-        <MenuItemLink
-          to="/guide-utilisateur/index.html"
-          primaryText="Guide utilisateur"
-          leftIcon={<MenuBookIcon />}
+        <MenuItem
+          component="a"
+          href="/guide-utilisateur/index.html"
           target="_blank"
           rel="noopener"
-        />
+          sx={{ color: 'text.secondary', py: '6px', fontSize: '0.875rem' }}
+        >
+          <ListItemIcon sx={{ minWidth: 40 }}><MenuBookIcon /></ListItemIcon>
+          <ListItemText primary="Guide utilisateur" />
+        </MenuItem>
 
       {/* @ts-ignore */}
       { isDefined(session) && isDefined(user) &&  user.roles.find(r => r === "admin") &&
