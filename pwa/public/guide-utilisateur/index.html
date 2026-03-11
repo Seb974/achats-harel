@@ -518,6 +518,7 @@
         <a href="#section-2">Stock</a>
         <a href="#section-3">Ventes</a>
         <a href="#section-4">Utilisateurs</a>
+        <a href="#section-5">Données &amp; Import</a>
       </div>
     </div>
   </nav>
@@ -1930,11 +1931,367 @@
 
   </div>
 
+  <hr class="section-divider">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 5 — NOMENCLATURE DES DONNÉES & IMPORT
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="guide-section" id="section-5">
+
+    <div class="section-header">
+      <span class="section-number">Section 5</span>
+      <h2>Nomenclature des données &amp; Import</h2>
+      <p>Structure des bases produits, clients et fournisseurs — Trames d'import téléchargeables</p>
+    </div>
+
+    <!-- ═══ 5.1 NOMENCLATURE PRODUITS ═══ -->
+    <h3 id="s5-1" style="font-size:1.35rem;color:var(--primary);margin:2.5rem 0 1rem;border-bottom:2px solid var(--primary);padding-bottom:0.5rem;">5.1 Base Produits (330 articles)</h3>
+
+    <p style="margin-bottom:1rem;color:#555;font-size:.95rem;">
+      Chaque produit du catalogue AH CHOU est identifié par un <strong>code interne à 6 chiffres</strong>
+      et classé dans une catégorie à 2 niveaux. Voici la structure complète.
+    </p>
+
+    <!-- Identifiant produit -->
+    <div class="s3-card">
+      <div class="s3-card-header">
+        <div class="s3-card-icon sale">🏷️</div>
+        <div class="s3-card-title">Identification du produit</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="dlc-table" style="font-size:0.88rem;">
+          <thead><tr><th>Champ</th><th>Description</th><th>Exemple</th></tr></thead>
+          <tbody>
+            <tr><td><code>default_code</code></td><td>Code interne (référence unique)</td><td><strong>000025</strong></td></tr>
+            <tr><td><code>name</code></td><td>Nom du produit</td><td>Tête de rouge vielle ananas Inde PNE 1Kg</td></tr>
+            <tr><td><code>barcode</code></td><td>Code-barres EAN (unique par fiche)</td><td>3456470202432</td></tr>
+            <tr><td><code>x_gencod</code></td><td>Gencod EAN (peut être partagé entre variantes)</td><td>3456470202432</td></tr>
+            <tr><td><code>x_code_interne</code></td><td>Code interne historique</td><td>000025</td></tr>
+            <tr><td><code>categ_id</code></td><td>Catégorie (2 niveaux)</td><td>PECHE / POISSON</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Catégories -->
+    <div style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin:1rem 0;">
+      <h4 style="color:var(--primary);margin:0 0 0.75rem;">Arborescence des catégories produit</h4>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
+        <div>
+          <div style="font-weight:700;color:#1e40af;margin-bottom:0.3rem;">🐟 PECHE</div>
+          <ul style="margin:0 0 0 1rem;font-size:0.88rem;line-height:1.8;">
+            <li>PECHE / POISSON</li>
+            <li>PECHE / CRUSTACE</li>
+            <li>PECHE / MOLLUSQUE</li>
+            <li>PECHE / AUTRE</li>
+          </ul>
+        </div>
+        <div>
+          <div style="font-weight:700;color:#059669;margin-bottom:0.3rem;">🥟 ENTREES</div>
+          <ul style="margin:0 0 0 1rem;font-size:0.88rem;line-height:1.8;">
+            <li>ENTREES / POISSON</li>
+            <li>ENTREES / CRUSTACE</li>
+            <li>ENTREES / MOLLUSQUE</li>
+            <li>ENTREES / NATURE</li>
+            <li>ENTREES / AUTRE</li>
+          </ul>
+        </div>
+        <div>
+          <div style="font-weight:700;color:#d97706;margin-bottom:0.3rem;">🌶️ CONDIMENTS</div>
+          <ul style="margin:0 0 0 1rem;font-size:0.88rem;line-height:1.8;">
+            <li>CONDIMENTS / LEGUME</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Champs caractéristiques -->
+    <div class="s3-card">
+      <div class="s3-card-header">
+        <div class="s3-card-icon stock">📦</div>
+        <div class="s3-card-title">Caractéristiques produit</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="dlc-table" style="font-size:0.88rem;">
+          <thead><tr><th>Champ</th><th>Description</th><th>Exemple</th></tr></thead>
+          <tbody>
+            <tr><td><code>x_origine</code></td><td>Pays d'origine</td><td>Vietnam, Inde, Indonésie</td></tr>
+            <tr><td><code>x_conditionnement</code></td><td>Poids net du conditionnement (kg)</td><td>0.4, 1.0, 10.0</td></tr>
+            <tr><td><code>x_poids_brut</code></td><td>Poids brut du carton (kg)</td><td>10.5</td></tr>
+            <tr><td><code>x_contenu</code></td><td>Nombre d'unités par carton</td><td>25</td></tr>
+            <tr><td><code>x_marque</code></td><td>Marque commerciale</td><td>AH CHOU, OCEAN GEMS</td></tr>
+            <tr><td><code>x_nom_long</code></td><td>Désignation longue complète</td><td>Crevette décortiquée 21/30...</td></tr>
+            <tr><td><code>x_nom_scientifique</code></td><td>Nom scientifique de l'espèce</td><td>Penaeus vannamei</td></tr>
+            <tr><td><code>x_zone_peche</code></td><td>Zone de pêche FAO</td><td>Zone 57, Zone 71</td></tr>
+            <tr><td><code>x_segment</code></td><td>Segment commercial</td><td>CREVETTES, POISSONS, BEIGNETS</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Champs prix & coût -->
+    <div class="s3-card">
+      <div class="s3-card-header">
+        <div class="s3-card-icon inv">💰</div>
+        <div class="s3-card-title">Prix &amp; Coût</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="dlc-table" style="font-size:0.88rem;">
+          <thead><tr><th>Champ</th><th>Description</th><th>Remplissage</th></tr></thead>
+          <tbody>
+            <tr><td><code>standard_price</code></td><td>Prix de revient (coût d'achat)</td><td>100 %</td></tr>
+            <tr><td><code>x_coef_approche</code></td><td>Coefficient d'approche (frais import, transport)</td><td>76 %</td></tr>
+            <tr><td><code>x_prmup</code></td><td>PRMUP — Prix de revient majoré unitaire pondéré</td><td>83 %</td></tr>
+            <tr><td><code>x_pv_ttc</code></td><td>Prix de vente TTC catalogue</td><td>98 %</td></tr>
+            <tr><td><code>x_tarif_t1_ht</code></td><td>Tarif HT niveau 1 (catalogue)</td><td>86 %</td></tr>
+            <tr><td><code>x_tarif_t3_ht</code></td><td>Tarif HT niveau 3 (grossiste)</td><td>81 %</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="info-box info" style="margin-top:0.75rem;">
+        <span class="box-icon">ℹ️</span>
+        <p>Les <strong>7 listes de prix</strong> (Catalogue, Hyper, Super, Grossiste, Plateforme, CHR, Partenaire) sont calculées automatiquement à partir du prix de revient. Les champs x_tarif_t2/t4/t5/t6 sont obsolètes et ne sont plus utilisés.</p>
+      </div>
+    </div>
+
+    <!-- Paramètres techniques -->
+    <div class="s3-card">
+      <div class="s3-card-header">
+        <div class="s3-card-icon" style="background:#f3e8ff;color:#6b21a8;">⚙️</div>
+        <div class="s3-card-title">Paramètres techniques (tous produits)</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="dlc-table" style="font-size:0.88rem;">
+          <thead><tr><th>Paramètre</th><th>Valeur</th><th>Signification</th></tr></thead>
+          <tbody>
+            <tr><td><code>type</code></td><td><code>consu</code></td><td>Produit stockable consommable</td></tr>
+            <tr><td><code>tracking</code></td><td><code>lot</code></td><td>Suivi par numéro de lot obligatoire</td></tr>
+            <tr><td><code>use_expiration_date</code></td><td><code>true</code></td><td>Date de péremption (DLC) obligatoire</td></tr>
+            <tr><td><code>uom_id</code></td><td>Unité(s)</td><td>Unité de mesure standard</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ VARIANTES PRODUIT ═══ -->
+    <div style="background:linear-gradient(135deg,#fdf2f8,#fce7f3);border:2px solid #ec4899;border-radius:12px;padding:1.5rem;margin:2rem 0;">
+      <h4 style="color:#be185d;margin:0 0 1rem;font-size:1.15rem;">🔀 Variantes produit — 1 Gencod = plusieurs fiches</h4>
+
+      <p style="font-size:0.92rem;margin-bottom:1rem;">
+        Certains produits AH CHOU partagent le <strong>même code Gencod (EAN)</strong> mais sont déclinés
+        par <strong>origine géographique</strong>. C'est le cas de <strong>23 groupes de produits</strong>.
+      </p>
+
+      <div style="background:#fff;border-radius:8px;padding:1rem;margin-bottom:1rem;">
+        <h5 style="color:#be185d;margin:0 0 0.5rem;">Fonctionnellement</h5>
+        <p style="font-size:0.9rem;margin:0;">
+          Un même produit (ex: Carri de daurade PNE 360g) peut provenir du <strong>Vietnam</strong> ou d'<strong>Indonésie</strong>.
+          Le Gencod est identique car c'est le même produit commercial, mais Odoo a besoin de fiches distinctes
+          pour gérer les <strong>origines, coûts et traçabilité</strong> séparément.
+        </p>
+      </div>
+
+      <div style="background:#fff;border-radius:8px;padding:1rem;margin-bottom:1rem;">
+        <h5 style="color:#be185d;margin:0 0 0.5rem;">Techniquement dans Odoo</h5>
+        <ul style="margin:0;padding:0 0 0 1.2rem;font-size:0.9rem;line-height:1.7;">
+          <li>L'attribut de variante <strong>« Origine »</strong> est configuré sur le produit template</li>
+          <li>Chaque origine crée un <code>product.product</code> distinct (variante)</li>
+          <li>Le champ <code>x_gencod</code> conserve le code EAN commun pour référence commerciale</li>
+          <li>Le champ <code>barcode</code> est unique par variante (seule la fiche principale le porte)</li>
+          <li>Chaque variante a son propre <strong>stock, lot et prix de revient</strong></li>
+        </ul>
+      </div>
+
+      <div style="background:#fff;border-radius:8px;padding:1rem;">
+        <h5 style="color:#be185d;margin:0 0 0.5rem;">Exemple concret</h5>
+        <div style="overflow-x:auto;">
+          <table class="dlc-table" style="font-size:0.85rem;margin:0;">
+            <thead><tr><th>Code</th><th>Produit</th><th>x_gencod</th><th>barcode</th></tr></thead>
+            <tbody>
+              <tr><td>203155</td><td>Carri de daurade <strong>Indonésie</strong> PNE 360g</td><td>3456470203156</td><td>3456470203156</td></tr>
+              <tr><td>203156</td><td>Carri de daurade <strong>Vietnam</strong> PNE 360G</td><td>3456470203156</td><td><em>(vide)</em></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="font-size:0.85rem;color:#666;margin:0.5rem 0 0;">
+          Même Gencod <code>3456470203156</code>, mais 2 fiches produit avec origines et coûts différents.
+        </p>
+      </div>
+    </div>
+
+    <!-- ═══ 5.2 NOMENCLATURE CLIENTS ═══ -->
+    <h3 id="s5-2" style="font-size:1.35rem;color:var(--primary);margin:2.5rem 0 1rem;border-bottom:2px solid var(--primary);padding-bottom:0.5rem;">5.2 Base Clients</h3>
+
+    <p style="margin-bottom:1rem;color:#555;font-size:.95rem;">
+      Les clients sont des <strong>sociétés</strong> (is_company = true) identifiées par un code de référence unique.
+    </p>
+
+    <div class="s3-card">
+      <div class="s3-card-header">
+        <div class="s3-card-icon sale">👥</div>
+        <div class="s3-card-title">Structure fiche client</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="dlc-table" style="font-size:0.88rem;">
+          <thead><tr><th>Champ</th><th>Description</th><th>Exemple</th></tr></thead>
+          <tbody>
+            <tr><td><code>name</code></td><td>Raison sociale</td><td>DISTRINOV</td></tr>
+            <tr><td><code>ref</code></td><td>Code client (référence unique)</td><td>01DISNOV</td></tr>
+            <tr><td><code>street</code></td><td>Adresse</td><td>12 rue des Lilas</td></tr>
+            <tr><td><code>city</code></td><td>Ville</td><td>Saint-Denis</td></tr>
+            <tr><td><code>zip</code></td><td>Code postal</td><td>97400</td></tr>
+            <tr><td><code>phone</code></td><td>Téléphone</td><td>0262 12 34 56</td></tr>
+            <tr><td><code>email</code></td><td>Email principal</td><td>contact@distrinov.re</td></tr>
+            <tr><td><code>property_product_pricelist</code></td><td>Liste de prix assignée</td><td>Tarif Supermarchés (EUR)</td></tr>
+            <tr><td><code>property_payment_term_id</code></td><td>Conditions de paiement</td><td>Immédiat, 30 jours</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="s3-card">
+      <div class="s3-card-header">
+        <div class="s3-card-icon" style="background:#f3e8ff;color:#6b21a8;">🏷️</div>
+        <div class="s3-card-title">Champs personnalisés client</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="dlc-table" style="font-size:0.88rem;">
+          <thead><tr><th>Champ</th><th>Description</th><th>Valeurs possibles</th></tr></thead>
+          <tbody>
+            <tr><td><code>x_groupe_client</code></td><td>Groupe commercial du client</td><td>(sélection)</td></tr>
+            <tr><td><code>x_enseigne</code></td><td>Enseigne commerciale</td><td>(sélection)</td></tr>
+            <tr><td><code>x_typologie</code></td><td>Typologie du client</td><td>(sélection)</td></tr>
+            <tr><td><code>x_groupe_facturation</code></td><td>Mode de facturation</td><td>UNE FACTURE 1 BL, PLUSIEURS BL UNE FACTURE</td></tr>
+            <tr><td><code>x_blocage</code></td><td>Blocage de commande</td><td>(sélection)</td></tr>
+            <tr><td><code>x_taux_remise</code></td><td>Taux de remise spécifique (%)</td><td>5.0, 10.0</td></tr>
+            <tr><td><code>x_taux_rfa</code></td><td>Taux RFA (%)</td><td>2.0</td></tr>
+            <tr><td><code>x_compte_comptable</code></td><td>N° de compte comptable</td><td>411000</td></tr>
+            <tr><td><code>x_email_compta</code></td><td>Email du service comptabilité</td><td>compta@client.re</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ 5.3 NOMENCLATURE FOURNISSEURS ═══ -->
+    <h3 id="s5-3" style="font-size:1.35rem;color:var(--primary);margin:2.5rem 0 1rem;border-bottom:2px solid var(--primary);padding-bottom:0.5rem;">5.3 Base Fournisseurs (70 fournisseurs)</h3>
+
+    <p style="margin-bottom:1rem;color:#555;font-size:.95rem;">
+      Les fournisseurs sont des <strong>sociétés</strong> identifiées par un code court et classées par tag géographique.
+    </p>
+
+    <div class="s3-card">
+      <div class="s3-card-header">
+        <div class="s3-card-icon stock">🏭</div>
+        <div class="s3-card-title">Structure fiche fournisseur</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="dlc-table" style="font-size:0.88rem;">
+          <thead><tr><th>Champ</th><th>Description</th><th>Exemple</th></tr></thead>
+          <tbody>
+            <tr><td><code>name</code></td><td>Raison sociale</td><td>CORAL EXPORTS</td></tr>
+            <tr><td><code>ref</code></td><td>Code fournisseur (référence courte)</td><td>CORAL</td></tr>
+            <tr><td><code>country_id</code></td><td>Pays</td><td>Inde, Vietnam, France</td></tr>
+            <tr><td><code>phone</code></td><td>Téléphone</td><td>+91 44 1234 5678</td></tr>
+            <tr><td><code>email</code></td><td>Email</td><td>export@coral.com</td></tr>
+            <tr><td><code>category_id</code></td><td>Tag (étiquette)</td><td>Fournisseur</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="s3-card">
+      <div class="s3-card-header">
+        <div class="s3-card-icon" style="background:#f3e8ff;color:#6b21a8;">🏷️</div>
+        <div class="s3-card-title">Champs personnalisés fournisseur</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="dlc-table" style="font-size:0.88rem;">
+          <thead><tr><th>Champ</th><th>Description</th><th>Valeurs possibles</th></tr></thead>
+          <tbody>
+            <tr><td><code>x_groupe_fournisseur</code></td><td>Groupe fournisseur</td><td>(sélection)</td></tr>
+            <tr><td><code>x_studio_grp_frs</code></td><td>Groupe fournisseur (Studio)</td><td>(sélection)</td></tr>
+            <tr><td><code>x_conditions_achat</code></td><td>Conditions d'achat</td><td>FOB, CIF, EXW</td></tr>
+            <tr><td><code>x_incoterm</code></td><td>Incoterm par défaut</td><td>FOB</td></tr>
+            <tr><td><code>x_delai_livraison</code></td><td>Délai de livraison (jours)</td><td>45, 60, 90</td></tr>
+            <tr><td><code>x_is_transitaire</code></td><td>Est un transitaire</td><td>Oui / Non</td></tr>
+            <tr><td><code>x_numero_client_chez_frs</code></td><td>N° de client chez le fournisseur</td><td>AHC-001</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ 5.4 TRAMES D'IMPORT ═══ -->
+    <h3 id="s5-4" style="font-size:1.35rem;color:var(--primary);margin:2.5rem 0 1rem;border-bottom:2px solid var(--primary);padding-bottom:0.5rem;">5.4 Trames d'import (téléchargement)</h3>
+
+    <p style="margin-bottom:1rem;color:#555;font-size:.95rem;">
+      Pour ajouter de nouvelles données dans Odoo, téléchargez les trames ci-dessous.
+      Chaque fichier contient <strong>des exemples pré-remplis</strong> avec les données actuelles.
+      Complétez-les et transmettez-les à l'administrateur pour import.
+    </p>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin:1.5rem 0;">
+      <!-- Trame Produits -->
+      <div style="background:#fff;border:2px solid var(--primary);border-radius:12px;padding:1.25rem;text-align:center;">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">📦</div>
+        <h4 style="color:var(--primary);margin:0 0 0.5rem;">Produits</h4>
+        <p style="font-size:0.85rem;color:#666;margin-bottom:1rem;">330 articles — 5 exemples pré-remplis</p>
+        <a href="downloads/trame_import_produits.csv" download
+           style="display:inline-block;background:var(--primary);color:#fff;padding:0.5rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:600;font-size:0.9rem;">
+          ⬇️ Télécharger CSV
+        </a>
+      </div>
+
+      <!-- Trame Clients -->
+      <div style="background:#fff;border:2px solid #059669;border-radius:12px;padding:1.25rem;text-align:center;">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">👥</div>
+        <h4 style="color:#059669;margin:0 0 0.5rem;">Clients</h4>
+        <p style="font-size:0.85rem;color:#666;margin-bottom:1rem;">Sociétés clientes — 5 exemples</p>
+        <a href="downloads/trame_import_clients.csv" download
+           style="display:inline-block;background:#059669;color:#fff;padding:0.5rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:600;font-size:0.9rem;">
+          ⬇️ Télécharger CSV
+        </a>
+      </div>
+
+      <!-- Trame Contacts -->
+      <div style="background:#fff;border:2px solid #d97706;border-radius:12px;padding:1.25rem;text-align:center;">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">👤</div>
+        <h4 style="color:#d97706;margin:0 0 0.5rem;">Contacts</h4>
+        <p style="font-size:0.85rem;color:#666;margin-bottom:1rem;">Personnes rattachées aux sociétés</p>
+        <a href="downloads/trame_import_contacts.csv" download
+           style="display:inline-block;background:#d97706;color:#fff;padding:0.5rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:600;font-size:0.9rem;">
+          ⬇️ Télécharger CSV
+        </a>
+      </div>
+
+      <!-- Trame Fournisseurs -->
+      <div style="background:#fff;border:2px solid #be185d;border-radius:12px;padding:1.25rem;text-align:center;">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">🏭</div>
+        <h4 style="color:#be185d;margin:0 0 0.5rem;">Fournisseurs</h4>
+        <p style="font-size:0.85rem;color:#666;margin-bottom:1rem;">70 fournisseurs — 5 exemples</p>
+        <a href="downloads/trame_import_fournisseurs.csv" download
+           style="display:inline-block;background:#be185d;color:#fff;padding:0.5rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:600;font-size:0.9rem;">
+          ⬇️ Télécharger CSV
+        </a>
+      </div>
+    </div>
+
+    <div class="info-box tip">
+      <span class="box-icon">💡</span>
+      <p><strong>Format des fichiers</strong> — Les trames sont au format CSV (séparateur point-virgule, encodage UTF-8). Elles s'ouvrent directement dans Excel ou LibreOffice Calc. Conservez les en-têtes de colonnes intacts lors du remplissage.</p>
+    </div>
+
+    <div class="info-box warning">
+      <span class="box-icon">⚠️</span>
+      <p><strong>Avant tout import</strong> — Transmettez les fichiers complétés à l'administrateur. L'import sera effectué dans Odoo via <code>Favoris → Importer des enregistrements</code>. Ne modifiez pas les noms de colonnes.</p>
+    </div>
+
+  </div>
+
   <!-- ═══════════════ FOOTER ═══════════════ -->
   <footer class="guide-footer">
     <p><strong>AH CHOU</strong> — Guide utilisateur Odoo</p>
     <p>Produits surgelés de la mer — La Réunion</p>
-    <p style="margin-top:0.5rem;font-size:0.78rem;">Document généré le 11 mars 2026 — Version 1.0</p>
+    <p style="margin-top:0.5rem;font-size:0.78rem;">Document généré le 11 mars 2026 — Version 1.1</p>
   </footer>
 
 </body>
