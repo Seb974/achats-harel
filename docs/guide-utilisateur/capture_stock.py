@@ -25,21 +25,29 @@ async def main():
         await page.wait_for_load_state("domcontentloaded")
         await asyncio.sleep(5)
 
-        # Stock report
-        print("Navigating to stock report...")
-        await page.goto(f"{ODOO_URL}/odoo/stock-report")
+        # Inventory overview (operations: receipts, internal transfers, deliveries)
+        print("Navigating to inventory overview...")
+        await page.goto(f"{ODOO_URL}/odoo/inventory")
         await page.wait_for_load_state("domcontentloaded")
         await asyncio.sleep(4)
-        await page.screenshot(path=str(SCREENSHOTS_DIR / "09_odoo_stock_report.png"), full_page=True)
-        print("  -> 09_odoo_stock_report.png")
+        await page.screenshot(path=str(SCREENSHOTS_DIR / "14_odoo_inventory_operations.png"), full_page=True)
+        print("  -> 14_odoo_inventory_operations.png")
 
-        # Lots / Serial Numbers
-        print("Navigating to lots...")
-        await page.goto(f"{ODOO_URL}/odoo/inventory/products/lots")
+        # Delivery orders (bons de livraison)
+        print("Navigating to delivery orders...")
+        await page.goto(f"{ODOO_URL}/odoo/inventory/delivery-orders")
         await page.wait_for_load_state("domcontentloaded")
         await asyncio.sleep(4)
-        await page.screenshot(path=str(SCREENSHOTS_DIR / "12_odoo_lots_liste.png"), full_page=True)
-        print("  -> 12_odoo_lots_liste.png")
+        await page.screenshot(path=str(SCREENSHOTS_DIR / "15_odoo_delivery_orders.png"), full_page=True)
+        print("  -> 15_odoo_delivery_orders.png")
+
+        # Internal transfers
+        print("Navigating to internal transfers...")
+        await page.goto(f"{ODOO_URL}/odoo/inventory/internal-transfers")
+        await page.wait_for_load_state("domcontentloaded")
+        await asyncio.sleep(4)
+        await page.screenshot(path=str(SCREENSHOTS_DIR / "16_odoo_internal_transfers.png"), full_page=True)
+        print("  -> 16_odoo_internal_transfers.png")
 
         print("\nDone!")
         await asyncio.sleep(2)

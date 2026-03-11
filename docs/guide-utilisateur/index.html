@@ -1317,7 +1317,9 @@
         <span class="s3-flow-arrow">→</span>
         <div class="flow-node order">✅ Commande</div>
         <span class="s3-flow-arrow">→</span>
-        <div class="flow-node delivery">🚚 Bon de livraison</div>
+        <div class="flow-node" style="background:#f3e8ff;border-color:#a855f7;color:#6b21a8;">🛒 Pick</div>
+        <span class="s3-flow-arrow">→</span>
+        <div class="flow-node delivery">🚚 Livraison (BL)</div>
         <span class="s3-flow-arrow">→</span>
         <div class="flow-node invoice">🧾 Facture</div>
         <span class="s3-flow-arrow">→</span>
@@ -1340,7 +1342,7 @@
 
     <div class="info-box info">
       <span class="box-icon">ℹ️</span>
-      <p><strong>Flux de stock associé :</strong> CONGÉLATEUR → PICKING → EXPÉDITION → Client. Ce flux est déclenché automatiquement par la confirmation de commande.</p>
+      <p><strong>Flux de stock associé (picking) :</strong> CONGÉLATEUR → <strong>PICKING</strong> (préparation) → <strong>EXPÉDITION</strong> (chargement) → Client (BL signé). Ce flux est déclenché automatiquement par la confirmation de commande. Voir détails en section 3.2.</p>
     </div>
 
     <!-- 3.1 CRÉER UNE COMMANDE -->
@@ -1390,30 +1392,145 @@
       <div class="caption">Liste des commandes de vente dans Odoo</div>
     </div>
 
-    <!-- 3.2 PRÉPARER LA LIVRAISON -->
-    <h3 id="s3-2" style="font-size:1.35rem;color:var(--primary);margin:2.5rem 0 1rem;border-bottom:2px solid var(--primary);padding-bottom:0.5rem;">3.2 Préparer la livraison (Bon de Livraison)</h3>
+    <!-- 3.2 PRÉPARER ET LIVRER — FLUX DE PICKING COMPLET -->
+    <h3 id="s3-2" style="font-size:1.35rem;color:var(--primary);margin:2.5rem 0 1rem;border-bottom:2px solid var(--primary);padding-bottom:0.5rem;">3.2 Préparer et livrer — Flux de Picking</h3>
 
-    <div class="s3-card">
+    <p style="margin-bottom:1rem;color:#555;font-size:.95rem;">
+      Lorsqu'une commande client est confirmée, Odoo déclenche automatiquement le flux logistique de préparation et livraison.
+      Ce flux passe par <strong>3 zones physiques</strong> successives avant d'arriver chez le client :
+    </p>
+
+    <!-- Schéma visuel du flux picking -->
+    <div style="background:linear-gradient(135deg,#f0f4f8,#e8eef5);border-radius:12px;padding:1.5rem;margin:1.5rem 0;border:1px solid var(--border);">
+      <h4 style="text-align:center;color:var(--primary);margin:0 0 1rem;">Flux physique de la marchandise</h4>
+      <div style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:0.5rem;font-size:0.9rem;">
+        <div style="background:#dbeafe;border:2px solid #3b82f6;border-radius:10px;padding:0.6rem 1rem;text-align:center;font-weight:600;color:#1e40af;">
+          ❄️ Congélateur<br><small style="font-weight:400;opacity:0.7;">CONGELATEUR 1/2/3</small>
+        </div>
+        <div style="font-size:1.5rem;color:var(--primary);font-weight:700;">→</div>
+        <div style="background:#f3e8ff;border:2px solid #a855f7;border-radius:10px;padding:0.6rem 1rem;text-align:center;font-weight:600;color:#6b21a8;">
+          🛒 Picking<br><small style="font-weight:400;opacity:0.7;">WH/Stock/PICKING</small>
+        </div>
+        <div style="font-size:1.5rem;color:var(--primary);font-weight:700;">→</div>
+        <div style="background:#fef3c7;border:2px solid #f59e0b;border-radius:10px;padding:0.6rem 1rem;text-align:center;font-weight:600;color:#92400e;">
+          📤 Expédition<br><small style="font-weight:400;opacity:0.7;">WH/EXPEDITION</small>
+        </div>
+        <div style="font-size:1.5rem;color:var(--primary);font-weight:700;">→</div>
+        <div style="background:#d1fae5;border:2px solid #10b981;border-radius:10px;padding:0.6rem 1rem;text-align:center;font-weight:600;color:#065f46;">
+          🚚 Client<br><small style="font-weight:400;opacity:0.7;">Livré + BL signé</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vue d'ensemble opérations -->
+    <div class="screenshot-container">
+      <img src="images/14_odoo_inventory_operations.png" alt="Vue d'ensemble des opérations Inventaire — Réceptions, Transferts internes, Bons de livraison">
+      <div class="caption">Vue d'ensemble des opérations : Réceptions, Transferts internes (picking), Bons de livraison</div>
+    </div>
+
+    <!-- ÉTAPE 1 : PRÉPARATION (PICK) -->
+    <div class="s3-card" style="border-left:4px solid #a855f7;">
       <div class="s3-card-header">
-        <div class="s3-card-icon stock">🚚</div>
-        <div class="s3-card-title">Traitement du bon de livraison (BL)</div>
+        <div class="s3-card-icon" style="background:#f3e8ff;color:#6b21a8;">🛒</div>
+        <div class="s3-card-title">Étape 1 — Préparation de commande (Pick)</div>
+      </div>
+      <div style="overflow-x:auto;margin-bottom:1rem;">
+        <table class="dlc-table" style="font-size:0.88rem;">
+          <tbody>
+            <tr><td style="width:30%;font-weight:600;">Qui</td><td>Préparateur / magasinier</td></tr>
+            <tr><td style="font-weight:600;">Où dans Odoo</td><td><code>Inventaire → Opérations → Transferts internes</code></td></tr>
+            <tr><td style="font-weight:600;">Mouvement stock</td><td>CONGELATEUR 1/2/3 → <strong>WH/Stock/PICKING</strong></td></tr>
+            <tr><td style="font-weight:600;">Document Odoo</td><td><code>stock.picking</code> (type : Pick / Transfert interne)</td></tr>
+          </tbody>
+        </table>
       </div>
       <ol class="s3-steps">
-        <li><div class="s3-step-num"></div><div>Accédez à <span class="nav-path">Inventaire <span class="sep">→</span> Transferts <span class="sep">→</span> Bons de livraison</span>.</div></li>
-        <li><div class="s3-step-num"></div><div><strong>Ouvrez le BL</strong> correspondant à la commande confirmée. Vous pouvez filtrer par client, date ou numéro de commande.</div></li>
-        <li><div class="s3-step-num"></div><div><strong>Vérifiez les quantités et les lots</strong>. Odoo applique la règle <strong>FEFO</strong> : les lots avec la date de péremption la plus proche sont proposés en priorité.</div></li>
-        <li><div class="s3-step-num"></div><div>Cliquez sur <strong>Valider</strong> pour confirmer la livraison. Le stock est automatiquement déduit.</div></li>
+        <li><div class="s3-step-num"></div><div>Accédez à <span class="nav-path">Inventaire <span class="sep">→</span> Opérations <span class="sep">→</span> Transferts internes</span>. Ouvrez le bon de préparation assigné à la tournée du jour.</div></li>
+        <li><div class="s3-step-num"></div><div>Pour chaque ligne de produit, <strong>sélectionnez le lot</strong>. Odoo propose automatiquement le lot avec la <strong>date de péremption la plus proche</strong> (stratégie FEFO — First Expired, First Out).</div></li>
+        <li><div class="s3-step-num"></div><div><strong>Vérifiez les quantités</strong> à prélever. Si un produit est en rupture, vous pouvez ajuster la quantité (Odoo créera un reliquat).</div></li>
+        <li><div class="s3-step-num"></div><div>Cliquez sur <strong>Valider</strong> pour confirmer le picking. Le stock est <strong>décrémenté du congélateur</strong> et déplacé vers la <strong>zone PICKING</strong>.</div></li>
+      </ol>
+      <div class="info-box tip" style="margin-top:1rem;">
+        <span class="box-icon">💡</span>
+        <p><strong>FEFO automatique</strong> — Odoo propose les lots par date d'expiration croissante (le plus proche de la péremption en premier). Le préparateur peut ajuster si nécessaire, mais la suggestion garantit la conformité réglementaire.</p>
+      </div>
+    </div>
+
+    <!-- ÉTAPE 2 : LIVRAISON (SHIP) -->
+    <div class="s3-card" style="border-left:4px solid #f59e0b;">
+      <div class="s3-card-header">
+        <div class="s3-card-icon" style="background:#fef3c7;color:#92400e;">🚚</div>
+        <div class="s3-card-title">Étape 2 — Livraison (Ship) &amp; Bon de Livraison</div>
+      </div>
+      <div style="overflow-x:auto;margin-bottom:1rem;">
+        <table class="dlc-table" style="font-size:0.88rem;">
+          <tbody>
+            <tr><td style="width:30%;font-weight:600;">Qui</td><td>Chauffeur / livreur</td></tr>
+            <tr><td style="font-weight:600;">Où dans Odoo</td><td><code>Inventaire → Opérations → Bons de livraison</code></td></tr>
+            <tr><td style="font-weight:600;">Mouvement stock</td><td>WH/EXPEDITION → <strong>Clients</strong> (sortie de stock définitive)</td></tr>
+            <tr><td style="font-weight:600;">Document Odoo</td><td><code>stock.picking</code> (type : Ship) → BL papier imprimé</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ol class="s3-steps">
+        <li><div class="s3-step-num"></div><div>Accédez à <span class="nav-path">Inventaire <span class="sep">→</span> Opérations <span class="sep">→</span> Bons de livraison</span>. Ouvrez le BL correspondant à la commande.</div></li>
+        <li><div class="s3-step-num"></div><div><strong>Imprimez le BL</strong> depuis Odoo (bouton « Imprimer → Bon de livraison »). Ce document accompagne la marchandise.</div></li>
+        <li><div class="s3-step-num"></div><div><strong>Chargez le camion</strong> selon la tournée du jour.</div></li>
+        <li><div class="s3-step-num"></div><div><strong>Livrez le client</strong> et faites <strong>signer le BL papier</strong>.</div></li>
+        <li><div class="s3-step-num"></div><div>Au retour, <strong>validez le picking dans Odoo</strong>. Le stock est définitivement sorti. La commande est marquée « Livré ».</div></li>
       </ol>
     </div>
 
-    <div class="info-box warning">
-      <span class="box-icon">⚠️</span>
-      <p><strong>Livraisons partielles (Backorders)</strong><br>Si le stock disponible ne couvre pas la totalité de la commande, Odoo propose de créer un <strong>reliquat</strong>. Un second BL sera généré automatiquement pour les quantités restantes.</p>
+    <!-- Résumé des 3 opérations -->
+    <div style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin:1.5rem 0;">
+      <h4 style="color:var(--primary);margin:0 0 0.75rem;">Récapitulatif des opérations de stock liées à une vente</h4>
+      <div style="overflow-x:auto;">
+        <table class="dlc-table" style="font-size:0.88rem;">
+          <thead>
+            <tr>
+              <th>Opération</th>
+              <th>De</th>
+              <th>Vers</th>
+              <th>Responsable</th>
+              <th>Dans Odoo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="s3-badge" style="background:#f3e8ff;color:#6b21a8;">Pick</span></td>
+              <td>Congélateur</td>
+              <td>PICKING</td>
+              <td>Magasinier</td>
+              <td>Transferts internes</td>
+            </tr>
+            <tr>
+              <td><span class="s3-badge" style="background:#fef3c7;color:#92400e;">Ship</span></td>
+              <td>EXPEDITION</td>
+              <td>Client</td>
+              <td>Livreur</td>
+              <td>Bons de livraison</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
+    <!-- Livraisons partielles -->
+    <div class="info-box warning">
+      <span class="box-icon">⚠️</span>
+      <p><strong>Livraisons partielles (Backorders)</strong><br>Si le stock disponible ne couvre pas la totalité de la commande, Odoo propose de créer un <strong>reliquat</strong>. Un second BL sera généré automatiquement pour les quantités restantes, livrable lors de la prochaine tournée.</p>
+    </div>
+
+    <!-- Tournées -->
     <div class="info-box info">
       <span class="box-icon">ℹ️</span>
       <p><strong>Tournées de livraison</strong><br>Les livraisons sont organisées par zone (<code>x_zone_livraison</code>), jour (<code>x_jour_livraison</code>) et tournée (<code>x_tournee</code>). L'entrepôt effectue en moyenne <strong>2 à 3 tournées par jour</strong>.</p>
+    </div>
+
+    <!-- Lot obligatoire au picking -->
+    <div class="info-box danger">
+      <span class="box-icon">🚨</span>
+      <p><strong>Lot obligatoire</strong><br>Tous les 299 produits surgelés AH CHOU sont suivis par lot. Lors de la préparation (Pick), le lot doit être renseigné. Odoo le propose automatiquement via FEFO, mais le préparateur doit valider la sélection.</p>
     </div>
 
     <!-- 3.3 FACTURER -->
