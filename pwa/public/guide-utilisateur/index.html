@@ -960,9 +960,64 @@
     </div>
 
     <p style="margin-bottom:18px; color:#555; font-size:.95rem;">
-      Il existe trois façons de consulter votre stock dans Odoo, selon le niveau de détail souhaité.
+      Il existe plusieurs façons de consulter votre stock dans Odoo, selon le niveau de détail souhaité.
     </p>
 
+    <!-- Rapport de stock complet -->
+    <div class="s2-card" style="border-left:4px solid var(--primary);">
+      <h4>Vue d'ensemble du stock (Rapport d'inventaire)</h4>
+      <p>
+        Accédez à <code>Inventaire</code> → <code>Analyse</code> → <code>Stock</code>
+        ou directement via l'URL : <code>/odoo/stock-report</code>
+      </p>
+      <p style="margin-top:8px;">
+        Cette vue affiche <strong>l'ensemble des 347 produits</strong> avec pour chacun :
+      </p>
+      <div style="overflow-x:auto;margin:0.75rem 0;">
+        <table class="dlc-table" style="font-size:0.88rem;">
+          <thead>
+            <tr>
+              <th>Colonne</th>
+              <th>Signification</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Coût unitaire</strong></td><td>Prix de revient du produit (PR)</td></tr>
+            <tr><td><strong>Valeur totale</strong></td><td>Coût unitaire × Quantité en stock = valeur du stock</td></tr>
+            <tr><td><strong>Disponible</strong></td><td>Quantité physiquement disponible pour la vente</td></tr>
+            <tr><td><strong>Virtuellement</strong></td><td>Disponible + Entrant - Sortant (stock prévisionnel)</td></tr>
+            <tr><td><strong>Entrant</strong></td><td>Quantités en cours de réception (commandes confirmées)</td></tr>
+            <tr><td><strong>Sortant</strong></td><td>Quantités réservées pour des livraisons à venir</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p style="margin-top:0.5rem;">
+        Le panneau de gauche permet de filtrer par <strong>catégorie de produit</strong> :
+      </p>
+      <ul style="margin:0.5rem 0 0 1.2rem;font-size:0.92rem;">
+        <li><strong>CONDIMENTS</strong> — 4 produits</li>
+        <li><strong>ENTREES</strong> — 27 produits</li>
+        <li><strong>PECHE</strong> — 316 produits</li>
+      </ul>
+
+      <div class="screenshot-container" style="margin-top:1rem;">
+        <img src="images/09_odoo_stock_report.png" alt="Rapport de stock Odoo — vue complète avec 347 produits">
+        <div class="caption">Rapport de stock Odoo — vue complète des 347 produits avec valeurs et quantités</div>
+      </div>
+
+      <div class="s2-box info" style="margin-top:1rem;">
+        <strong>Actions rapides depuis cette vue</strong>
+        Pour chaque produit, des boutons d'action sont disponibles directement sur la ligne :
+        <ul style="margin:0.3rem 0 0 1rem;font-size:0.9rem;">
+          <li><strong>Historique</strong> — voir tous les mouvements de stock du produit</li>
+          <li><strong>Réassort</strong> — lancer une demande de réapprovisionnement</li>
+          <li><strong>Emplacements</strong> — voir la répartition par emplacement (congélateur, picking, etc.)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Par produit -->
     <div class="s2-card">
       <h4>Par produit</h4>
       <p>
@@ -979,6 +1034,7 @@
       </div>
     </div>
 
+    <!-- Par emplacement -->
     <div class="s2-card">
       <h4>Par emplacement</h4>
       <p>
@@ -988,6 +1044,7 @@
       </p>
     </div>
 
+    <!-- Par lot -->
     <div class="s2-card">
       <h4>Par lot / numéro de série</h4>
       <p>
@@ -995,6 +1052,13 @@
         Recherchez un numéro de lot pour voir le produit associé, la date de péremption (DLC),
         la quantité en stock et l'historique des mouvements.
       </p>
+      <p style="margin-top:8px;">
+        Les lots sont regroupés par emplacement pour une vision claire de la répartition :
+      </p>
+      <div class="screenshot-container">
+        <img src="images/12_odoo_lots_liste.png" alt="Liste des lots par emplacement dans Odoo">
+        <div class="caption">Lots / Numéros de série — regroupés par emplacement (WH/Stock, WH/RECEPTION, etc.)</div>
+      </div>
     </div>
 
     <div class="s2-box tip">
@@ -1002,6 +1066,15 @@
       Dans chaque vue, vous pouvez utiliser la barre de recherche en haut pour filtrer
       par nom de produit, référence, lot ou emplacement. Odoo propose aussi des
       <em>« Filtres »</em> et <em>« Regrouper par »</em> pour affiner vos résultats.
+    </div>
+
+    <div class="s2-box info">
+      <strong>Lien direct — Rapport de stock</strong>
+      Accédez directement au rapport complet via :
+      <a href="https://ah-chou1.odoo.com/odoo/stock-report" target="_blank" rel="noopener"
+         style="color:var(--primary);font-weight:600;">
+        ah-chou1.odoo.com/odoo/stock-report
+      </a>
     </div>
 
     <!-- 2.3 EMPLACEMENTS DE STOCKAGE -->
