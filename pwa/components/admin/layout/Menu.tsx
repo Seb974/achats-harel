@@ -13,6 +13,7 @@ import SellIcon from '@mui/icons-material/Sell';
 import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
 import LocalPoliceIcon from '@mui/icons-material/LocalPolice';
 import DirectionsBoatIcon from '@mui/icons-material/DirectionsBoat';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 import { useSessionContext } from "../../admin/SessionContextProvider";
 
 const CustomMenu = () => {
@@ -50,6 +51,14 @@ const CustomMenu = () => {
           to="/taxes"
           primaryText="Taxes"
           leftIcon={<PaymentsIcon />}
+        />
+
+        <MenuItemLink
+          to="/guide-utilisateur/index.html"
+          primaryText="Guide utilisateur"
+          leftIcon={<MenuBookIcon />}
+          target="_blank"
+          rel="noopener"
         />
 
       {/* @ts-ignore */}
