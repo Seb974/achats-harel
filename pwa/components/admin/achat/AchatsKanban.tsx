@@ -500,7 +500,7 @@ export const AchatsKanban = () => {
                         try {
                             const result = await createPurchaseOrder(poData);
                             if (result.success && result.order_id) {
-                                const skippedWarning = result.skipped_lines?.length > 0
+                                const skippedWarning = (result.skipped_lines && result.skipped_lines.length > 0)
                                     ? ` — ⚠️ ${result.skipped_lines.length} ligne(s) ignorée(s)`
                                     : '';
                                 updateStep(stepIdx, { status: 'success', detail: `${result.order_name} (id=${result.order_id})${skippedWarning}` });
