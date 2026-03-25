@@ -1051,6 +1051,13 @@ class OdooDataController extends AbstractController
                 return $this->json(['error' => 'Échec de la suppression'], 500);
             }
 
+            $mediaObject = $this->em->getRepository(MediaObject::class)
+                ->findOneBy(['odooDocumentId' => $id]);
+            if ($mediaObject) {
+                $this->em->remove($mediaObject);
+                $this->em->flush();
+            }
+
             return $this->json(['success' => true]);
 
         } catch (\Throwable $e) {

@@ -622,13 +622,14 @@ export const AchatsEdit = () => {
     });
 
     let odooContext = null;
-    if (isOdoo && achatData?.odooPurchaseOrderName) {
-      const achatDate = achatData.date ? new Date(achatData.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+    if (isOdoo) {
+      const achatDate = achatData?.date ? new Date(achatData.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      const poName = achatData?.odooPurchaseOrderName || `Achat-${achatData?.id || 'nouveau'}`;
       odooContext = {
-        supplierName: achatData.supplier || 'Sans fournisseur',
-        poName: achatData.odooPurchaseOrderName,
+        supplierName: achatData?.supplier || 'Sans fournisseur',
+        poName,
         poDate: achatDate,
-        odooPurchaseOrderId: achatData.odooPurchaseOrderId || null,
+        odooPurchaseOrderId: achatData?.odooPurchaseOrderId || null,
       };
     }
 
@@ -701,9 +702,40 @@ export const AchatsEdit = () => {
     };
   };
 
+  const deleteRemovedOdooDocuments = async (currentDocs, originalDocs) => {
+    if (!isOdoo || !originalDocs?.length) return;
+
+    const currentIds = new Set(
+      (currentDocs || [])
+        .filter(d => d?.['@id'])
+        .map(d => d['@id'])
+    );
+
+    const removed = originalDocs.filter(
+      d => d?.['@id'] && !currentIds.has(d['@id']) && d?.odooDocumentId
+    );
+
+    for (const doc of removed) {
+      try {
+        await fetch(`/odoo/attachment/${doc.odooDocumentId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${session?.accessToken}` },
+        });
+      } catch (err) {
+        console.error('Erreur suppression Odoo:', err);
+      }
+    }
+  };
+
   const transform = async ({documents, ...data}) => {
     //@ts-ignore
     const formattedData = getFormattedData(data);
+
+    const originalRecord = await dataProvider.getOne('achats', { id: data['@id'] || data.id });
+    const originalDocs = originalRecord?.data?.documents || [];
+
+    await deleteRemovedOdooDocuments(documents, originalDocs);
+
     const documentIds = isDefinedAndNotVoid(documents) ? await getDocuments(documents, data) : [];
     return {...formattedData, documents: documentIds};
   };
