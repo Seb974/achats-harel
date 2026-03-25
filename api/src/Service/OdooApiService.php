@@ -1046,6 +1046,129 @@ class OdooApiService
     }
 
     /**
+     * Configure la protection des PO créés par l'app dans Odoo :
+     * 1. Crée les champs custom s'ils n'existent pas
+     * 2. Crée une règle d'accès (ir.rule) bloquant l'écriture sur les PO verrouillés
+     *
+     * L'utilisateur admin (API) contourne les ir.rule et peut toujours synchroniser.
+     */
+    public function setupPurchaseOrderProtection(): array
+    {
+        $result = [
+            'fields_created' => [],
+            'fields_existing' => [],
+            'rule_created' => false,
+            'rule_existing' => false,
+            'errors' => [],
+        ];
+
+        // 1. Créer les champs custom sur purchase.order
+        $poFields = [
+            ['name' => 'x_locked_by_app', 'field_type' => 'boolean', 'field_description' => 'Verrouillé par App Achats'],
+            ['name' => 'x_statut_transit', 'field_type' => 'char', 'field_description' => 'Statut Transit'],
+            ['name' => 'x_devise_achat', 'field_type' => 'char', 'field_description' => 'Devise achat origine'],
+        ];
+        $polFields = [
+            ['name' => 'x_prix_achat_devise', 'field_type' => 'float', 'field_description' => 'Prix unitaire devise origine'],
+            ['name' => 'x_devise_origine', 'field_type' => 'char', 'field_description' => 'Code devise origine'],
+        ];
+
+        $poModelId = $this->getModelId('purchase.order');
+        $polModelId = $this->getModelId('purchase.order.line');
+
+        foreach ($poFields as $f) {
+            $this->ensureCustomField($poModelId, 'purchase.order', $f, $result);
+        }
+        foreach ($polFields as $f) {
+            $this->ensureCustomField($polModelId, 'purchase.order.line', $f, $result);
+        }
+
+        // 2. Créer la règle d'accès ir.rule
+        $ruleName = 'App Achats: PO verrouillés en lecture seule';
+        $existingRules = $this->searchRead('ir.rule', [
+            ['name', '=', $ruleName],
+        ], ['id'], 1);
+
+        if (!empty($existingRules)) {
+            $result['rule_existing'] = true;
+        } else {
+            try {
+                $this->create('ir.rule', [
+                    'name' => $ruleName,
+                    'model_id' => $poModelId,
+                    'domain_force' => "['|', ('x_locked_by_app', '=', False), ('x_locked_by_app', '=', False)]",
+                    'perm_read' => false,
+                    'perm_write' => true,
+                    'perm_create' => false,
+                    'perm_unlink' => true,
+                    'groups' => [], // Vide = s'applique à tous les utilisateurs (sauf admin)
+                ]);
+                $result['rule_created'] = true;
+            } catch (\Throwable $e) {
+                $result['errors'][] = "Création règle: {$e->getMessage()}";
+
+                // Fallback : essayer avec un domain plus simple
+                try {
+                    $this->create('ir.rule', [
+                        'name' => $ruleName,
+                        'model_id' => $poModelId,
+                        'domain_force' => "[('x_locked_by_app', '!=', True)]",
+                        'perm_read' => false,
+                        'perm_write' => true,
+                        'perm_create' => false,
+                        'perm_unlink' => true,
+                    ]);
+                    $result['rule_created'] = true;
+                    array_pop($result['errors']);
+                } catch (\Throwable $e2) {
+                    $result['errors'][] = "Fallback règle: {$e2->getMessage()}";
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    private function getModelId(string $modelName): int
+    {
+        $models = $this->searchRead('ir.model', [
+            ['model', '=', $modelName],
+        ], ['id'], 1);
+
+        if (empty($models)) {
+            throw new \RuntimeException("Modèle Odoo '{$modelName}' non trouvé");
+        }
+
+        return $models[0]['id'];
+    }
+
+    private function ensureCustomField(int $modelId, string $modelName, array $fieldDef, array &$result): void
+    {
+        $existing = $this->searchRead('ir.model.fields', [
+            ['model', '=', $modelName],
+            ['name', '=', $fieldDef['name']],
+        ], ['id'], 1);
+
+        if (!empty($existing)) {
+            $result['fields_existing'][] = "{$modelName}.{$fieldDef['name']}";
+            return;
+        }
+
+        try {
+            $this->create('ir.model.fields', [
+                'model_id' => $modelId,
+                'name' => $fieldDef['name'],
+                'field_description' => $fieldDef['field_description'],
+                'ttype' => $fieldDef['field_type'],
+                'store' => true,
+            ]);
+            $result['fields_created'][] = "{$modelName}.{$fieldDef['name']}";
+        } catch (\Throwable $e) {
+            $result['errors'][] = "Champ {$modelName}.{$fieldDef['name']}: {$e->getMessage()}";
+        }
+    }
+
+    /**
      * Execute an Odoo method, treating "cannot marshal None" errors as success
      */
     private function safeExecute(string $model, string $method, array $args = [], array $kwargs = []): mixed

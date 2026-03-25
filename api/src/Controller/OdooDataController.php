@@ -80,6 +80,34 @@ class OdooDataController extends AbstractController
     }
 
     /**
+     * Configure les protections Odoo : champs custom + règle d'accès sur les PO verrouillés.
+     * À appeler une seule fois pour initialiser la configuration.
+     */
+    #[Route('/setup-protections', name: 'setup_protections', methods: ['POST'])]
+    public function setupProtections(): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $result = $this->odooService->setupPurchaseOrderProtection();
+
+            return $this->json([
+                'success' => true,
+                'result' => $result,
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Failed to setup protections', ['error' => $e->getMessage()]);
+            return $this->json([
+                'error' => 'Erreur lors de la configuration des protections',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Récupère la liste des produits Odoo
      */
     #[Route('/products', name: 'get_products', methods: ['GET'])]
