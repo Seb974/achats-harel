@@ -3,6 +3,7 @@
 namespace App\Serializer;
 
 use App\Entity\MediaObject;
+use App\Service\ClientGetter;
 use Vich\UploaderBundle\Storage\StorageInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
@@ -15,7 +16,8 @@ class MediaObjectNormalizer implements NormalizerInterface
   public function __construct(
     #[Autowire(service: 'api_platform.jsonld.normalizer.item')]
     private readonly NormalizerInterface $normalizer,
-    private readonly StorageInterface $storage
+    private readonly StorageInterface $storage,
+    private readonly ClientGetter $clientGetter
   ) {
   }
 
@@ -24,7 +26,13 @@ class MediaObjectNormalizer implements NormalizerInterface
     $context[self::ALREADY_CALLED] = true;
 
     if ($object->isStoredInOdoo()) {
-      $object->contentUrl = '/odoo/attachment/' . $object->getOdooDocumentId() . '/download';
+      try {
+        $client = $this->clientGetter->get();
+        $odooUrl = rtrim($client?->getOdooUrl() ?? '', '/');
+        $object->contentUrl = $odooUrl . '/odoo/documents/' . $object->getOdooDocumentId();
+      } catch (\Throwable) {
+        $object->contentUrl = '/odoo/attachment/' . $object->getOdooDocumentId() . '/download';
+      }
     } else {
       $object->contentUrl = $this->storage->resolveUri($object, 'file');
     }

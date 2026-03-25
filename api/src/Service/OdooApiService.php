@@ -1586,12 +1586,12 @@ class OdooApiService
 
     /**
      * Trouve ou crée un dossier dans la GED Odoo.
-     * Odoo 19 : les dossiers sont des documents.document avec is_folder=true,
-     * et le parent est référencé par folder_id.
+     * Odoo 19 : le champ `type` (selection) détermine si c'est un dossier.
+     * `is_folder` est un champ calculé readonly basé sur `type`.
      */
     public function findOrCreateFolder(string $name, ?int $parentId = null): int
     {
-        $domain = [['name', '=', $name], ['is_folder', '=', true]];
+        $domain = [['name', '=', $name], ['type', '=', 'folder']];
         if ($parentId !== null) {
             $domain[] = ['folder_id', '=', $parentId];
         } else {
@@ -1604,7 +1604,7 @@ class OdooApiService
             return $existing[0]['id'];
         }
 
-        $values = ['name' => $name, 'is_folder' => true];
+        $values = ['name' => $name, 'type' => 'folder'];
         if ($parentId !== null) {
             $values['folder_id'] = $parentId;
         }
@@ -1639,7 +1639,7 @@ class OdooApiService
      *
      * @param string $fileName     Nom du fichier (ex: "facture.pdf")
      * @param string $base64Data   Contenu du fichier encodé en base64
-     * @param int    $folderId     ID du dossier GED cible (documents.document avec is_folder=true)
+     * @param int    $folderId     ID du dossier GED cible (documents.document avec type='folder')
      * @param string $description  Description optionnelle
      * @param string|null $resModel  Modèle Odoo lié (ex: "purchase.order")
      * @param int|null    $resId     ID de l'enregistrement lié
