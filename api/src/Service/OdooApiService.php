@@ -1670,13 +1670,22 @@ class OdooApiService
 
         $docId = $this->create('documents.document', $values);
 
+        $accessUrl = null;
+        try {
+            $docData = $this->read('documents.document', [$docId], ['access_url']);
+            $accessUrl = $docData[0]['access_url'] ?? null;
+        } catch (\Throwable $e) {
+            $this->logger->warning('Odoo: impossible de lire access_url', ['doc_id' => $docId]);
+        }
+
         $this->logger->info('Odoo: document uploadé dans la GED', [
             'doc_id' => $docId,
             'name' => $fileName,
             'folder_id' => $folderId,
+            'access_url' => $accessUrl,
         ]);
 
-        return ['id' => $docId, 'name' => $fileName];
+        return ['id' => $docId, 'name' => $fileName, 'access_url' => $accessUrl];
     }
 
     /**

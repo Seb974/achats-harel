@@ -970,6 +970,7 @@ class OdooDataController extends AbstractController
 
             $mediaObject = new MediaObject();
             $mediaObject->setOdooDocumentId($doc['id']);
+            $mediaObject->setOdooAccessUrl($doc['access_url'] ?? null);
             $mediaObject->setDescription($description ?: $fileName);
             $this->em->persist($mediaObject);
             $this->em->flush();
@@ -978,9 +979,10 @@ class OdooDataController extends AbstractController
                 '@id' => '/media_objects/' . $mediaObject->getId(),
                 '@type' => 'https://schema.org/MediaObject',
                 'id' => $mediaObject->getId(),
-                'contentUrl' => '/odoo/attachment/' . $doc['id'] . '/download',
+                'contentUrl' => $doc['access_url'] ?? '/odoo/attachment/' . $doc['id'] . '/download',
                 'description' => $mediaObject->getDescription(),
                 'odooDocumentId' => $doc['id'],
+                'odooAccessUrl' => $doc['access_url'] ?? null,
                 'createdAt' => $mediaObject->createdAt->format(\DateTimeInterface::ATOM),
             ]);
 

@@ -90,6 +90,10 @@ class MediaObject
     #[Groups(['media_object:read', 'Achat:read', 'Item:read', 'Expense:read'])]
     private ?int $odooDocumentId = null;
 
+    #[ORM\Column(nullable: true)]
+    #[Groups(['media_object:read', 'Achat:read', 'Item:read', 'Expense:read'])]
+    private ?string $odooAccessUrl = null;
+
     #[ORM\ManyToOne(inversedBy: 'documents')]
     #[Groups(['media_object:read'])]
     private ?Achat $achat = null;
@@ -141,6 +145,18 @@ class MediaObject
     public function setOdooDocumentId(?int $odooDocumentId): static
     {
         $this->odooDocumentId = $odooDocumentId;
+
+        return $this;
+    }
+
+    public function getOdooAccessUrl(): ?string
+    {
+        return $this->odooAccessUrl;
+    }
+
+    public function setOdooAccessUrl(?string $odooAccessUrl): static
+    {
+        $this->odooAccessUrl = $odooAccessUrl;
 
         return $this;
     }
