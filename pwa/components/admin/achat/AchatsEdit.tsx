@@ -616,11 +616,23 @@ export const AchatsEdit = () => {
     return getSelectedPackaging(packagingId, packagings);
   };
 
-  const getDocuments = async (documents) => {   
+  const getDocuments = async (documents, achatData = null) => {   
     const docs = documents.map(document => {
         return isDefined(document?.['@id']) ? document : { ...document, description: document.title };
     });
-    return await syncDocuments(docs, session);
+
+    let odooContext = null;
+    if (isOdoo && achatData?.odooPurchaseOrderName) {
+      const achatDate = achatData.date ? new Date(achatData.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      odooContext = {
+        supplierName: achatData.supplier || 'Sans fournisseur',
+        poName: achatData.odooPurchaseOrderName,
+        poDate: achatDate,
+        odooPurchaseOrderId: achatData.odooPurchaseOrderId || null,
+      };
+    }
+
+    return await syncDocuments(docs, session, odooContext);
   };
 
   const getCategoryTaxes = (categoryTaxesArray, existingCategoryTaxes = [], data = null) => {
@@ -692,7 +704,7 @@ export const AchatsEdit = () => {
   const transform = async ({documents, ...data}) => {
     //@ts-ignore
     const formattedData = getFormattedData(data);
-    const documentIds = isDefinedAndNotVoid(documents) ? await getDocuments(documents) : [];
+    const documentIds = isDefinedAndNotVoid(documents) ? await getDocuments(documents, data) : [];
     return {...formattedData, documents: documentIds};
   };
 

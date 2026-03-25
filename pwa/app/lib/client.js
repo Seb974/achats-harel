@@ -122,12 +122,35 @@ export const objectToFormData = (data, form = new FormData(), namespace = '') =>
     return form;
 };
 
-export const createMediaObject = async (file, description = '', session) => {
+export const createMediaObject = async (file, description = '', session, odooContext = null) => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('description', description);
 
     try {
+        if (odooContext) {
+            formData.append('supplierName', odooContext.supplierName);
+            formData.append('poName', odooContext.poName);
+            formData.append('poDate', odooContext.poDate);
+            if (odooContext.odooPurchaseOrderId) {
+                formData.append('odooPurchaseOrderId', String(odooContext.odooPurchaseOrderId));
+            }
+
+            const response = await fetch('/odoo/attachment/upload', {
+                method: 'POST',
+                body: formData,
+                headers: { Authorization: `Bearer ${session?.accessToken}` },
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`Erreur upload GED Odoo : ${errorText}`);
+                return null;
+            }
+
+            return await response.json();
+        }
+
         const response = await fetch('/media_objects', {
             method: 'POST',
             body: formData,
@@ -158,13 +181,13 @@ export const createMediaObjects = async (items, session) => {
     return results;
 }
 
-export const syncDocument = async (document, session) => {
+export const syncDocument = async (document, session, odooContext = null) => {
 
   if (!document) return null;
 
   // Cas 1 & 2 : création ou remplacement d’un fichier
   if (document.rawFile) {
-    const created = await createMediaObject(document.rawFile, document.description ?? '', session);
+    const created = await createMediaObject(document.rawFile, document.description ?? '', session, odooContext);
     return created ? created['@id'] : null;
   }
 
@@ -195,13 +218,13 @@ export const syncDocument = async (document, session) => {
 };
 
 
-export const syncDocuments = async (documents, session) => {
+export const syncDocuments = async (documents, session, odooContext = null) => {
   if (!documents || documents.length === 0) return [];
 
   const results = [];
 
   for (const document of documents) {
-    const mediaId = await syncDocument(document, session);
+    const mediaId = await syncDocument(document, session, odooContext);
     if (mediaId) results.push(mediaId);
   }
 

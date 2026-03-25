@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Entity\MediaObject;
 use App\Service\ClientGetter;
 use App\Service\OdooApiService;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -24,6 +26,7 @@ class OdooDataController extends AbstractController
     public function __construct(
         private ClientGetter $clientGetter,
         private OdooApiService $odooService,
+        private EntityManagerInterface $em,
         private LoggerInterface $logger
     ) {}
 
@@ -909,6 +912,189 @@ class OdooDataController extends AbstractController
             $this->logger->error('Failed to fetch Odoo UoM', ['error' => $e->getMessage()]);
             return $this->json([
                 'error' => 'Erreur lors de la récupération des unités de mesure',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // =========================================================================
+    // GED — Upload / Download / Delete de documents
+    // =========================================================================
+
+    /**
+     * Upload un fichier dans la GED Odoo.
+     * Le fichier est rangé dans Achats/{Fournisseur}/{PO}-{Date}
+     */
+    #[Route('/attachment/upload', name: 'attachment_upload', methods: ['POST'])]
+    public function uploadAttachment(Request $request): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $file = $request->files->get('file');
+            if (!$file) {
+                return $this->json(['error' => 'Aucun fichier fourni'], 400);
+            }
+
+            $supplierName = $request->request->get('supplierName');
+            $poName = $request->request->get('poName');
+            $poDate = $request->request->get('poDate');
+            $description = $request->request->get('description', '');
+            $odooPoId = $request->request->get('odooPurchaseOrderId');
+
+            if (!$supplierName || !$poName || !$poDate) {
+                return $this->json([
+                    'error' => 'Paramètres manquants: supplierName, poName, poDate sont requis'
+                ], 400);
+            }
+
+            $folderId = $this->odooService->getOrCreateAchatFolder($supplierName, $poName, $poDate);
+
+            $base64Data = base64_encode(file_get_contents($file->getPathname()));
+            $fileName = $file->getClientOriginalName();
+
+            $resModel = $odooPoId ? 'purchase.order' : null;
+            $resId = $odooPoId ? (int) $odooPoId : null;
+
+            $doc = $this->odooService->uploadDocument(
+                $fileName,
+                $base64Data,
+                $folderId,
+                $description,
+                $resModel,
+                $resId
+            );
+
+            $mediaObject = new MediaObject();
+            $mediaObject->setOdooDocumentId($doc['id']);
+            $mediaObject->setDescription($description ?: $fileName);
+            $this->em->persist($mediaObject);
+            $this->em->flush();
+
+            return $this->json([
+                '@id' => '/media_objects/' . $mediaObject->getId(),
+                '@type' => 'https://schema.org/MediaObject',
+                'id' => $mediaObject->getId(),
+                'contentUrl' => '/odoo/attachment/' . $doc['id'] . '/download',
+                'description' => $mediaObject->getDescription(),
+                'odooDocumentId' => $doc['id'],
+                'createdAt' => $mediaObject->createdAt->format(\DateTimeInterface::ATOM),
+            ]);
+
+        } catch (\Throwable $e) {
+            $this->logger->error('Odoo attachment upload failed', ['error' => $e->getMessage()]);
+            return $this->json([
+                'error' => 'Échec de l\'upload vers Odoo',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Télécharge un document depuis la GED Odoo (proxy binaire).
+     */
+    #[Route('/attachment/{id}/download', name: 'attachment_download', methods: ['GET'])]
+    public function downloadAttachment(int $id): JsonResponse|\Symfony\Component\HttpFoundation\Response
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $doc = $this->odooService->downloadDocument($id);
+            if (!$doc || empty($doc['datas'])) {
+                return $this->json(['error' => 'Document non trouvé'], 404);
+            }
+
+            $binaryContent = $doc['datas'];
+            if (is_string($binaryContent) && !preg_match('/[^\x20-\x7E\t\r\n]/', substr($binaryContent, 0, 100))) {
+                $binaryContent = base64_decode($binaryContent);
+            }
+
+            $response = new \Symfony\Component\HttpFoundation\Response($binaryContent);
+            $response->headers->set('Content-Type', $doc['mimetype'] ?? 'application/octet-stream');
+            $response->headers->set('Content-Disposition', 'inline; filename="' . ($doc['name'] ?? 'document') . '"');
+            $response->headers->set('Cache-Control', 'private, max-age=3600');
+
+            return $response;
+
+        } catch (\Throwable $e) {
+            $this->logger->error('Odoo attachment download failed', ['error' => $e->getMessage()]);
+            return $this->json([
+                'error' => 'Échec du téléchargement depuis Odoo',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Supprime un document de la GED Odoo.
+     */
+    #[Route('/attachment/{id}', name: 'attachment_delete', methods: ['DELETE'])]
+    public function deleteAttachment(int $id): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $success = $this->odooService->deleteDocument($id);
+
+            if (!$success) {
+                return $this->json(['error' => 'Échec de la suppression'], 500);
+            }
+
+            return $this->json(['success' => true]);
+
+        } catch (\Throwable $e) {
+            $this->logger->error('Odoo attachment delete failed', ['error' => $e->getMessage()]);
+            return $this->json([
+                'error' => 'Échec de la suppression dans Odoo',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Liste les documents d'un achat dans la GED Odoo.
+     */
+    #[Route('/attachment/list', name: 'attachment_list', methods: ['GET'])]
+    public function listAttachments(Request $request): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $supplierName = $request->query->get('supplierName');
+            $poName = $request->query->get('poName');
+            $poDate = $request->query->get('poDate');
+
+            if (!$supplierName || !$poName || !$poDate) {
+                return $this->json([
+                    'error' => 'Paramètres manquants: supplierName, poName, poDate'
+                ], 400);
+            }
+
+            $folderId = $this->odooService->getOrCreateAchatFolder($supplierName, $poName, $poDate);
+            $documents = $this->odooService->listDocuments($folderId);
+
+            return $this->json([
+                'documents' => $documents,
+                'count' => count($documents),
+                'folderId' => $folderId,
+            ]);
+
+        } catch (\Throwable $e) {
+            $this->logger->error('Odoo attachment list failed', ['error' => $e->getMessage()]);
+            return $this->json([
+                'error' => 'Échec de la liste des documents',
                 'message' => $e->getMessage()
             ], 500);
         }

@@ -86,6 +86,10 @@ class MediaObject
     #[Groups(['media_object:read', 'Achat:read', 'Item:read', 'Expense:read'])]
     public ?\DateTimeImmutable $createdAt = null;
 
+    #[ORM\Column(nullable: true)]
+    #[Groups(['media_object:read', 'Achat:read', 'Item:read', 'Expense:read'])]
+    private ?int $odooDocumentId = null;
+
     #[ORM\ManyToOne(inversedBy: 'documents')]
     #[Groups(['media_object:read'])]
     private ?Achat $achat = null;
@@ -127,5 +131,22 @@ class MediaObject
         $this->achat = $achat;
 
         return $this;
+    }
+
+    public function getOdooDocumentId(): ?int
+    {
+        return $this->odooDocumentId;
+    }
+
+    public function setOdooDocumentId(?int $odooDocumentId): static
+    {
+        $this->odooDocumentId = $odooDocumentId;
+
+        return $this;
+    }
+
+    public function isStoredInOdoo(): bool
+    {
+        return $this->odooDocumentId !== null;
     }
 }

@@ -23,7 +23,11 @@ class MediaObjectNormalizer implements NormalizerInterface
   {
     $context[self::ALREADY_CALLED] = true;
 
-    $object->contentUrl = $this->storage->resolveUri($object, 'file');
+    if ($object->isStoredInOdoo()) {
+      $object->contentUrl = '/odoo/attachment/' . $object->getOdooDocumentId() . '/download';
+    } else {
+      $object->contentUrl = $this->storage->resolveUri($object, 'file');
+    }
 
     return $this->normalizer->normalize($object, $format, $context);
   }

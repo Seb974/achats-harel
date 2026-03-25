@@ -1581,6 +1581,163 @@ class OdooApiService
     }
 
     // =========================================================================
+    // GED — GESTION DOCUMENTAIRE (documents.folder + documents.document)
+    // =========================================================================
+
+    /**
+     * Trouve ou crée un dossier dans la GED Odoo.
+     * Retourne l'ID du dossier.
+     */
+    public function findOrCreateFolder(string $name, ?int $parentId = null): int
+    {
+        $domain = [['name', '=', $name]];
+        if ($parentId !== null) {
+            $domain[] = ['parent_folder_id', '=', $parentId];
+        } else {
+            $domain[] = ['parent_folder_id', '=', false];
+        }
+
+        $existing = $this->searchRead('documents.folder', $domain, ['id'], 1);
+
+        if (!empty($existing)) {
+            return $existing[0]['id'];
+        }
+
+        $values = ['name' => $name];
+        if ($parentId !== null) {
+            $values['parent_folder_id'] = $parentId;
+        }
+
+        $folderId = $this->create('documents.folder', $values);
+
+        $this->logger->info('Odoo: dossier GED créé', [
+            'name' => $name,
+            'parent_id' => $parentId,
+            'folder_id' => $folderId,
+        ]);
+
+        return $folderId;
+    }
+
+    /**
+     * Construit l'arborescence complète pour un achat :
+     * Achats / {Fournisseur} / {PO} - {Date}
+     *
+     * Retourne l'ID du dossier final (celui du PO).
+     */
+    public function getOrCreateAchatFolder(string $supplierName, string $poName, string $date): int
+    {
+        $rootId = $this->findOrCreateFolder('Achats');
+        $supplierId = $this->findOrCreateFolder($supplierName, $rootId);
+        $poFolderName = $poName . ' - ' . $date;
+        return $this->findOrCreateFolder($poFolderName, $supplierId);
+    }
+
+    /**
+     * Upload un document dans la GED Odoo.
+     *
+     * @param string $fileName     Nom du fichier (ex: "facture.pdf")
+     * @param string $base64Data   Contenu du fichier encodé en base64
+     * @param int    $folderId     ID du dossier GED cible
+     * @param string $description  Description optionnelle
+     * @param string|null $resModel  Modèle Odoo lié (ex: "purchase.order")
+     * @param int|null    $resId     ID de l'enregistrement lié
+     *
+     * @return array{id: int, name: string} Données du document créé
+     */
+    public function uploadDocument(
+        string $fileName,
+        string $base64Data,
+        int $folderId,
+        string $description = '',
+        ?string $resModel = null,
+        ?int $resId = null
+    ): array {
+        $values = [
+            'name' => $fileName,
+            'datas' => $base64Data,
+            'folder_id' => $folderId,
+        ];
+
+        if ($description) {
+            $values['description'] = $description;
+        }
+        if ($resModel && $resId) {
+            $values['res_model'] = $resModel;
+            $values['res_id'] = $resId;
+        }
+
+        $docId = $this->create('documents.document', $values);
+
+        $this->logger->info('Odoo: document uploadé dans la GED', [
+            'doc_id' => $docId,
+            'name' => $fileName,
+            'folder_id' => $folderId,
+        ]);
+
+        return ['id' => $docId, 'name' => $fileName];
+    }
+
+    /**
+     * Récupère les métadonnées d'un document GED Odoo.
+     */
+    public function getDocument(int $documentId): ?array
+    {
+        $docs = $this->read('documents.document', [$documentId], [
+            'id', 'name', 'description', 'mimetype', 'file_size',
+            'create_date', 'folder_id', 'res_model', 'res_id',
+        ]);
+
+        return $docs[0] ?? null;
+    }
+
+    /**
+     * Télécharge le contenu binaire d'un document GED Odoo (base64).
+     */
+    public function downloadDocument(int $documentId): ?array
+    {
+        $docs = $this->read('documents.document', [$documentId], [
+            'id', 'name', 'datas', 'mimetype',
+        ]);
+
+        if (empty($docs)) {
+            return null;
+        }
+
+        return $docs[0];
+    }
+
+    /**
+     * Supprime un document de la GED Odoo.
+     */
+    public function deleteDocument(int $documentId): bool
+    {
+        try {
+            $this->execute('documents.document', 'unlink', [[$documentId]]);
+            $this->logger->info('Odoo: document GED supprimé', ['doc_id' => $documentId]);
+            return true;
+        } catch (\Throwable $e) {
+            $this->logger->error('Odoo: échec suppression document GED', [
+                'doc_id' => $documentId,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Liste les documents d'un dossier GED Odoo.
+     */
+    public function listDocuments(int $folderId): array
+    {
+        return $this->searchRead('documents.document', [
+            ['folder_id', '=', $folderId],
+        ], [
+            'id', 'name', 'description', 'mimetype', 'file_size', 'create_date',
+        ]);
+    }
+
+    // =========================================================================
     // MÉTHODES UTILITAIRES PRIVÉES
     // =========================================================================
 
