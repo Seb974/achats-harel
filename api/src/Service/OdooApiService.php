@@ -1581,34 +1581,35 @@ class OdooApiService
     }
 
     // =========================================================================
-    // GED — GESTION DOCUMENTAIRE (documents.folder + documents.document)
+    // GED — GESTION DOCUMENTAIRE (Odoo 19 : documents.document avec is_folder)
     // =========================================================================
 
     /**
      * Trouve ou crée un dossier dans la GED Odoo.
-     * Retourne l'ID du dossier.
+     * Odoo 19 : les dossiers sont des documents.document avec is_folder=true,
+     * et le parent est référencé par folder_id.
      */
     public function findOrCreateFolder(string $name, ?int $parentId = null): int
     {
-        $domain = [['name', '=', $name]];
+        $domain = [['name', '=', $name], ['is_folder', '=', true]];
         if ($parentId !== null) {
-            $domain[] = ['parent_folder_id', '=', $parentId];
+            $domain[] = ['folder_id', '=', $parentId];
         } else {
-            $domain[] = ['parent_folder_id', '=', false];
+            $domain[] = ['folder_id', '=', false];
         }
 
-        $existing = $this->searchRead('documents.folder', $domain, ['id'], 1);
+        $existing = $this->searchRead('documents.document', $domain, ['id'], 1);
 
         if (!empty($existing)) {
             return $existing[0]['id'];
         }
 
-        $values = ['name' => $name];
+        $values = ['name' => $name, 'is_folder' => true];
         if ($parentId !== null) {
-            $values['parent_folder_id'] = $parentId;
+            $values['folder_id'] = $parentId;
         }
 
-        $folderId = $this->create('documents.folder', $values);
+        $folderId = $this->create('documents.document', $values);
 
         $this->logger->info('Odoo: dossier GED créé', [
             'name' => $name,
@@ -1638,7 +1639,7 @@ class OdooApiService
      *
      * @param string $fileName     Nom du fichier (ex: "facture.pdf")
      * @param string $base64Data   Contenu du fichier encodé en base64
-     * @param int    $folderId     ID du dossier GED cible
+     * @param int    $folderId     ID du dossier GED cible (documents.document avec is_folder=true)
      * @param string $description  Description optionnelle
      * @param string|null $resModel  Modèle Odoo lié (ex: "purchase.order")
      * @param int|null    $resId     ID de l'enregistrement lié
