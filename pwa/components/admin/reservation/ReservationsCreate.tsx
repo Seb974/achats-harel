@@ -215,7 +215,7 @@ const ConversionLink = ({ client, debut }) => {
     <Box display="flex" gap={2} flexWrap="nowrap" width="100%" sx={{ marginBottom: '1em'}}>
         <Box flex={1} display="flex" alignItems="right" justifyContent={"end"}>
           <Link to={ root } style={{ textDecoration: 'none', textAlign: 'right' }}>
-            <Typography color="primary">Créer à partir d'un prépaiement</Typography>
+            <Typography color="primary">Créer à partir d&apos;un prépaiement</Typography>
           </Link>
         </Box>
     </Box>

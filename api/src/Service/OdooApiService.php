@@ -1055,9 +1055,6 @@ class OdooApiService
 
     /**
      * Met à jour les prix des lignes d'un bon de commande existant
-     *
-     * @param int $orderId ID du PO
-     * @param array $lines [['line_id' => int, 'price_unit' => float], ...] ou [['product_id' => int, 'price_unit' => float], ...]
      */
     public function updatePurchaseOrderLines(int $orderId, array $lines): bool
     {
@@ -1090,6 +1087,169 @@ class OdooApiService
         }
 
         return true;
+    }
+
+    /**
+     * Synchronisation complète des données d'un PO avec l'état actuel de l'achat.
+     * Compare les lignes existantes dans Odoo avec les lignes envoyées par l'app,
+     * met à jour / crée / supprime selon les différences.
+     */
+    public function syncPurchaseOrderData(int $orderId, array $headerData, array $lines): array
+    {
+        $summary = [
+            'updated' => 0,
+            'created' => 0,
+            'deleted' => 0,
+            'header_updated' => false,
+            'errors' => [],
+        ];
+
+        // 1. Mise à jour en-tête PO (champs standard)
+        $stdHeader = array_filter([
+            'date_planned' => $headerData['date_planned'] ?? null,
+        ], fn($v) => $v !== null);
+
+        if (!empty($headerData['notes'])) {
+            $stdHeader['note'] = $headerData['notes'];
+        }
+
+        if (!empty($stdHeader)) {
+            try {
+                $this->write('purchase.order', [$orderId], $stdHeader);
+                $summary['header_updated'] = true;
+            } catch (\Throwable $e) {
+                $summary['errors'][] = "Header update: {$e->getMessage()}";
+            }
+        }
+
+        // Champs custom en-tête (non-bloquants)
+        $customHeader = [];
+        if (!empty($headerData['x_devise_achat'])) {
+            $customHeader['x_devise_achat'] = $headerData['x_devise_achat'];
+        }
+        if (!empty($customHeader)) {
+            try {
+                $this->write('purchase.order', [$orderId], $customHeader);
+            } catch (\Throwable $e) {
+                $this->logger->info('Sync: custom header fields not available', ['error' => $e->getMessage()]);
+            }
+        }
+
+        // 2. Lire les lignes existantes dans Odoo
+        $existingLines = $this->searchRead(
+            'purchase.order.line',
+            [['order_id', '=', $orderId]],
+            ['id', 'product_id', 'product_qty', 'price_unit', 'name']
+        );
+
+        $existingByProductId = [];
+        foreach ($existingLines as $el) {
+            $pid = is_array($el['product_id']) ? $el['product_id'][0] : $el['product_id'];
+            $existingByProductId[$pid] = $el;
+        }
+
+        // 3. Traiter chaque ligne de l'app
+        $appProductIds = [];
+        foreach ($lines as $line) {
+            $productId = $line['product_id'] ?? null;
+            if (!$productId) continue;
+            $appProductIds[] = $productId;
+
+            if (isset($existingByProductId[$productId])) {
+                // Ligne existante → mise à jour
+                $odooLine = $existingByProductId[$productId];
+                $updateData = [];
+
+                if (isset($line['product_qty']) && abs($line['product_qty'] - $odooLine['product_qty']) > 0.001) {
+                    $updateData['product_qty'] = $line['product_qty'];
+                }
+                if (isset($line['price_unit']) && abs($line['price_unit'] - $odooLine['price_unit']) > 0.001) {
+                    $updateData['price_unit'] = $line['price_unit'];
+                }
+                if (!empty($line['name']) && $line['name'] !== $odooLine['name']) {
+                    $updateData['name'] = $line['name'];
+                }
+                if (!empty($line['product_uom'])) {
+                    $updateData['product_uom_id'] = $line['product_uom'];
+                }
+
+                if (!empty($updateData)) {
+                    try {
+                        $this->write('purchase.order.line', [$odooLine['id']], $updateData);
+                        $summary['updated']++;
+                    } catch (\Throwable $e) {
+                        $summary['errors'][] = "Update line product_id={$productId}: {$e->getMessage()}";
+                    }
+                }
+
+                // Champs custom ligne (non-bloquants)
+                $customLine = [];
+                if (!empty($line['x_prix_achat_devise'])) {
+                    $customLine['x_prix_achat_devise'] = $line['x_prix_achat_devise'];
+                }
+                if (!empty($line['x_devise_origine'])) {
+                    $customLine['x_devise_origine'] = $line['x_devise_origine'];
+                }
+                if (!empty($customLine)) {
+                    try {
+                        $this->write('purchase.order.line', [$odooLine['id']], $customLine);
+                    } catch (\Throwable $e) {
+                        $this->logger->info('Sync: custom line fields not available', ['error' => $e->getMessage()]);
+                    }
+                }
+            } else {
+                // Nouvelle ligne → création
+                $newLineData = [
+                    'order_id' => $orderId,
+                    'product_id' => $productId,
+                    'product_qty' => $line['product_qty'] ?? 1,
+                    'price_unit' => $line['price_unit'] ?? 0,
+                ];
+                if (!empty($line['name'])) {
+                    $newLineData['name'] = $line['name'];
+                }
+                if (!empty($line['product_uom'])) {
+                    $newLineData['product_uom_id'] = $line['product_uom'];
+                }
+
+                try {
+                    $newLineId = $this->create('purchase.order.line', $newLineData);
+                    $summary['created']++;
+
+                    // Champs custom sur la nouvelle ligne
+                    $customLine = [];
+                    if (!empty($line['x_prix_achat_devise'])) {
+                        $customLine['x_prix_achat_devise'] = $line['x_prix_achat_devise'];
+                    }
+                    if (!empty($line['x_devise_origine'])) {
+                        $customLine['x_devise_origine'] = $line['x_devise_origine'];
+                    }
+                    if (!empty($customLine)) {
+                        try {
+                            $this->write('purchase.order.line', [$newLineId], $customLine);
+                        } catch (\Throwable $e) {
+                            $this->logger->info('Sync: custom fields on new line not available', ['error' => $e->getMessage()]);
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    $summary['errors'][] = "Create line product_id={$productId}: {$e->getMessage()}";
+                }
+            }
+        }
+
+        // 4. Supprimer les lignes Odoo qui n'existent plus dans l'app
+        foreach ($existingByProductId as $pid => $odooLine) {
+            if (!in_array($pid, $appProductIds)) {
+                try {
+                    $this->execute('purchase.order.line', 'unlink', [[$odooLine['id']]]);
+                    $summary['deleted']++;
+                } catch (\Throwable $e) {
+                    $summary['errors'][] = "Delete line id={$odooLine['id']} (product={$pid}): {$e->getMessage()}";
+                }
+            }
+        }
+
+        return $summary;
     }
 
     /**

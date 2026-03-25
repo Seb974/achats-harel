@@ -232,6 +232,7 @@ export const AchatsKanban = () => {
         loading: odooLoading,
         isOdooConfigured,
         syncTransitStatus,
+        syncPurchaseOrderData,
         updatePurchaseOrderPrices,
         cancelPurchaseOrder,
         calculateCostPrices,
@@ -246,7 +247,7 @@ export const AchatsKanban = () => {
         postPOMessage,
     } = useOdoo();
 
-    const [prDialog, setPrDialog] = useState<{ open: boolean; achat: any; targetStatus: any }>({ open: false, achat: null, targetStatus: null });
+    // prDialog supprimé — la sync est automatique à chaque transition
     const [processing, setProcessing] = useState(false);
     const [allStatuses, setAllStatuses] = useState<any[]>([]);
     const [stockDialog, setStockDialog] = useState<{
@@ -353,6 +354,10 @@ export const AchatsKanban = () => {
             steps.push({ label: 'Annulation du PO Odoo (button_cancel)', status: 'pending' });
             steps.push({ label: 'Nettoyage stock transit + suppression lien PO', status: 'pending' });
         } else {
+            if (achat.odooPurchaseOrderId) {
+                steps.push({ label: 'Synchronisation données → Odoo (prix, quantités, lignes)', status: 'pending' });
+            }
+
             const srcName = fromStatus?.label || fromCode;
             const destName = toStatus?.label || toCode;
             const srcId = fromStatus?.odooLocationId;
@@ -391,11 +396,6 @@ export const AchatsKanban = () => {
 
         if (!isValidTransition(fromCode, toCode)) {
             notify(`Transition ${fromCode} → ${toCode} non autorisée (adjacente uniquement)`, { type: 'warning' });
-            return;
-        }
-
-        if (toCode === 'A_RECEPTIONNER') {
-            setPrDialog({ open: true, achat, targetStatus });
             return;
         }
 
@@ -564,11 +564,36 @@ export const AchatsKanban = () => {
                 const fromStatus = getStatusByCode(fromCode) || achat.status;
                 const srcLocationId = fromStatus?.odooLocationId;
                 const destLocationId = targetStatus.odooLocationId;
+                const fullAchat = await fetchFullAchat(achat.id);
+
+                // Synchronisation des données vers Odoo avant le transfert
+                if (achat.odooPurchaseOrderId) {
+                    updateStep(stepIdx, { status: 'running' });
+                    try {
+                        const syncResult = await syncPurchaseOrderData(achat.odooPurchaseOrderId, fullAchat);
+                        if (syncResult.success) {
+                            const s = syncResult.sync_summary;
+                            const parts: string[] = [];
+                            if (s?.updated) parts.push(`${s.updated} MAJ`);
+                            if (s?.created) parts.push(`${s.created} ajoutée(s)`);
+                            if (s?.deleted) parts.push(`${s.deleted} supprimée(s)`);
+                            if (s?.header_updated) parts.push('en-tête');
+                            const detail = parts.length > 0 ? parts.join(', ') : 'aucune modification';
+                            updateStep(stepIdx, { status: 'success', detail });
+                        } else {
+                            updateStep(stepIdx, { status: 'error', detail: syncResult.error || 'Erreur sync' });
+                            hasError = true;
+                        }
+                    } catch (e: any) {
+                        updateStep(stepIdx, { status: 'error', detail: e.message });
+                        hasError = true;
+                    }
+                    stepIdx++;
+                }
 
                 let transferResult: any = null;
                 if (srcLocationId && destLocationId) {
                     updateStep(stepIdx, { status: 'running' });
-                    const fullAchat = await fetchFullAchat(achat.id);
                     try {
                         transferResult = await syncTransitStatus(
                             fullAchat,
@@ -747,35 +772,8 @@ export const AchatsKanban = () => {
         await patchAchat(achat.id, { status: statusIri });
     };
 
-    const handlePrConfirm = async (choice: 'yes' | 'no' | 'later') => {
-        const { achat, targetStatus } = prDialog;
-        setPrDialog({ open: false, achat: null, targetStatus: null });
-
-        if (choice === 'later') return;
-
-        if (choice === 'no') {
-            redirect('edit', 'achats', achat.id);
-            return;
-        }
-
-        setProcessing(true);
-        try {
-            if (achat.odooPurchaseOrderId) {
-                const fullAchat = await fetchFullAchat(achat.id);
-                const costItems = calculateCostPrices(fullAchat);
-                const lines = costItems.map((item: any) => ({
-                    product_id: item.productId,
-                    price_unit: item.mainPr,
-                }));
-                await updatePurchaseOrderPrices(achat.odooPurchaseOrderId, lines);
-            }
-
-            await executeTransition(achat, targetStatus);
-        } catch (e: any) {
-            notify(e.message || 'Erreur mise à jour PR', { type: 'error' });
-            setProcessing(false);
-        }
-    };
+    // La synchronisation des données (prix, lignes, quantités) est maintenant
+    // automatique à chaque transition via syncPurchaseOrderData
 
     const handleShowOdoo = (achat: any) => {
         if (achat.odooPurchaseOrderId) {
@@ -1033,53 +1031,7 @@ export const AchatsKanban = () => {
                 </DialogActions>
             </Dialog>
 
-            <Dialog open={prDialog.open} onClose={() => handlePrConfirm('later')} maxWidth="sm" fullWidth>
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <LocalShippingIcon color="primary" />
-                    Mise à jour des prix de revient
-                </DialogTitle>
-                <DialogContent>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                        À cette étape, vos prix de revient doivent être définitifs. Avez-vous finalisé les coûts d'approche pour cet achat ?
-                    </Typography>
-                    {prDialog.achat && (
-                        <Chip
-                            label={`${prDialog.achat.supplier || ''} — ${prDialog.achat.shipNumber || `#${prDialog.achat.id}`}`}
-                            sx={{ mt: 1, mb: 2 }}
-                        />
-                    )}
-                </DialogContent>
-                <DialogActions sx={{ flexDirection: 'column', gap: 1, p: 2 }}>
-                    <Button
-                        fullWidth
-                        variant="contained"
-                        color="success"
-                        startIcon={<CheckCircleIcon />}
-                        onClick={() => handlePrConfirm('yes')}
-                        disabled={processing}
-                    >
-                        Oui, mes coûts sont à jour
-                    </Button>
-                    <Button
-                        fullWidth
-                        variant="outlined"
-                        color="primary"
-                        onClick={() => handlePrConfirm('no')}
-                        disabled={processing}
-                    >
-                        Non, je vais les mettre à jour
-                    </Button>
-                    <Button
-                        fullWidth
-                        variant="text"
-                        color="inherit"
-                        onClick={() => handlePrConfirm('later')}
-                        disabled={processing}
-                    >
-                        Plus tard
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            {/* Sync automatique à chaque transition — plus besoin de dialogue prix */}
 
             <Dialog
                 open={stockDialog.open}

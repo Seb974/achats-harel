@@ -522,7 +522,7 @@ const CalculatedCoeffAppInput = ({ client }) => {
         <NumberInput source="totalOtherCosts"  label={"Total des autres coûts " + (isDefined(targetCurrency) ? `en ${targetCurrency}` : "")} readOnly/>
         {/* @ts-ignore */}
         <Typography variant="p" gutterBottom>
-          Coefficient d'approche
+          Coefficient d&apos;approche
         </Typography>
         <NumberInput source="coeffApp" label="Coefficient d'approche" min={0} defaultValue={1}/>
     </Box>

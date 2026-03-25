@@ -179,7 +179,7 @@ export const SendToOdooButton = ({
                         <Box>
                             <Alert severity="info" sx={{ mb: 2 }}>
                                 Cette action va créer une <strong>commande fournisseur confirmée</strong> dans Odoo 
-                                avec les <strong>prix de revient</strong> calculés (coûts d'approche inclus).
+                                avec les <strong>prix de revient</strong> calculés (coûts d&apos;approche inclus).
                             </Alert>
                             
                             {record && (
@@ -197,7 +197,7 @@ export const SendToOdooButton = ({
                                                 <strong>Référence :</strong> {record.shipNumber || `HAREL-${record.id}`}
                                             </Typography>
                                             <Typography variant="body2">
-                                                <strong>Coefficient d'approche :</strong> {record.coeffApp?.toFixed(4) || '1.0000'}
+                                                <strong>Coefficient d&apos;approche :</strong> {record.coeffApp?.toFixed(4) || '1.0000'}
                                             </Typography>
                                             <Typography variant="body2">
                                                 <strong>Devise :</strong> EUR (prix de revient)
@@ -262,7 +262,7 @@ export const SendToOdooButton = ({
                                     </TableContainer>
 
                                     <Alert severity="warning" sx={{ mt: 2 }}>
-                                        La commande sera directement <strong>confirmée</strong> dans Odoo (état "Bon de commande").
+                                        La commande sera directement <strong>confirmée</strong> dans Odoo (état &quot;Bon de commande&quot;).
                                     </Alert>
                                 </>
                             )}
@@ -303,7 +303,7 @@ export const SendToOdooButton = ({
                             {result.state && result.state !== 'purchase' && (
                                 <Alert severity="error" sx={{ mt: 2, textAlign: 'left' }}>
                                     <Typography variant="subtitle2" gutterBottom>
-                                        La commande n'a pas pu être confirmée (état : {result.state})
+                                        La commande n&apos;a pas pu être confirmée (état : {result.state})
                                     </Typography>
                                     {result.confirmation_error && (
                                         <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>

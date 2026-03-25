@@ -1,136 +1,159 @@
-# Contexte de debug — ah-chou.creazot.com (production)
+# Contexte Ops & Debug — Achats Harel 4.0
 
-## Infrastructure
+Référence opérationnelle pour le déploiement, le debug et la maintenance.
+Ce fichier ne contient pas de secrets — les credentials Odoo sont dans l'entité `Client` en base.
 
-| Environnement | URL | IP | SSH |
-|---|---|---|---|
-| **Production** | `ah-chou.creazot.com` | `159.223.23.209` | `ssh root@159.223.23.209` |
-| **Staging** | `staging.creazot.com` | `167.172.191.66` | `ssh root@167.172.191.66` |
+## Serveurs
 
-Les deux serveurs partagent la **même base PostgreSQL** (hébergée sur le serveur de prod).
+| Environnement | URL publique | IP | SSH | Répertoire |
+|---------------|-------------|-----|-----|------------|
+| **Staging** | `staging.creazot.com` | `167.172.191.66` | `ssh root@167.172.191.66` | `/root/achats-harel` |
+| **Production** | `ah-chou.creazot.com` | `159.223.23.209` | `ssh root@159.223.23.209` | `/root/achats-harel` |
+| **Odoo** | `ah-chou1.odoo.com` | — | — | SaaS (pas d'accès serveur) |
 
-## Stack technique
+- Auth HTTP staging : `ah-chou` / `ah-chou`
+- Branche Git : **`4.0`**
+- Remote : `github.com:Seb974/achats-harel.git`
 
-- **Backend** : Symfony / API Platform (PHP 8.x, FrankenPHP)
-- **Frontend** : Next.js 14 / React Admin 5
-- **Reverse proxy** : Caddy (intégré dans FrankenPHP)
-- **Auth** : Keycloak (container Docker)
-- **Conteneurisation** : Docker Compose
-- **Odoo** : `https://ah-chou1.odoo.com` (saas-19.1 / Odoo 19), connecté via XML-RPC
-
-## Structure Docker
+## Services Docker
 
 ```bash
-cd /root/achats-harel
 docker compose -f compose.yaml -f compose.prod.yaml ps
 ```
 
-Services principaux : `php`, `pwa`, `database`, `keycloak`
+| Service | Image/Rôle | Port interne |
+|---------|-----------|-------------|
+| `php` | API Symfony + FrankenPHP (Caddy) | 80/443 |
+| `pwa` | Next.js 15 (frontend) | 3000 |
+| `keycloak` | Keycloak (OIDC) | 8080 |
+| `keycloak-database` | PostgreSQL Keycloak | 5432 |
+| `database` | PostgreSQL app (non présent sur staging — BDD sur prod) | 5432 |
 
-## Commandes utiles
+## Déploiement
+
+### Staging (accès GitHub)
 
 ```bash
-# Logs PHP (backend + Caddy)
-docker compose -f compose.yaml -f compose.prod.yaml logs php --tail=100
-
-# Logs PWA (Next.js)
-docker compose -f compose.yaml -f compose.prod.yaml logs pwa --tail=100
-
-# Exécuter une commande Symfony
-docker compose -f compose.yaml -f compose.prod.yaml exec php bin/console <command>
-
-# SQL directe
-docker compose -f compose.yaml -f compose.prod.yaml exec php bin/console dbal:run-sql "SELECT ..."
-
-# Rebuild un seul service
-docker compose -f compose.yaml -f compose.prod.yaml up -d --build php --no-deps
-docker compose -f compose.yaml -f compose.prod.yaml up -d --build pwa --no-deps
-
-# État des containers
-docker compose -f compose.yaml -f compose.prod.yaml ps --format '{{.Name}}: {{.Status}}'
+ssh root@167.172.191.66
+cd /root/achats-harel
+git pull origin 4.0
+docker compose -f compose.yaml -f compose.prod.yaml up -d --build php pwa
 ```
 
-## Déploiement (local → serveur)
-
-Le serveur n'a **pas** d'accès GitHub. Le déploiement se fait via `git bundle` :
+### Production (PAS d'accès GitHub → git bundle)
 
 ```bash
-# Sur la machine locale
+# 1. Sur la machine locale
 cd /Users/mhoar/Desktop/achats-harel-4.0
-git bundle create /tmp/deploy.bundle HEAD~N..HEAD  # N = nombre de commits
+git bundle create /tmp/deploy.bundle HEAD~N..HEAD   # N = nombre de commits
 
-# Transfert
+# 2. Transfert
 scp /tmp/deploy.bundle root@159.223.23.209:/root/achats-harel/
 
-# Sur le serveur
+# 3. Sur le serveur prod
 cd /root/achats-harel
 git fetch deploy.bundle HEAD:refs/heads/deploy-fix
 git merge deploy-fix --no-edit
 git branch -d deploy-fix
 
-# Rebuild
-docker compose -f compose.yaml -f compose.prod.yaml up -d --build php pwa --no-deps
+# 4. Rebuild
+docker compose -f compose.yaml -f compose.prod.yaml up -d --build php pwa
 ```
 
-## Fichiers clés du projet
+Les migrations Doctrine s'exécutent automatiquement au démarrage du conteneur `php`.
 
-| Fichier | Rôle |
-|---|---|
-| `api/src/Controller/OdooDataController.php` | Proxy Odoo (produits, PO, GED documents) |
-| `api/src/Service/OdooApiService.php` | Service XML-RPC Odoo (toutes les méthodes) |
-| `api/src/Entity/MediaObject.php` | Entité document (champs: `odooDocumentId`, `odooAccessUrl`) |
-| `api/src/Serializer/MediaObjectNormalizer.php` | Génère `contentUrl` (Odoo access_url ou fallback proxy) |
-| `pwa/components/admin/achat/AchatsEdit.tsx` | Formulaire édition achat (upload docs, transform) |
-| `pwa/app/lib/client.js` | `createMediaObject`, `syncDocument`, `syncDocuments` |
-| `api/frankenphp/Caddyfile` | Config Caddy (routes, guide utilisateur) |
-| `compose.prod.yaml` | Overrides Docker production |
+## Commandes de debug courantes
 
-## Intégration Odoo GED
+```bash
+# Alias pour compose
+DC="docker compose -f compose.yaml -f compose.prod.yaml"
 
-Les documents sont stockés dans la GED Odoo (pas en local). Points clés :
+# Logs
+$DC logs php --tail=200 -f          # Backend + Caddy
+$DC logs pwa --tail=200 -f          # Frontend Next.js
+$DC logs keycloak --tail=100        # Auth
 
-- **Modèle Odoo 19** : `documents.document` — les dossiers ont `type = 'folder'` (le champ `is_folder` est calculé readonly)
-- **Hiérarchie** : `Achats / {Fournisseur} / {PO ou Achat-id} - {Date}`
-- **Parent** : champ `folder_id` (many2one vers le dossier parent)
-- **URL directe** : champ calculé `access_url` sur `documents.document` (ex: `https://ah-chou1.odoo.com/odoo/documents/xxx`)
-- **Upload** : `POST /odoo/attachment/upload` (multipart: file + supplierName + poName + poDate)
-- **Download proxy** : `GET /odoo/attachment/{id}/download`
-- **Suppression** : `DELETE /odoo/attachment/{id}` (supprime dans Odoo + MediaObject local)
+# Console Symfony
+$DC exec php bin/console debug:router              # Routes API
+$DC exec php bin/console doctrine:migrations:status # État migrations
+$DC exec php bin/console cache:clear                # Vider cache
 
-## Connexion Odoo (XML-RPC)
+# SQL directe
+$DC exec php bin/console dbal:run-sql "SELECT id, supplier, odoo_purchase_order_id FROM achat ORDER BY id DESC LIMIT 10"
+
+# État containers
+$DC ps --format '{{.Name}}: {{.Status}}'
+
+# Rebuild un seul service (sans toucher aux autres)
+$DC up -d --build php --no-deps
+$DC up -d --build pwa --no-deps
+
+# Purge Docker (attention : supprime images/volumes non utilisés)
+docker system prune -a
+```
+
+## Fichiers clés pour le debug
+
+| Fichier | Quand le consulter |
+|---------|-------------------|
+| `api/src/Service/OdooApiService.php` | Erreurs XML-RPC, problèmes de création PO/picking |
+| `api/src/Controller/OdooDataController.php` | Erreurs 4xx/5xx sur `/odoo/*` |
+| `api/src/Entity/Client.php` | Vérifier config Odoo (URL, DB, username, apiKey) |
+| `api/src/Serializer/MediaObjectNormalizer.php` | Problèmes d'URL documents |
+| `pwa/components/admin/achat/AchatsKanban.tsx` | Bugs de transition Kanban |
+| `pwa/components/admin/achat/SendToOdooButton.tsx` | Problèmes d'envoi PO depuis page détail |
+| `pwa/hooks/useOdoo.ts` | Transformation données Achat → PO Odoo |
+| `api/frankenphp/Caddyfile` | Routes statiques, proxy, CORS |
+| `compose.prod.yaml` | Variables d'env, volumes, ports |
+
+## Connexion Odoo XML-RPC (debug)
 
 ```
 URL      : https://ah-chou1.odoo.com
 Database : ah-chou1
 Username : mathieu.loic.hoarau@gmail.com
-API Key  : ac2f53c600679ace89993a296c2002e0b6b945e4
-Version  : saas-19.1 (Odoo 19)
+Auth     : clé API (stockée dans Client.odooApiKey en base)
 ```
 
-Endpoints XML-RPC :
-- Auth : `{url}/xmlrpc/2/common` → `authenticate`
-- Data : `{url}/xmlrpc/2/object` → `execute_kw`
+Pour tester manuellement (Python) :
+
+```python
+import xmlrpc.client
+url = "https://ah-chou1.odoo.com"
+db = "ah-chou1"
+username = "mathieu.loic.hoarau@gmail.com"
+api_key = "VOTRE_CLE_API"  # Depuis Odoo → Paramètres → Utilisateurs → Clés API
+
+common = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/common")
+uid = common.authenticate(db, username, api_key, {})
+print(f"UID: {uid}")  # Si False → clé invalide ou utilisateur désactivé
+```
 
 ## Problèmes connus et résolus
 
-1. **`documents.folder` n'existe pas** → Odoo 19 n'utilise plus ce modèle. Utiliser `documents.document` avec `type = 'folder'`
-2. **`is_folder` ignoré à la création** → C'est un champ calculé readonly. Utiliser `type = 'folder'` à la place
-3. **Guide utilisateur 404** → Ajout d'un `handle /guide-utilisateur/*` dans le Caddyfile + volume mount dans compose.prod.yaml
-4. **MissingCSRF login** → Problème de cookies client, pas serveur
-5. **Keycloak KC_PROXY** → Remplacé par `KC_PROXY_HEADERS: xforwarded` dans compose.prod.yaml
-6. **Keycloak 431 Request Header Or Cookie Too Large** → Cookies accumulés dépassent la limite par défaut (8 KB). Fix : vider les cookies navigateur + `KC_HTTP_MAX_HEADER_SIZE: "32768"` dans compose
+| # | Problème | Cause | Solution |
+|---|----------|-------|----------|
+| 1 | `Invalid field 'x_devise_achat' in 'purchase.order'` | Champs custom pas encore créés dans Odoo | Champs custom écrits en `write` séparé avec try/catch (non bloquant) |
+| 2 | `documents.folder does not exist` | Odoo 19 n'a plus ce modèle | Utiliser `documents.document` avec `type = 'folder'` |
+| 3 | `is_folder` ignoré à la création | Champ calculated readonly dans Odoo 19 | Utiliser `type = 'folder'` au lieu de `is_folder = True` |
+| 4 | Guide utilisateur 404 | Pas de route Caddy | Ajout `handle /guide-utilisateur/*` dans Caddyfile + volume dans compose.prod |
+| 5 | Keycloak `KC_PROXY` deprecated | Variable supprimée dans Keycloak récent | Remplacé par `KC_PROXY_HEADERS: xforwarded` |
+| 6 | Keycloak 431 Header Too Large | Cookies accumulés dépassent 8 KB | `KC_HTTP_MAX_HEADER_SIZE: "32768"` + vider cookies navigateur |
+| 7 | `coeffApp` ne peut recevoir le focus | `setValue` sur input dans onglet `TabbedForm` inactif | `setValue("coeffApp", val, { shouldValidate: false, shouldTouch: false })` |
+| 8 | XML-RPC auth `uid=False` | Utilisation du mot de passe web au lieu de la clé API | Sur Odoo SaaS, XML-RPC exige une **clé API** (pas le mdp web) |
+| 9 | PO en doublon dans Odoo | Pas de vérification `odooPurchaseOrderId` avant création | Ajout protection anti-doublon dans Kanban et SendToOdooButton |
+| 10 | `skipped_lines` non affiché | Champ retourné par l'API mais pas montré dans la PWA | Alert warning ajouté dans le dialogue résultat |
 
-## État actuel staging vs production
+## État staging vs production
 
-**Staging est en avance** sur production avec les fonctionnalités suivantes non déployées en prod :
+**Staging est en avance** sur production. Fonctionnalités déployées en staging uniquement :
+
 - Intégration GED Odoo (upload/download/delete documents)
-- Champs `odooDocumentId` et `odooAccessUrl` sur MediaObject
+- Correction des 7 failles intégration Odoo (F1-F7, F10)
+- Champs custom non-bloquants (x_devise_achat, x_prix_achat_devise, x_devise_origine)
+- Protection anti-doublon PO
+- Picking ID stocké sur Achat
+- Fix focus coeffApp dans TabbedForm
 - Migration `Version20260325_AddOdooAccessUrl.php`
-- Suppression propagée des documents vers Odoo
-- Upload toujours vers Odoo (même sans PO)
 
-Pour synchroniser prod avec staging, il faudra :
-1. Créer un bundle avec tous les commits d'avance
-2. Transférer et merger sur le serveur prod
-3. Rebuilder les containers php + pwa
-4. La migration DB s'exécutera automatiquement au démarrage
+Pour synchroniser prod : créer un bundle git, transférer via scp, merger et rebuilder.

@@ -468,6 +468,42 @@ class OdooDataController extends AbstractController
     }
 
     /**
+     * Synchronisation complète des données d'un PO avec l'achat local.
+     * Compare lignes existantes / nouvelles / supprimées, met à jour en-tête et notes.
+     */
+    #[Route('/purchase-order/{id}/sync', name: 'sync_purchase_order', methods: ['POST'])]
+    public function syncPurchaseOrder(int $id, Request $request): JsonResponse
+    {
+        try {
+            $config = $this->configureOdoo();
+            if ($config instanceof JsonResponse) {
+                return $config;
+            }
+
+            $data = json_decode($request->getContent(), true);
+
+            if (empty($data['lines']) || !is_array($data['lines'])) {
+                return $this->json(['error' => 'lines doit être un tableau non vide'], 400);
+            }
+
+            $headerData = $data['header'] ?? [];
+            $summary = $this->odooService->syncPurchaseOrderData($id, $headerData, $data['lines']);
+
+            return $this->json([
+                'success' => true,
+                'order_id' => $id,
+                'sync_summary' => $summary,
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Failed to sync PO', ['id' => $id, 'error' => $e->getMessage()]);
+            return $this->json([
+                'error' => 'Erreur lors de la synchronisation',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Récupère les pickings liés à un PO
      */
     #[Route('/purchase-order/{id}/pickings', name: 'get_purchase_order_pickings', methods: ['GET'])]

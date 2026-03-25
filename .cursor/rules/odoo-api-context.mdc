@@ -1,88 +1,198 @@
 ---
-description: Contexte API Odoo — connexion, credentials, architecture d'intégration
+description: Intégration Odoo — API, flux de données, champs custom, endpoints
 alwaysApply: true
 ---
 
-# Contexte API Odoo — AH CHOU
+# Intégration Odoo — AH CHOU
 
-## Connexion Odoo
+## Instance Odoo
 
-- **Instance** : `https://ah-chou1.odoo.com` (Odoo SaaS 19.1+e)
-- **Base de données** : `ah-chou1`
-- **Utilisateur API** : `mathieu.loic.hoarau@gmail.com`
-- **Protocole** : XML-RPC (`/xmlrpc/2/common`, `/xmlrpc/2/object`)
+| Paramètre | Valeur |
+|-----------|--------|
+| URL | `https://ah-chou1.odoo.com` |
+| Version | Odoo 19 (saas-19.1) |
+| Base de données | `ah-chou1` |
+| Utilisateur API | `mathieu.loic.hoarau@gmail.com` |
+| Protocole | XML-RPC (`/xmlrpc/2/common`, `/xmlrpc/2/object`) |
+| Hébergement | Odoo SaaS (pas Odoo.sh) |
 
-## IMPORTANT — Authentification
+## Authentification — Point critique
 
-Les credentials Odoo sont stockées **par client dans la base PostgreSQL** (entité `Client`), PAS dans `.env`.
-- `client.odooUrl`, `client.odooDatabase`, `client.odooUsername`, `client.odooApiKey`
-- Le champ `odooApiKey` est une **clé API Odoo** (pas le mot de passe web)
-- Pour les scripts Python standalone, récupérer la clé depuis l'app ou demander à l'utilisateur
+Les credentials Odoo ne sont **PAS** dans `.env`. Elles sont stockées **par tenant** dans l'entité `Client` (PostgreSQL) :
 
-**Ne jamais hard-coder de credentials dans les scripts versionnés.**
+```
+Client.odooUrl       → https://ah-chou1.odoo.com
+Client.odooDatabase  → ah-chou1
+Client.odooUsername  → mathieu.loic.hoarau@gmail.com
+Client.odooApiKey    → (clé API Odoo — jamais le mot de passe web)
+```
+
+- L'auth XML-RPC SaaS exige une **clé API** (générée dans Odoo : Paramètres → Utilisateurs → Clés API)
+- Le mot de passe web ne fonctionne **pas** pour XML-RPC sur Odoo SaaS
+- `ClientGetter` récupère le tenant actif, puis `OdooApiService.configure(client)` initialise la connexion
+- **Ne jamais hard-coder de credentials dans le code versionné**
 
 ## Architecture d'intégration
 
 ```
-PWA (React) ──► API Symfony (/odoo/*) ──► Odoo (XML-RPC)
-                OdooDataController        OdooApiService
+PWA (React)                API Symfony              Odoo (XML-RPC)
+───────────                ────────────              ──────────────
+useOdoo.ts    ──►  OdooDataController.php  ──►  OdooApiService.php  ──►  ah-chou1.odoo.com
+  hooks/               /odoo/*                    XML-RPC client          execute_kw()
 ```
 
-- `OdooDataController` : configure le service avec le `Client` actif via `ClientGetter`
-- `OdooApiService` : toutes les méthodes XML-RPC (CRUD, purchase, stock, GED)
-- Le frontend appelle `/odoo/*` endpoints, jamais Odoo directement
+- Le frontend n'appelle **jamais** Odoo directement — tout passe par `/odoo/*`
+- `OdooDataController` : 30+ routes, configure le service via `ClientGetter`
+- `OdooApiService` : client XML-RPC générique (CRUD) + méthodes métier
 
-## Modèle de données Achat ↔ Odoo
+## Endpoints API `/odoo/*` — Référence complète
 
-| Entité App | Modèle Odoo | Lien |
-|------------|-------------|------|
-| `Achat` | `purchase.order` | `achat.odooPurchaseOrderId` |
-| `Item` | `purchase.order.line` | via `product_id` |
-| `Status` | `x_statut_transit` (champ custom) | code mappé |
-| `MediaObject` | `documents.document` | `odooDocumentId` |
+### Connexion & Référentiels
+
+| Méthode | Route | Rôle |
+|---------|-------|------|
+| GET | `/odoo/test` | Test de connexion Odoo |
+| GET | `/odoo/products` | Liste produits Odoo |
+| GET | `/odoo/products/{id}` | Détail produit |
+| GET | `/odoo/suppliers` | Liste fournisseurs |
+| GET | `/odoo/suppliers/search` | Recherche fournisseur par nom |
+| GET | `/odoo/categories` | Catégories de produits |
+| GET | `/odoo/uom` | Unités de mesure |
+
+### Bons de commande (Purchase Orders)
+
+| Méthode | Route | Rôle |
+|---------|-------|------|
+| POST | `/odoo/rfq` | Créer un RFQ (demande de prix) |
+| POST | `/odoo/rfq/{id}/confirm` | Confirmer un RFQ → PO |
+| POST | `/odoo/purchase-order` | Créer un PO confirmé (brouillon + confirm auto) |
+| PUT | `/odoo/purchase-order/{id}/lines` | Mettre à jour les lignes du PO |
+| POST | `/odoo/purchase-order/{id}/message` | Poster un message chatter |
+| POST | `/odoo/purchase-order/{id}/cancel` | Annuler un PO |
+
+### Stock & Transit
+
+| Méthode | Route | Rôle |
+|---------|-------|------|
+| GET | `/odoo/stock-locations` | Emplacements de stock |
+| POST | `/odoo/stock-transfer` | Créer un transfert de stock |
+| GET | `/odoo/purchase-order/{id}/pickings` | Pickings liés à un PO |
+| GET | `/odoo/picking/{id}/state` | État d'un picking |
+| POST | `/odoo/purchase-order/{id}/transit-status` | Mettre à jour le statut transit |
+| GET | `/odoo/stock-by-transit/{statusCode}` | Stock filtré par statut transit |
+| POST | `/odoo/clear-transit-stock` | Vider le stock transit |
+| GET | `/odoo/stock-at-location/{locationId}` | Stock à un emplacement |
+| GET | `/odoo/movement-history/{locationId}` | Historique des mouvements |
+| GET | `/odoo/stock-counts-batch` | Compteurs stock par batch |
+
+### Réception
+
+| Méthode | Route | Rôle |
+|---------|-------|------|
+| GET | `/odoo/purchase-order/{id}/reception-info` | Info picking de réception |
+| GET | `/odoo/check-reception-status` | Vérification batch réceptions |
+| POST | `/odoo/purchase-order/{id}/validate-receipt` | Valider réception |
+
+### GED (Documents)
+
+| Méthode | Route | Rôle |
+|---------|-------|------|
+| POST | `/odoo/attachment/upload` | Upload document (multipart) |
+| GET | `/odoo/attachment/{id}/download` | Télécharger via proxy |
+| DELETE | `/odoo/attachment/{id}` | Supprimer document (Odoo + local) |
+| GET | `/odoo/attachment/list` | Lister documents d'un PO |
+
+## Modèle de données — Mapping App ↔ Odoo
+
+| Entité App | Modèle Odoo | Champ de lien |
+|------------|-------------|---------------|
+| `Achat` | `purchase.order` | `achat.odooPurchaseOrderId` → `purchase.order.id` |
+| `Achat` | `stock.picking` | `achat.odooPickingId` → picking de réception |
+| `Item` | `purchase.order.line` | via `product_id` (pas de lien stocké) |
+| `Status` | champ `x_statut_transit` | mapping par code statut |
+| `MediaObject` | `documents.document` | `mediaObject.odooDocumentId` |
 
 ## Champs custom Odoo (créés par l'app)
 
-| Modèle | Champ | Type | Rôle |
-|--------|-------|------|------|
-| `purchase.order` | `x_statut_transit` | char | Statut transit (en_mer, au_port, etc.) |
-| `purchase.order` | `x_locked_by_app` | boolean | PO verrouillé (créé par l'app) |
-| `purchase.order` | `x_devise_achat` | char | Devise d'achat d'origine |
-| `purchase.order.line` | `x_prix_achat_devise` | float | Prix unitaire devise origine |
-| `purchase.order.line` | `x_devise_origine` | char | Code devise origine |
+Ces champs doivent être créés via le script `docs/guide-utilisateur/lock_po_field.py` ou manuellement dans Odoo.
+L'app les écrit de manière **non-bloquante** (try/catch) : si le champ n'existe pas, le PO est quand même créé.
 
-## Flux Achat — séquence
+| Modèle Odoo | Champ | Type | Rôle |
+|-------------|-------|------|------|
+| `purchase.order` | `x_statut_transit` | char | Statut transit (en_mer, au_port, douane…) |
+| `purchase.order` | `x_locked_by_app` | boolean | Verrouillage PO (créé par l'app, ne pas modifier dans Odoo) |
+| `purchase.order` | `x_devise_achat` | char | Code devise d'achat d'origine (ex: USD, THB) |
+| `purchase.order.line` | `x_prix_achat_devise` | float | Prix unitaire en devise d'origine |
+| `purchase.order.line` | `x_devise_origine` | char | Code devise de la ligne |
 
-1. Création `Achat` en base locale (POST /achats)
-2. Envoi vers Odoo (drag Kanban BROUILLON→ENVOYE ou bouton SendToOdoo)
-3. `POST /odoo/purchase-order` → `createPurchaseOrder()` → `purchase.order` + lines + `button_confirm`
-4. PATCH achat avec `odooPurchaseOrderId`, `odooPurchaseOrderName`, `odooPickingId`
-5. Transit : drag Kanban → `POST /odoo/purchase-order/{id}/transit-status` + stock transfers
-6. Réception : validation picking dans Odoo → polling → statut RECU
+## Flux détaillé : Achat → Odoo PO
 
-## Serveurs
+### Étape 1 — Création PO (BROUILLON → ENVOYE)
 
-| Environnement | IP / URL | Répertoire |
-|---------------|----------|------------|
-| Staging | `167.172.191.66` (staging-ahchou) | `/root/achats-harel` |
-| Production | `159.223.23.209` (ah-chou.creazot.com) | `/root/achats-harel` |
-| Accès SSH | `root@{IP}` | Docker compose.yaml + compose.prod.yaml |
+Déclenché par : drag Kanban ou bouton `SendToOdooButton`
+
+```
+1. Recherche fournisseur dans Odoo (par partner_id)
+2. create('purchase.order', {...})                     ← EN-TÊTE
+3. write('purchase.order', [id], {x_devise_achat})     ← champ custom (try/catch)
+4. Pour chaque Item :
+   a. create('purchase.order.line', {...})              ← LIGNE
+   b. write('purchase.order.line', [id], {x_prix_achat_devise, x_devise_origine})  ← custom (try/catch)
+5. button_confirm (RFQ → PO confirmé)                  ← CONFIRMATION
+6. write('purchase.order', [id], {x_locked_by_app: true})  ← VERROUILLAGE
+7. Recherche stock.picking (origin = PO name)          ← PICKING
+8. PATCH achat local avec odooPurchaseOrderId, odooPurchaseOrderName, odooPickingId
+```
+
+### Protections implémentées
+
+- **Anti-doublon** : si `odooPurchaseOrderId` existe déjà, pas de re-création
+- **Lignes invalides** : produits introuvables ignorés (skipped_lines retournées au frontend)
+- **Confirmation échouée** : PO créé quand même, erreur remontée au frontend
+- **Champs custom absents** : écriture séparée en try/catch, non bloquante
+
+### Étape 2 — Transit (EN_MER → AU_PORT → DOUANE)
+
+```
+POST /odoo/purchase-order/{id}/transit-status
+→ write x_statut_transit sur le PO
+→ create stock.move / stock.picking inter-entrepôts
+```
+
+### Étape 3 — Réception (A_RECEPTIONNER → RECU)
+
+```
+Polling : GET /odoo/check-reception-status
+→ Vérification état du picking de réception
+→ POST /odoo/purchase-order/{id}/validate-receipt → button_validate sur picking
+```
+
+## GED Odoo — Points clés
+
+- Modèle Odoo 19 : `documents.document` (pas `documents.folder` qui n'existe plus)
+- Dossiers : `type = 'folder'` (le champ `is_folder` est calculated readonly)
+- Hiérarchie : `Achats / {Fournisseur} / {PO ou Achat-id} - {Date}`
+- Parent : champ `folder_id` (many2one)
+- URL directe : champ calculé `access_url`
+- L'upload va toujours vers Odoo, même sans PO lié
+
+## Configuration Warehouse Odoo
+
+| Paramètre | Valeur |
+|-----------|--------|
+| Livraison | 2 étapes (`pick_ship` : WH/Stock → WH/Output → Clients) |
+| Réception | 1 étape |
+| Picking types | Receipts (ID=1), Delivery (ID=2), Pick (ID=3), Internal (ID=4) |
 
 ## Utilisateurs Odoo de test
 
 | Profil | Nom | Login | Droits |
 |--------|-----|-------|--------|
-| Admin | Mathieu | mathieu.loic.hoarau@gmail.com | Complet |
-| Direction | Paul Pieuvre | paul@ah-chou.com | Complet |
-| Commercial | Sarah Dine | sarah@ah-chou.com | Ventes (ses docs) |
-| Commercial | Sam Oussah | sam@ah-chou.com | Ventes (ses docs) |
-| Comptable | Gilles Mérou | gilles@ah-chou.com | Compta complet |
+| Admin | Mathieu | mathieu.loic.hoarau@gmail.com | Complet (tous modules) |
+| Direction | Paul Pieuvre | paul@ah-chou.com | Complet (tous modules) |
+| Commercial | Sarah Dine | sarah@ah-chou.com | Ventes (ses documents) |
+| Commercial | Sam Oussah | sam@ah-chou.com | Ventes (ses documents) |
+| Comptable | Gilles Mérou | gilles@ah-chou.com | Comptabilité complet |
 | Logistique | Marc Hareng | marc@ah-chou.com | Stock complet |
 
 Mot de passe commun test : `AhChou2026!`
-
-## Warehouse Odoo
-
-- Delivery : `pick_ship` (2 étapes : WH/Stock → WH/Output → Clients)
-- Reception : 1 étape
-- Picking types : Receipts (ID=1), Delivery (ID=2), Pick (ID=3), Internal (ID=4)

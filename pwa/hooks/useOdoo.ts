@@ -92,6 +92,22 @@ interface CostPriceItem {
     mainPr: number;
 }
 
+interface SyncSummary {
+    updated: number;
+    created: number;
+    deleted: number;
+    header_updated: boolean;
+    errors: string[];
+}
+
+interface SyncResult {
+    success: boolean;
+    order_id?: number;
+    sync_summary?: SyncSummary;
+    error?: string;
+    message?: string;
+}
+
 interface StockTransferData {
     location_src_id: number;
     location_dest_id: number;
@@ -139,6 +155,9 @@ interface UseOdooReturn {
     convertAchatToRFQ: (achat: any) => OdooRFQData | null;
     convertAchatToPurchaseOrder: (achat: any) => OdooPurchaseOrderData | null;
     calculateCostPrices: (achat: any) => CostPriceItem[];
+
+    // Synchronisation
+    syncPurchaseOrderData: (orderId: number, achat: any) => Promise<SyncResult>;
 
     // Transit / Stock
     createStockTransfer: (data: StockTransferData) => Promise<StockTransferResult>;
@@ -688,6 +707,83 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
     }, [notify, calculateCostPrices, generateOdooNotes]);
 
     /**
+     * Synchronise toutes les données d'un achat vers le PO Odoo existant.
+     * Met à jour en-tête, lignes (prix, quantités, descriptions), ajoute/supprime les lignes différentes.
+     */
+    const syncPurchaseOrderData = useCallback(async (orderId: number, achat: any): Promise<SyncResult> => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const costPriceItems = calculateCostPrices(achat);
+            const lines = costPriceItems.map((item) => {
+                const description = `${item.product}
+─────────────────────────────
+• Catégorie : ${item.category ?? 'Non définie'}
+• Conditionnement achat : ${item.quantity} x ${item.packaging}
+• Prix unitaire converti : ${item.outGoingUnitPriceHT?.toFixed(4) ?? 0} EUR
+• Total HT ligne : ${item.ht?.toFixed(2) ?? 0} EUR
+• Total TTC ligne : ${item.ttc?.toFixed(2) ?? 0} EUR
+• Prix de revient/unité : ${item.mainPr?.toFixed(4) ?? 0} EUR/${item.mainPackaging ?? 'Unit'}`;
+
+                return {
+                    product_id: item.productId,
+                    product_qty: item.mainQuantity,
+                    price_unit: item.mainPr,
+                    name: description,
+                    x_prix_achat_devise: item.incomingUnitPrice ?? undefined,
+                    x_devise_origine: achat.baseCurrency ?? undefined,
+                };
+            });
+
+            const formatDate = (date: string | Date | null) => {
+                if (!date) return undefined;
+                const d = new Date(date);
+                return d.toISOString().slice(0, 10);
+            };
+
+            const notes = generateOdooNotes(achat, costPriceItems);
+
+            const body = {
+                header: {
+                    date_planned: formatDate(achat.deliveryDate),
+                    notes,
+                    x_devise_achat: achat.baseCurrency ?? undefined,
+                },
+                lines,
+            };
+
+            const response = await fetch(`${ENTRYPOINT}/odoo/purchase-order/${orderId}/sync`, {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify(body),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || result.error || 'Erreur synchronisation');
+            }
+
+            const s = result.sync_summary;
+            const parts: string[] = [];
+            if (s?.updated) parts.push(`${s.updated} modifiée(s)`);
+            if (s?.created) parts.push(`${s.created} ajoutée(s)`);
+            if (s?.deleted) parts.push(`${s.deleted} supprimée(s)`);
+            if (s?.header_updated) parts.push('en-tête mis à jour');
+            const detail = parts.length > 0 ? parts.join(', ') : 'aucune modification';
+
+            return { ...result, detail };
+        } catch (e: any) {
+            const msg = e.message || 'Erreur synchronisation PO';
+            setError(msg);
+            return { success: false, error: msg };
+        } finally {
+            setLoading(false);
+        }
+    }, [calculateCostPrices, generateOdooNotes, session]);
+
+    /**
      * Crée un transfert de stock interne dans Odoo
      */
     const createStockTransfer = useCallback(async (data: StockTransferData): Promise<StockTransferResult> => {
@@ -1021,6 +1117,7 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
         findSupplierByName,
         createRFQ,
         createPurchaseOrder,
+        syncPurchaseOrderData,
         convertAchatToRFQ,
         convertAchatToPurchaseOrder,
         calculateCostPrices,

@@ -1,49 +1,174 @@
 ---
-description: Architecture du projet achats-harel-4.0 — stack, structure, conventions
+description: Architecture complète du projet achats-harel-4.0
 alwaysApply: true
 ---
 
-# Architecture projet achats-harel-4.0
+# Achats Harel 4.0 — Architecture projet
+
+Application de gestion des achats import pour le négoce alimentaire (crustacés, produits de la mer).
+Pilotage du cycle complet : achat fournisseur → transit maritime → réception en stock via Odoo ERP.
+
+## Langue
+
+- L'UI, la documentation et les échanges avec l'utilisateur sont **en français**.
+- Le code (variables, fonctions, commentaires techniques) est en anglais.
 
 ## Stack technique
 
-| Composant | Technologie | Répertoire |
-|-----------|------------|------------|
-| API | PHP 8.3 / Symfony 7 / API Platform 4 | `api/` |
-| Frontend | Next.js 15 / React 19 / React-Admin | `pwa/` |
-| Auth | Keycloak (OIDC) | Docker service |
-| DB | PostgreSQL 16 | Docker service |
-| Serveur | FrankenPHP (Caddy) | `api/frankenphp/` |
-| ERP | Odoo 19 SaaS (externe, XML-RPC) | Pas dockerisé |
+| Couche | Technologie | Dossier |
+|--------|------------|---------|
+| API | PHP 8.3 / Symfony 7 / API Platform 4 / Doctrine ORM | `api/` |
+| Frontend (PWA) | Next.js 15 / React 19 / React-Admin 5 / MUI | `pwa/` |
+| Auth | Keycloak (OIDC, conteneur Docker) | service `keycloak` |
+| BDD | PostgreSQL 16 | service `database` |
+| Serveur HTTP | FrankenPHP (Caddy intégré) | `api/frankenphp/` |
+| ERP externe | Odoo 19 SaaS (XML-RPC) — voir `odoo-api-context.mdc` | non dockerisé |
+| CI | GitHub Actions | `.github/workflows/` |
+| Déploiement | Docker Compose + SSH | `compose.yaml` + `compose.prod.yaml` |
 
-## Structure API (`api/`)
+## Structure API (`api/src/`)
 
-- `src/Entity/` : Entités Doctrine (Achat, Item, Client, Status, Tax, MediaObject...)
-- `src/Service/OdooApiService.php` : Intégration XML-RPC Odoo
-- `src/Controller/OdooDataController.php` : Endpoints `/odoo/*`
-- `src/EventSubscriber/` : Subscribers Doctrine
-- `migrations/` : Migrations Doctrine
+### Entités Doctrine (`Entity/`)
+
+| Entité | Rôle | Relations clés |
+|--------|------|----------------|
+| **`Achat`** | Bon d'achat import (entité centrale) | → items (OneToMany), → status (ManyToOne), → documents (OneToMany MediaObject), → categoryTaxes, → globalTaxes, → otherCosts, → coveringCosts |
+| **`Item`** | Ligne article d'un achat | → achat (ManyToOne) |
+| **`Status`** | Statut d'un achat (code + label) | ← achats |
+| **`Client`** | Tenant (config Odoo, SMTP, logo) | Porte les credentials Odoo (multi-tenant) |
+| **`MediaObject`** | Document/pièce jointe | → achat (ManyToOne) ; champs `odooDocumentId`, `odooAccessUrl` |
+| `Tax` | Taxe applicable (Octroi de mer, TVA) | ← globalTaxes (ManyToMany sur Achat) |
+| `CategoryTax` | Taxe par catégorie de produit | → achat |
+| `TaxType` | Type de taxe (référentiel) | |
+| `OtherCost` | Frais annexes (fret, douane, transit…) | → achat |
+| `CoveringCost` | Frais de couverture de change | → achat |
+| `Currency` | Devise (référentiel) | |
+| `Expense` | Charge/dépense | |
+| `Nature` | Nature d'achat | |
+| `PaymentDetail` | Modalités de paiement | |
+| `RecurringCost` | Charge récurrente | |
+| `User` | Utilisateur (lié Keycloak via OIDC) | |
+
+### Champs clés de `Achat`
+
+| Champ | Type | Rôle |
+|-------|------|------|
+| `supplierId` / `supplier` | int / string | Fournisseur Odoo (ID + nom) |
+| `baseCurrency` / `targetCurrency` | string (6) | Devise d'achat / devise cible |
+| `exchangeRate` / `coveringExchangeRate` | float | Taux de change / taux de couverture |
+| `totalHT` / `totalCoveringHT` | float | Total HT / Total après couverture |
+| `coeffApp` | float | Coefficient d'approche calculé |
+| `odooPurchaseOrderId` | int | ID du PO dans Odoo |
+| `odooPurchaseOrderName` | string | Référence PO Odoo (ex: `PO00042`) |
+| `odooPickingId` | int | ID du picking de réception Odoo |
+| `shipNumber` | string | N° navire/conteneur |
+| `groupingElement` | string | Regroupement logistique |
+
+### Champs clés de `Item`
+
+| Champ | Type | Rôle |
+|-------|------|------|
+| `productId` / `product` | int / string | Produit Odoo (ID + nom) |
+| `packagingId` / `packaging` | int / string | Conditionnement |
+| `categoryId` / `category` | string | Catégorie produit |
+| `quantity` / `weight` | float | Quantité / Poids |
+| `incomingUnitPrice` | float | Prix unitaire d'achat (devise source) |
+| `outGoingUnitPriceHT` | float | Prix unitaire de revient (devise cible) |
+| `costPriceHT` | float | Prix de revient HT |
+| `approchCoeff` | float | Coefficient d'approche par article |
+| `mainQuantity` / `mainPackaging` / `mainPackagingId` | mixed | Conditionnement principal (conversion) |
+| `unitFactor` | int | Facteur de conversion entre UdM |
+
+### Services (`Service/`)
+
+| Service | Rôle |
+|---------|------|
+| `OdooApiService` | Client XML-RPC Odoo (CRUD, PO, stock, GED) |
+| `ClientGetter` | Récupère le tenant `Client` actif |
+| `PdfGenerator` | Génération PDF (snappy) |
+| `FileUploader` | Upload fichiers locaux |
+| `DynamicMailerFactory` | SMTP dynamique par client |
+| `Export/ExportFilterManager` | Filtres d'export données |
+
+### Contrôleurs (`Controller/`)
+
+| Contrôleur | Rôle |
+|------------|------|
+| `OdooDataController` | Proxy Odoo — 30+ endpoints `/odoo/*` |
+| `ExportController` | Export CSV/Excel |
+| `ExchangeRateController` | Taux de change |
+| `ClientDataController` | Données client |
+| `ShopController` | Boutique (hérité) |
+| `MicrotrakProxyController` | Proxy Microtrak (balance) |
+| `UploadClientAssetController` | Upload assets client |
+
+### Commandes Symfony (`Command/`)
+
+| Commande | Rôle |
+|----------|------|
+| `ImportCurrenciesCommand` | Import référentiel devises |
+| `ImportTaxTypesCommand` | Import types de taxes |
+| `InitializeDataCommand` | Données initiales |
+| `PurgeDataCommand` | Purge données (dev/test) |
+| `UpdateKeycloakIdsCommand` | Sync IDs Keycloak |
 
 ## Structure PWA (`pwa/`)
 
-- `components/admin/achat/` : Composants achat (List, Create, Edit, Show, Kanban, SendToOdoo)
-- `components/admin/layout/` : Menu, AppBar, Layout
-- `hooks/useOdoo.ts` : Hook d'intégration Odoo (toutes les fonctions API)
-- `config/entrypoint.ts` : ENTRYPOINT API
-- `public/guide-utilisateur/` : Guide utilisateur HTML statique
+### Composants admin (`components/admin/`)
 
-## Conventions
+Le cœur métier est dans `achat/` :
 
-- Langue de l'UI et docs : **français**
-- Répondre en **français** à l'utilisateur
-- Entité principale : `Achat` (pas PurchaseOrder)
-- Statuts : `BROUILLON`, `ENVOYE`, `EN_MER`, `AU_PORT`, `DOUANE`, `A_RECEPTIONNER`, `RECU`
-- Données Odoo par client (multi-tenant via entité `Client`)
-- Pas de Symfony Workflow — le flux est géré côté frontend (Kanban drag & drop)
+| Fichier | Rôle |
+|---------|------|
+| `AchatsList.tsx` | Liste des achats (Datagrid React-Admin) |
+| `AchatsCreate.tsx` | Formulaire de création (TabbedForm multi-onglets) |
+| `AchatsEdit.tsx` | Formulaire d'édition |
+| `AchatShow.tsx` | Vue détaillée d'un achat |
+| `AchatsKanban.tsx` | Tableau Kanban (drag & drop entre statuts) |
+| `SendToOdooButton.tsx` | Bouton envoi vers Odoo (page détail) |
+| `ItemsAnalytics.jsx` | Analytique articles |
+| `GlobalTaxes.jsx` | Gestion taxes globales |
+| `CategoryTaxInput.jsx` | Saisie taxes par catégorie |
 
-## Deployment
+Autres domaines admin : `client/`, `supplier/`, `product/`, `currency/`, `tax/`, `expense/`, `status/`, `nature/`, `user/`, etc.
 
-- Docker Compose : `compose.yaml` + `compose.prod.yaml`
-- Git : branche `main`, push vers origin, déploiement via SSH + `git pull` + `docker compose up -d`
-- Accès staging : `ssh root@167.172.191.66`
-- Authentification HTTP staging : `ah-chou` / `ah-chou`
+### Hooks (`hooks/`)
+
+| Hook | Rôle |
+|------|------|
+| `useOdoo.ts` | Toutes les fonctions d'appel Odoo (PO, stock, GED, produits) + transformation Achat → PO |
+
+### Config (`config/`)
+
+| Fichier | Rôle |
+|---------|------|
+| `entrypoint.ts` | URL de l'API backend |
+| `keycloak.ts` | Config Keycloak frontend |
+
+## Flux métier principal — Cycle d'un Achat
+
+```
+BROUILLON → ENVOYE → EN_MER → AU_PORT → DOUANE → A_RECEPTIONNER → RECU
+```
+
+1. **BROUILLON** : Création de l'achat dans l'app (articles, prix, fournisseur, devises)
+2. **BROUILLON → ENVOYE** : Envoi vers Odoo = création `purchase.order` + confirmation + création picking
+3. **EN_MER → AU_PORT → DOUANE** : Suivi du transit (mise à jour `x_statut_transit` + transferts stock Odoo)
+4. **A_RECEPTIONNER** : Picking de réception prêt dans Odoo
+5. **RECU** : Validation du picking dans Odoo → statut final
+
+Le flux est piloté par le **Kanban** (drag & drop) — il n'y a pas de Symfony Workflow.
+
+## Conventions importantes
+
+- L'entité s'appelle `Achat` (pas PurchaseOrder) dans l'app
+- Multi-tenant via l'entité `Client` (chaque client a ses propres credentials Odoo, SMTP…)
+- Sécurité API : `is_granted("OIDC_USER")` (standard) / `is_granted("OIDC_ADMIN")` (admin)
+- Sérialization groups : `Achat:read`, `Achat:write`, `Item:read`, `Item:write`, `Client:read`, `Client:write`
+- Les formulaires utilisent `TabbedForm` (React-Admin) — attention au focus sur les inputs d'onglets inactifs
+- Mercure activé pour les mises à jour temps réel
+
+## Branche Git
+
+- Branche active : **`4.0`** (pas `main`)
+- Remote : `origin` → `github.com:Seb974/achats-harel.git`
