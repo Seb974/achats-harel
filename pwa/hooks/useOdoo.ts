@@ -63,6 +63,11 @@ interface OdooPurchaseOrderResult {
     state?: string;
     origin?: string;
     lines_count?: number;
+    skipped_lines?: string[];
+    skipped_count?: number;
+    confirmation_error?: string;
+    picking_id?: number;
+    picking_name?: string;
     error?: string;
     message?: string;
 }
