@@ -24,6 +24,8 @@ import SendIcon from '@mui/icons-material/Send';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import { useOdoo } from '../../../hooks/useOdoo';
+import { ENTRYPOINT } from '../../../config/entrypoint';
+import { useSessionContext } from '../SessionContextProvider';
 
 interface SendToOdooButtonProps {
     label?: string;
@@ -49,6 +51,7 @@ export const SendToOdooButton = ({
     const record = useRecordContext();
     const notify = useNotify();
     const refresh = useRefresh();
+    const { session } = useSessionContext();
     
     const { 
         isOdooConfigured, 
@@ -83,6 +86,18 @@ export const SendToOdooButton = ({
         return null;
     }
 
+    if (record?.odooPurchaseOrderId) {
+        return (
+            <Chip
+                icon={<CheckCircleIcon />}
+                label={record.odooPurchaseOrderName || `PO #${record.odooPurchaseOrderId}`}
+                color="success"
+                variant="outlined"
+                onClick={() => window.open(`https://ah-chou1.odoo.com/odoo/purchase/${record.odooPurchaseOrderId}`, '_blank')}
+            />
+        );
+    }
+
     const handleOpen = () => {
         setDialogOpen(true);
         setResult(null);
@@ -114,7 +129,23 @@ export const SendToOdooButton = ({
             const response = await createPurchaseOrder(purchaseOrderData);
             setResult(response);
 
-            if (response.success) {
+            if (response.success && response.order_id) {
+                try {
+                    await fetch(`${ENTRYPOINT}${record['@id']}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/merge-patch+json',
+                            Authorization: `Bearer ${session?.accessToken}`,
+                        },
+                        body: JSON.stringify({
+                            odooPurchaseOrderId: response.order_id,
+                            odooPurchaseOrderName: response.order_name ?? null,
+                            odooPickingId: response.picking_id ?? null,
+                        }),
+                    });
+                } catch (e) {
+                    console.warn('Failed to save Odoo PO reference on achat', e);
+                }
                 notify(`Commande ${response.order_name} créée et confirmée dans Odoo !`, { type: 'success' });
             }
         } catch (error: any) {
@@ -268,6 +299,35 @@ export const SendToOdooButton = ({
                                     variant="outlined" 
                                 />
                             </Box>
+
+                            {result.state && result.state !== 'purchase' && (
+                                <Alert severity="error" sx={{ mt: 2, textAlign: 'left' }}>
+                                    <Typography variant="subtitle2" gutterBottom>
+                                        La commande n'a pas pu être confirmée (état : {result.state})
+                                    </Typography>
+                                    {result.confirmation_error && (
+                                        <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                                            {result.confirmation_error}
+                                        </Typography>
+                                    )}
+                                    <Typography variant="body2" sx={{ fontSize: '0.85rem', mt: 0.5 }}>
+                                        Vérifiez le bon de commande directement dans Odoo.
+                                    </Typography>
+                                </Alert>
+                            )}
+
+                            {result.skipped_lines && result.skipped_lines.length > 0 && (
+                                <Alert severity="warning" sx={{ mt: 2, textAlign: 'left' }}>
+                                    <Typography variant="subtitle2" gutterBottom>
+                                        ⚠️ {result.skipped_lines.length} ligne(s) ignorée(s) :
+                                    </Typography>
+                                    {result.skipped_lines.map((line: string, i: number) => (
+                                        <Typography key={i} variant="body2" sx={{ fontSize: '0.85rem' }}>
+                                            • {line}
+                                        </Typography>
+                                    ))}
+                                </Alert>
+                            )}
                             
                             {result.origin && (
                                 <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>

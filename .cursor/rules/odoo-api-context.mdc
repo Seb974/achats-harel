@@ -1,0 +1,88 @@
+---
+description: Contexte API Odoo — connexion, credentials, architecture d'intégration
+alwaysApply: true
+---
+
+# Contexte API Odoo — AH CHOU
+
+## Connexion Odoo
+
+- **Instance** : `https://ah-chou1.odoo.com` (Odoo SaaS 19.1+e)
+- **Base de données** : `ah-chou1`
+- **Utilisateur API** : `mathieu.loic.hoarau@gmail.com`
+- **Protocole** : XML-RPC (`/xmlrpc/2/common`, `/xmlrpc/2/object`)
+
+## IMPORTANT — Authentification
+
+Les credentials Odoo sont stockées **par client dans la base PostgreSQL** (entité `Client`), PAS dans `.env`.
+- `client.odooUrl`, `client.odooDatabase`, `client.odooUsername`, `client.odooApiKey`
+- Le champ `odooApiKey` est une **clé API Odoo** (pas le mot de passe web)
+- Pour les scripts Python standalone, récupérer la clé depuis l'app ou demander à l'utilisateur
+
+**Ne jamais hard-coder de credentials dans les scripts versionnés.**
+
+## Architecture d'intégration
+
+```
+PWA (React) ──► API Symfony (/odoo/*) ──► Odoo (XML-RPC)
+                OdooDataController        OdooApiService
+```
+
+- `OdooDataController` : configure le service avec le `Client` actif via `ClientGetter`
+- `OdooApiService` : toutes les méthodes XML-RPC (CRUD, purchase, stock, GED)
+- Le frontend appelle `/odoo/*` endpoints, jamais Odoo directement
+
+## Modèle de données Achat ↔ Odoo
+
+| Entité App | Modèle Odoo | Lien |
+|------------|-------------|------|
+| `Achat` | `purchase.order` | `achat.odooPurchaseOrderId` |
+| `Item` | `purchase.order.line` | via `product_id` |
+| `Status` | `x_statut_transit` (champ custom) | code mappé |
+| `MediaObject` | `documents.document` | `odooDocumentId` |
+
+## Champs custom Odoo (créés par l'app)
+
+| Modèle | Champ | Type | Rôle |
+|--------|-------|------|------|
+| `purchase.order` | `x_statut_transit` | char | Statut transit (en_mer, au_port, etc.) |
+| `purchase.order` | `x_locked_by_app` | boolean | PO verrouillé (créé par l'app) |
+| `purchase.order` | `x_devise_achat` | char | Devise d'achat d'origine |
+| `purchase.order.line` | `x_prix_achat_devise` | float | Prix unitaire devise origine |
+| `purchase.order.line` | `x_devise_origine` | char | Code devise origine |
+
+## Flux Achat — séquence
+
+1. Création `Achat` en base locale (POST /achats)
+2. Envoi vers Odoo (drag Kanban BROUILLON→ENVOYE ou bouton SendToOdoo)
+3. `POST /odoo/purchase-order` → `createPurchaseOrder()` → `purchase.order` + lines + `button_confirm`
+4. PATCH achat avec `odooPurchaseOrderId`, `odooPurchaseOrderName`, `odooPickingId`
+5. Transit : drag Kanban → `POST /odoo/purchase-order/{id}/transit-status` + stock transfers
+6. Réception : validation picking dans Odoo → polling → statut RECU
+
+## Serveurs
+
+| Environnement | IP / URL | Répertoire |
+|---------------|----------|------------|
+| Staging | `167.172.191.66` (staging-ahchou) | `/root/achats-harel` |
+| Production | `159.223.23.209` (ah-chou.creazot.com) | `/root/achats-harel` |
+| Accès SSH | `root@{IP}` | Docker compose.yaml + compose.prod.yaml |
+
+## Utilisateurs Odoo de test
+
+| Profil | Nom | Login | Droits |
+|--------|-----|-------|--------|
+| Admin | Mathieu | mathieu.loic.hoarau@gmail.com | Complet |
+| Direction | Paul Pieuvre | paul@ah-chou.com | Complet |
+| Commercial | Sarah Dine | sarah@ah-chou.com | Ventes (ses docs) |
+| Commercial | Sam Oussah | sam@ah-chou.com | Ventes (ses docs) |
+| Comptable | Gilles Mérou | gilles@ah-chou.com | Compta complet |
+| Logistique | Marc Hareng | marc@ah-chou.com | Stock complet |
+
+Mot de passe commun test : `AhChou2026!`
+
+## Warehouse Odoo
+
+- Delivery : `pick_ship` (2 étapes : WH/Stock → WH/Output → Clients)
+- Reception : 1 étape
+- Picking types : Receipts (ID=1), Delivery (ID=2), Pick (ID=3), Internal (ID=4)

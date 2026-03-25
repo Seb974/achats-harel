@@ -335,6 +335,7 @@ class OdooDataController extends AbstractController
                 'notes' => $data['notes'] ?? '',
                 'date_order' => $data['date_order'] ?? null,
                 'date_planned' => $data['date_planned'] ?? null,
+                'x_devise_achat' => $data['x_devise_achat'] ?? null,
             ];
 
             $result = $this->odooService->createPurchaseOrder(

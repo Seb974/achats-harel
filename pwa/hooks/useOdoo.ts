@@ -39,6 +39,8 @@ interface OdooPurchaseOrderLine {
     price_unit: number;
     product_uom?: number;
     name?: string;
+    x_prix_achat_devise?: number;
+    x_devise_origine?: string;
 }
 
 interface OdooPurchaseOrderData {
@@ -48,6 +50,7 @@ interface OdooPurchaseOrderData {
     date_order?: string;
     date_planned?: string;
     notes?: string;
+    x_devise_achat?: string;
 }
 
 interface OdooPurchaseOrderResult {
@@ -647,6 +650,8 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
                 product_qty: item.mainQuantity,
                 price_unit: item.mainPr,
                 name: description,
+                x_prix_achat_devise: item.incomingUnitPrice ?? undefined,
+                x_devise_origine: achat.baseCurrency ?? undefined,
             };
         });
 
@@ -673,6 +678,7 @@ Importé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTi
             date_order: formatDateTime(achat.date),
             date_planned: formatDate(achat.deliveryDate),
             notes,
+            x_devise_achat: achat.baseCurrency ?? undefined,
         };
     }, [notify, calculateCostPrices, generateOdooNotes]);
 

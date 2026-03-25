@@ -1,0 +1,49 @@
+---
+description: Architecture du projet achats-harel-4.0 — stack, structure, conventions
+alwaysApply: true
+---
+
+# Architecture projet achats-harel-4.0
+
+## Stack technique
+
+| Composant | Technologie | Répertoire |
+|-----------|------------|------------|
+| API | PHP 8.3 / Symfony 7 / API Platform 4 | `api/` |
+| Frontend | Next.js 15 / React 19 / React-Admin | `pwa/` |
+| Auth | Keycloak (OIDC) | Docker service |
+| DB | PostgreSQL 16 | Docker service |
+| Serveur | FrankenPHP (Caddy) | `api/frankenphp/` |
+| ERP | Odoo 19 SaaS (externe, XML-RPC) | Pas dockerisé |
+
+## Structure API (`api/`)
+
+- `src/Entity/` : Entités Doctrine (Achat, Item, Client, Status, Tax, MediaObject...)
+- `src/Service/OdooApiService.php` : Intégration XML-RPC Odoo
+- `src/Controller/OdooDataController.php` : Endpoints `/odoo/*`
+- `src/EventSubscriber/` : Subscribers Doctrine
+- `migrations/` : Migrations Doctrine
+
+## Structure PWA (`pwa/`)
+
+- `components/admin/achat/` : Composants achat (List, Create, Edit, Show, Kanban, SendToOdoo)
+- `components/admin/layout/` : Menu, AppBar, Layout
+- `hooks/useOdoo.ts` : Hook d'intégration Odoo (toutes les fonctions API)
+- `config/entrypoint.ts` : ENTRYPOINT API
+- `public/guide-utilisateur/` : Guide utilisateur HTML statique
+
+## Conventions
+
+- Langue de l'UI et docs : **français**
+- Répondre en **français** à l'utilisateur
+- Entité principale : `Achat` (pas PurchaseOrder)
+- Statuts : `BROUILLON`, `ENVOYE`, `EN_MER`, `AU_PORT`, `DOUANE`, `A_RECEPTIONNER`, `RECU`
+- Données Odoo par client (multi-tenant via entité `Client`)
+- Pas de Symfony Workflow — le flux est géré côté frontend (Kanban drag & drop)
+
+## Deployment
+
+- Docker Compose : `compose.yaml` + `compose.prod.yaml`
+- Git : branche `main`, push vers origin, déploiement via SSH + `git pull` + `docker compose up -d`
+- Accès staging : `ssh root@167.172.191.66`
+- Authentification HTTP staging : `ah-chou` / `ah-chou`

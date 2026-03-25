@@ -441,6 +441,32 @@ export const AchatsKanban = () => {
                 } else {
                     const fullAchat = await fetchFullAchat(achat.id);
 
+                    if (fullAchat.odooPurchaseOrderId) {
+                        updateStep(stepIdx, { status: 'skipped', detail: `PO existant: ${fullAchat.odooPurchaseOrderName || fullAchat.odooPurchaseOrderId}` });
+                        stepIdx++;
+                        updateStep(stepIdx, { status: 'skipped' });
+                        stepIdx++;
+                        updateStep(stepIdx, { status: 'skipped' });
+                        stepIdx++;
+
+                        updateStep(stepIdx, { status: 'running' });
+                        await postPOMessage(fullAchat.odooPurchaseOrderId,
+                            `<p><strong>📦 Statut transit : ENVOYÉ</strong><br/>Reprise depuis l'application le ${new Date().toLocaleDateString('fr-FR')}</p>`
+                        );
+                        updateStep(stepIdx, { status: 'success' });
+                        stepIdx++;
+
+                        updateStep(stepIdx, { status: 'running' });
+                        await updateTransitStatus(fullAchat.odooPurchaseOrderId, 'ENVOYE');
+                        updateStep(stepIdx, { status: 'success' });
+                        stepIdx++;
+
+                        updateStep(stepIdx, { status: 'running' });
+                        await patchAchat(achat.id, { status: statusIri });
+                        updateStep(stepIdx, { status: 'success' });
+                        stepIdx++;
+                    } else {
+
                     updateStep(stepIdx, { status: 'running' });
                     if (!fullAchat.supplierId && fullAchat.supplier) {
                         const match = await findSupplierByName(fullAchat.supplier);
@@ -474,7 +500,10 @@ export const AchatsKanban = () => {
                         try {
                             const result = await createPurchaseOrder(poData);
                             if (result.success && result.order_id) {
-                                updateStep(stepIdx, { status: 'success', detail: `${result.order_name} (id=${result.order_id})` });
+                                const skippedWarning = result.skipped_lines?.length > 0
+                                    ? ` — ⚠️ ${result.skipped_lines.length} ligne(s) ignorée(s)`
+                                    : '';
+                                updateStep(stepIdx, { status: 'success', detail: `${result.order_name} (id=${result.order_id})${skippedWarning}` });
                                 stepIdx++;
                                 updateStep(stepIdx, { status: 'success', detail: 'RFQ confirmé' });
                                 stepIdx++;
@@ -496,6 +525,7 @@ export const AchatsKanban = () => {
                                     status: statusIri,
                                     odooPurchaseOrderId: result.order_id,
                                     odooPurchaseOrderName: result.order_name ?? null,
+                                    odooPickingId: result.picking_id ?? null,
                                 });
                                 updateStep(stepIdx, { status: 'success' });
                                 stepIdx++;
@@ -507,6 +537,7 @@ export const AchatsKanban = () => {
                             hasError = true;
                             stepIdx = transDialog.steps.length - 1;
                         }
+                    }
                     }
                 }
             } else if (isReverse && fromCode === 'ENVOYE' && toCode === 'BROUILLON') {
@@ -618,6 +649,16 @@ export const AchatsKanban = () => {
 
         const fullAchat = await fetchFullAchat(achat.id);
 
+        if (fullAchat.odooPurchaseOrderId) {
+            await postPOMessage(fullAchat.odooPurchaseOrderId,
+                `<p><strong>📦 Statut transit : ENVOYÉ</strong><br/>Reprise depuis l'application le ${new Date().toLocaleDateString('fr-FR')}</p>`
+            );
+            await updateTransitStatus(fullAchat.odooPurchaseOrderId, 'ENVOYE');
+            await patchAchat(achat.id, { status: statusIri });
+            notify(`PO existant ${fullAchat.odooPurchaseOrderName || fullAchat.odooPurchaseOrderId} — statut mis à jour`, { type: 'success' });
+            return;
+        }
+
         if (!fullAchat.supplierId && fullAchat.supplier) {
             const match = await findSupplierByName(fullAchat.supplier);
             if (match) {
@@ -644,6 +685,7 @@ export const AchatsKanban = () => {
                     status: statusIri,
                     odooPurchaseOrderId: result.order_id,
                     odooPurchaseOrderName: result.order_name ?? null,
+                    odooPickingId: result.picking_id ?? null,
                 });
                 postPOMessage(result.order_id,
                     `<p><strong>📦 Statut transit : ENVOYÉ</strong><br/>Commande créée depuis l'application Achats Harel le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>`
