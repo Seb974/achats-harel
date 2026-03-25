@@ -484,8 +484,8 @@ const CalculatedCoeffAppInput = ({ client }) => {
     const totalOtherCosts = otherCosts?.reduce((sum, c) => sum += c.currency !== targetCurrency ? parseFloat(c.value ?? 0) / parseFloat(coveringExchangeRate ?? 0) : parseFloat(c.value ?? 0), 0) ?? 0;
     const total = (totalOtherCosts ?? 0) - (totalCoveringHT ?? 0);
     const coeff = (total + (totalHT ?? 0))/ (totalHT ?? 1);
-    setValue("totalOtherCosts", totalOtherCosts);
-    setValue("coeffApp", coeff);
+    setValue("totalOtherCosts", totalOtherCosts, { shouldValidate: false, shouldTouch: false });
+    setValue("coeffApp", coeff, { shouldValidate: false, shouldTouch: false });
   }, [totalOtherCosts, totalCoveringHT, totalHT]);
 
 
