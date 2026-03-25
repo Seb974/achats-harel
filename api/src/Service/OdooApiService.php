@@ -930,7 +930,7 @@ class OdooApiService
 
     /**
      * After a transit transfer, reconcile quants across ALL transit locations:
-     * - Zero out every transit location for each product
+     * - Zero out every transit location for each product (quantity + reserved)
      * - Set correct qty ONLY at the destination
      */
     private function reconcileTransitQuants(int $srcLocationId, int $destLocationId, array $products): void
@@ -941,19 +941,27 @@ class OdooApiService
             $productId = $p['product_id'];
             $expectedQty = $p['qty'];
 
-            // Find ALL quants for this product across ALL transit locations
             $allQuants = $this->searchRead('stock.quant', [
                 ['product_id', '=', $productId],
                 ['location_id', 'in', self::TRANSIT_LOCATION_IDS],
-            ], ['id', 'quantity', 'location_id'], 10);
+            ], ['id', 'quantity', 'reserved_quantity', 'location_id'], 10);
 
             foreach ($allQuants as $q) {
                 $locId = is_array($q['location_id']) ? $q['location_id'][0] : $q['location_id'];
                 $isDestination = ($locId === $destLocationId);
                 $targetQty = $isDestination ? $expectedQty : 0;
+                $currentQty = (float)($q['quantity'] ?? 0);
+                $currentReserved = (float)($q['reserved_quantity'] ?? 0);
 
-                if ((float)$q['quantity'] !== (float)$targetQty) {
+                $needsUpdate = abs($currentQty - $targetQty) > 0.001 || $currentReserved > 0.001;
+                if ($needsUpdate) {
                     try {
+                        // Libérer les réservations en forçant reserved_quantity à 0
+                        if ($currentReserved > 0.001) {
+                            $this->execute('stock.quant', 'write', [
+                                [$q['id']], ['reserved_quantity' => 0],
+                            ], $ctx);
+                        }
                         $this->execute('stock.quant', 'write', [
                             [$q['id']], ['inventory_quantity' => $targetQty],
                         ], $ctx);
@@ -996,6 +1004,7 @@ class OdooApiService
 
     /**
      * Clears all transit stock for the given products (used when PO is cancelled).
+     * Resets both quantity and reserved_quantity to 0.
      */
     public function clearTransitStock(array $products): void
     {
@@ -1007,11 +1016,19 @@ class OdooApiService
             $allQuants = $this->searchRead('stock.quant', [
                 ['product_id', '=', $productId],
                 ['location_id', 'in', self::TRANSIT_LOCATION_IDS],
-            ], ['id', 'quantity'], 10);
+            ], ['id', 'quantity', 'reserved_quantity'], 10);
 
             foreach ($allQuants as $q) {
-                if ((float)$q['quantity'] !== 0.0) {
+                $hasQty = (float)($q['quantity'] ?? 0) !== 0.0;
+                $hasReserved = (float)($q['reserved_quantity'] ?? 0) > 0.001;
+
+                if ($hasQty || $hasReserved) {
                     try {
+                        if ($hasReserved) {
+                            $this->execute('stock.quant', 'write', [
+                                [$q['id']], ['reserved_quantity' => 0],
+                            ], $ctx);
+                        }
                         $this->execute('stock.quant', 'write', [
                             [$q['id']], ['inventory_quantity' => 0],
                         ], $ctx);
