@@ -792,7 +792,12 @@ class OdooApiService
             $this->assignTransitLotToMoveLines($move['id'], $productId);
         }
 
-        $this->safeExecute('stock.picking', 'button_validate', [[$picking]]);
+        $skipExpiryCtx = ['context' => ['skip_expired' => true, 'skip_immediate' => true]];
+        $validateResult = $this->safeExecute('stock.picking', 'button_validate', [[$picking]], $skipExpiryCtx);
+
+        if (is_array($validateResult) && isset($validateResult['res_model'])) {
+            $this->handleValidationWizard($validateResult, $picking);
+        }
 
         $result = $this->read('stock.picking', [$picking], ['id', 'name', 'state', 'origin']);
         $state = $result[0]['state'] ?? 'unknown';
@@ -803,7 +808,10 @@ class OdooApiService
             ]);
             try {
                 $this->safeExecute('stock.picking', 'action_set_quantities_to_reservation', [[$picking]]);
-                $this->safeExecute('stock.picking', 'button_validate', [[$picking]]);
+                $validateResult = $this->safeExecute('stock.picking', 'button_validate', [[$picking]], $skipExpiryCtx);
+                if (is_array($validateResult) && isset($validateResult['res_model'])) {
+                    $this->handleValidationWizard($validateResult, $picking);
+                }
                 $result = $this->read('stock.picking', [$picking], ['id', 'name', 'state', 'origin']);
                 $state = $result[0]['state'] ?? 'unknown';
             } catch (\Throwable $e) {
@@ -902,18 +910,39 @@ class OdooApiService
         }
     }
 
+    private const TRANSIT_LOT_EXPIRY = '2099-12-31 00:00:00';
+
     /**
      * Gets or creates the reusable "TRANSIT" lot for a product.
+     * Sets a far-future expiration date to avoid Odoo's expiry warnings
+     * (products with use_expiration_date=true and expiration_time=0
+     * would otherwise get an immediate expiry date).
      */
     private function getOrCreateTransitLot(int $productId): int
     {
         $existing = $this->searchRead('stock.lot', [
             ['name', '=', 'TRANSIT'],
             ['product_id', '=', $productId],
-        ], ['id'], 1);
+        ], ['id', 'expiration_date'], 1);
 
         if (!empty($existing)) {
-            return $existing[0]['id'];
+            $lotId = $existing[0]['id'];
+            $expiry = $existing[0]['expiration_date'] ?? false;
+            if (!$expiry || $expiry < '2090-01-01') {
+                try {
+                    $this->write('stock.lot', [$lotId], [
+                        'expiration_date' => self::TRANSIT_LOT_EXPIRY,
+                        'use_date' => self::TRANSIT_LOT_EXPIRY,
+                        'removal_date' => self::TRANSIT_LOT_EXPIRY,
+                        'alert_date' => self::TRANSIT_LOT_EXPIRY,
+                    ]);
+                } catch (\Throwable $e) {
+                    $this->logger->warning('Failed to update TRANSIT lot expiry', [
+                        'lot_id' => $lotId, 'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+            return $lotId;
         }
 
         $companyIds = $this->searchRead('res.company', [], ['id'], 1);
@@ -923,6 +952,10 @@ class OdooApiService
             'name' => 'TRANSIT',
             'product_id' => $productId,
             'company_id' => $companyId,
+            'expiration_date' => self::TRANSIT_LOT_EXPIRY,
+            'use_date' => self::TRANSIT_LOT_EXPIRY,
+            'removal_date' => self::TRANSIT_LOT_EXPIRY,
+            'alert_date' => self::TRANSIT_LOT_EXPIRY,
         ]);
     }
 
@@ -1556,7 +1589,10 @@ class OdooApiService
     }
 
     /**
-     * Valide le picking de réception d'un PO (fait passer receipt_status à "full")
+     * Valide le picking de réception d'un PO (fait passer receipt_status à "full").
+     * 
+     * Handles lot-tracked products by assigning TRANSIT lots to move lines
+     * and bypassing the expiry confirmation wizard via context.
      */
     public function validatePurchaseOrderReceipt(int $orderId): array
     {
@@ -1565,7 +1601,8 @@ class OdooApiService
 
         $pickings = $this->searchRead(
             'stock.picking',
-            [['origin', '=', $poName], ['state', 'not in', ['done', 'cancel']]],
+            [['origin', '=', $poName], ['state', 'not in', ['done', 'cancel']],
+             ['picking_type_id.code', '=', 'incoming']],
             ['id', 'name', 'state', 'move_ids']
         );
 
@@ -1583,11 +1620,14 @@ class OdooApiService
             $moveIds = $picking['move_ids'] ?? [];
 
             if (!empty($moveIds)) {
-                $moves = $this->read('stock.move', $moveIds, ['id', 'product_uom_qty']);
+                $moves = $this->read('stock.move', $moveIds, ['id', 'product_id', 'product_uom_qty']);
                 foreach ($moves as $move) {
                     $this->write('stock.move', [$move['id']], [
                         'quantity' => $move['product_uom_qty'],
                     ]);
+
+                    $productId = is_array($move['product_id']) ? $move['product_id'][0] : $move['product_id'];
+                    $this->assignTransitLotToMoveLines($move['id'], $productId);
                 }
             }
 
@@ -1595,13 +1635,34 @@ class OdooApiService
                 $this->safeExecute('stock.picking', 'action_confirm', [[$pickingId]]);
             }
 
-            $this->safeExecute('stock.picking', 'button_validate', [[$pickingId]]);
+            $skipExpiryCtx = ['context' => ['skip_expired' => true, 'skip_immediate' => true]];
+            $validateResult = $this->safeExecute('stock.picking', 'button_validate', [[$pickingId]], $skipExpiryCtx);
+
+            if (is_array($validateResult) && isset($validateResult['res_model'])) {
+                $this->handleValidationWizard($validateResult, $pickingId);
+            }
 
             $result = $this->read('stock.picking', [$pickingId], ['id', 'name', 'state']);
+            $state = $result[0]['state'] ?? 'unknown';
+
+            if ($state !== 'done') {
+                $this->logger->warning('Receipt picking not done after validate, retrying', [
+                    'picking_id' => $pickingId, 'state' => $state,
+                ]);
+                try {
+                    $this->safeExecute('stock.picking', 'action_set_quantities_to_reservation', [[$pickingId]]);
+                    $this->safeExecute('stock.picking', 'button_validate', [[$pickingId]], $skipExpiryCtx);
+                    $result = $this->read('stock.picking', [$pickingId], ['id', 'name', 'state']);
+                    $state = $result[0]['state'] ?? 'unknown';
+                } catch (\Throwable $e) {
+                    $this->logger->warning('Force validate receipt failed', ['error' => $e->getMessage()]);
+                }
+            }
+
             $validated[] = [
                 'picking_id' => $pickingId,
                 'picking_name' => $result[0]['name'] ?? '',
-                'state' => $result[0]['state'] ?? 'unknown',
+                'state' => $state,
             ];
         }
 
@@ -1612,6 +1673,35 @@ class OdooApiService
             'pickings_validated' => $validated,
             'receipt_status' => $updatedOrder[0]['receipt_status'] ?? 'unknown',
         ];
+    }
+
+    /**
+     * Handles wizard actions returned by button_validate (expiry confirmation, etc.).
+     */
+    private function handleValidationWizard(array $wizardAction, int $pickingId): void
+    {
+        $resModel = $wizardAction['res_model'] ?? '';
+        $resId = $wizardAction['res_id'] ?? null;
+
+        $this->logger->info('Handling validation wizard', [
+            'model' => $resModel, 'res_id' => $resId, 'picking_id' => $pickingId,
+        ]);
+
+        try {
+            if ($resModel === 'stock.expiry.picking.confirmation' && $resId) {
+                $this->safeExecute($resModel, 'process', [[$resId]]);
+            } elseif ($resModel === 'stock.immediate.transfer' && $resId) {
+                $this->safeExecute($resModel, 'process', [[$resId]]);
+            } elseif ($resModel === 'stock.backorder.confirmation' && $resId) {
+                $this->safeExecute($resModel, 'process', [[$resId]]);
+            } elseif ($resModel && $resId) {
+                $this->safeExecute($resModel, 'process', [[$resId]]);
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning('Wizard processing failed', [
+                'model' => $resModel, 'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
