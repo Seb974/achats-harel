@@ -576,12 +576,17 @@ class OdooApiService
             $orderData['origin'] = $options['origin'];
         }
 
-        if (!empty($options['x_devise_achat'])) {
-            $orderData['x_devise_achat'] = $options['x_devise_achat'];
-        }
-
         // Créer le bon de commande en brouillon d'abord
         $orderId = $this->create('purchase.order', $orderData);
+
+        // Champs custom (non-bloquants — écriture séparée)
+        if (!empty($options['x_devise_achat'])) {
+            try {
+                $this->write('purchase.order', [$orderId], ['x_devise_achat' => $options['x_devise_achat']]);
+            } catch (\Throwable $e) {
+                $this->logger->info('x_devise_achat not available on purchase.order', ['error' => $e->getMessage()]);
+            }
+        }
 
         // Créer les lignes de commande (tolérant aux produits manquants)
         $skippedLines = [];
@@ -602,16 +607,25 @@ class OdooApiService
                 $lineData['product_uom_id'] = $line['product_uom'];
             }
 
-            if (!empty($line['x_prix_achat_devise'])) {
-                $lineData['x_prix_achat_devise'] = $line['x_prix_achat_devise'];
-            }
-            if (!empty($line['x_devise_origine'])) {
-                $lineData['x_devise_origine'] = $line['x_devise_origine'];
-            }
-
             try {
-                $this->create('purchase.order.line', $lineData);
+                $lineId = $this->create('purchase.order.line', $lineData);
                 $addedLines++;
+
+                // Champs custom sur la ligne (non-bloquants)
+                $customLineData = [];
+                if (!empty($line['x_prix_achat_devise'])) {
+                    $customLineData['x_prix_achat_devise'] = $line['x_prix_achat_devise'];
+                }
+                if (!empty($line['x_devise_origine'])) {
+                    $customLineData['x_devise_origine'] = $line['x_devise_origine'];
+                }
+                if (!empty($customLineData)) {
+                    try {
+                        $this->write('purchase.order.line', [$lineId], $customLineData);
+                    } catch (\Throwable $e) {
+                        $this->logger->info('Custom fields not available on purchase.order.line', ['error' => $e->getMessage()]);
+                    }
+                }
             } catch (\Throwable $e) {
                 $productDesc = $line['name'] ?? "product_id={$line['product_id']}";
                 $skippedLines[] = "Produit #{$line['product_id']} ignoré : {$e->getMessage()}";
