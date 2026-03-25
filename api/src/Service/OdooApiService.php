@@ -1236,6 +1236,8 @@ class OdooApiService
      */
     public function syncPurchaseOrderData(int $orderId, array $headerData, array $lines): array
     {
+        $noTrack = ['context' => ['tracking_disable' => true, 'mail_notrack' => true]];
+
         $summary = [
             'updated' => 0,
             'created' => 0,
@@ -1255,7 +1257,7 @@ class OdooApiService
 
         if (!empty($stdHeader)) {
             try {
-                $this->write('purchase.order', [$orderId], $stdHeader);
+                $this->execute('purchase.order', 'write', [[$orderId], $stdHeader], $noTrack);
                 $summary['header_updated'] = true;
             } catch (\Throwable $e) {
                 $summary['errors'][] = "Header update: {$e->getMessage()}";
@@ -1269,7 +1271,7 @@ class OdooApiService
         }
         if (!empty($customHeader)) {
             try {
-                $this->write('purchase.order', [$orderId], $customHeader);
+                $this->execute('purchase.order', 'write', [[$orderId], $customHeader], $noTrack);
             } catch (\Throwable $e) {
                 $this->logger->info('Sync: custom header fields not available', ['error' => $e->getMessage()]);
             }
@@ -1315,7 +1317,7 @@ class OdooApiService
 
                 if (!empty($updateData)) {
                     try {
-                        $this->write('purchase.order.line', [$odooLine['id']], $updateData);
+                        $this->execute('purchase.order.line', 'write', [[$odooLine['id']], $updateData], $noTrack);
                         $summary['updated']++;
                     } catch (\Throwable $e) {
                         $summary['errors'][] = "Update line product_id={$productId}: {$e->getMessage()}";
@@ -1332,7 +1334,7 @@ class OdooApiService
                 }
                 if (!empty($customLine)) {
                     try {
-                        $this->write('purchase.order.line', [$odooLine['id']], $customLine);
+                        $this->execute('purchase.order.line', 'write', [[$odooLine['id']], $customLine], $noTrack);
                     } catch (\Throwable $e) {
                         $this->logger->info('Sync: custom line fields not available', ['error' => $e->getMessage()]);
                     }
@@ -1353,7 +1355,7 @@ class OdooApiService
                 }
 
                 try {
-                    $newLineId = $this->create('purchase.order.line', $newLineData);
+                    $newLineId = $this->execute('purchase.order.line', 'create', [$newLineData], $noTrack);
                     $summary['created']++;
 
                     // Champs custom sur la nouvelle ligne
@@ -1366,7 +1368,7 @@ class OdooApiService
                     }
                     if (!empty($customLine)) {
                         try {
-                            $this->write('purchase.order.line', [$newLineId], $customLine);
+                            $this->execute('purchase.order.line', 'write', [[$newLineId], $customLine], $noTrack);
                         } catch (\Throwable $e) {
                             $this->logger->info('Sync: custom fields on new line not available', ['error' => $e->getMessage()]);
                         }
@@ -1775,13 +1777,15 @@ class OdooApiService
     }
 
     /**
-     * Poste un message dans le chatter d'un bon de commande Odoo
+     * Poste un message dans le chatter d'un bon de commande Odoo.
+     * Utilise du texte brut — Odoo 19 via XML-RPC échappe le HTML dans message_post.
      */
     public function postPurchaseOrderMessage(int $orderId, string $body): void
     {
         try {
+            $cleanBody = strip_tags(str_replace(['<br/>', '<br>', '<br />'], "\n", $body));
             $this->execute('purchase.order', 'message_post', [[$orderId]], [
-                'body' => $body,
+                'body' => $cleanBody,
                 'message_type' => 'comment',
                 'subtype_xmlid' => 'mail.mt_note',
             ]);

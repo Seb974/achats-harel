@@ -451,7 +451,7 @@ export const AchatsKanban = () => {
 
                         updateStep(stepIdx, { status: 'running' });
                         await postPOMessage(fullAchat.odooPurchaseOrderId,
-                            `<p><strong>📦 Statut transit : ENVOYÉ</strong><br/>Reprise depuis l'application le ${new Date().toLocaleDateString('fr-FR')}</p>`
+                            `📦 Statut transit : ENVOYÉ\nReprise depuis l'application le ${new Date().toLocaleDateString('fr-FR')}`
                         );
                         updateStep(stepIdx, { status: 'success' });
                         stepIdx++;
@@ -510,7 +510,7 @@ export const AchatsKanban = () => {
 
                                 updateStep(stepIdx, { status: 'running' });
                                 postPOMessage(result.order_id,
-                                    `<p><strong>Statut transit : ENVOYÉ</strong><br/>Commande créée le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>`
+                                    `📦 Statut transit : ENVOYÉ\nCommande créée le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`
                                 );
                                 updateStep(stepIdx, { status: 'success' });
                                 stepIdx++;
@@ -619,10 +619,10 @@ export const AchatsKanban = () => {
                     const fromLabel = fromStatus?.label || fromCode;
                     const toLabel = targetStatus.label;
                     const pickingRef = transferResult?.picking_name
-                        ? `<br/>Transfert : <a href="https://ah-chou1.odoo.com/odoo/inventory/transfers/${transferResult.picking_id}">${transferResult.picking_name}</a> (${transferResult.state})`
+                        ? `\nTransfert : ${transferResult.picking_name} (${transferResult.state})`
                         : '';
                     postPOMessage(achat.odooPurchaseOrderId,
-                        `<p><strong>${arrow} : ${fromLabel} → ${toLabel}</strong><br/>${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}${pickingRef}</p>`
+                        `${arrow} : ${fromLabel} → ${toLabel}\n${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}${pickingRef}`
                     );
                     updateStep(stepIdx, { status: 'success' });
                     stepIdx++;
@@ -676,7 +676,7 @@ export const AchatsKanban = () => {
 
         if (fullAchat.odooPurchaseOrderId) {
             await postPOMessage(fullAchat.odooPurchaseOrderId,
-                `<p><strong>📦 Statut transit : ENVOYÉ</strong><br/>Reprise depuis l'application le ${new Date().toLocaleDateString('fr-FR')}</p>`
+                `📦 Statut transit : ENVOYÉ\nReprise depuis l'application le ${new Date().toLocaleDateString('fr-FR')}`
             );
             await updateTransitStatus(fullAchat.odooPurchaseOrderId, 'ENVOYE');
             await patchAchat(achat.id, { status: statusIri });
@@ -713,7 +713,7 @@ export const AchatsKanban = () => {
                     odooPickingId: result.picking_id ?? null,
                 });
                 postPOMessage(result.order_id,
-                    `<p><strong>📦 Statut transit : ENVOYÉ</strong><br/>Commande créée depuis l'application Achats Harel le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>`
+                    `📦 Statut transit : ENVOYÉ\nCommande créée depuis l'application Achats Harel le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`
                 );
             } else {
                 throw new Error(result.error || 'Erreur création PO Odoo');
@@ -727,7 +727,7 @@ export const AchatsKanban = () => {
     const handleEnvoyeToBrouillon = async (achat: any, statusIri: string) => {
         if (achat.odooPurchaseOrderId) {
             postPOMessage(achat.odooPurchaseOrderId,
-                `<p><strong>⬅️ Retour : ENVOYÉ → BROUILLON</strong><br/>Commande annulée le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>`
+                `⬅️ Retour : ENVOYÉ → BROUILLON\nCommande annulée le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`
             );
             try {
                 await cancelPurchaseOrder(achat.odooPurchaseOrderId);
@@ -765,7 +765,7 @@ export const AchatsKanban = () => {
             const fromLabel = fromStatus?.label || fromStatusCode;
             const toLabel = targetStatus.label;
             postPOMessage(achat.odooPurchaseOrderId,
-                `<p><strong>${arrow} : ${fromLabel} → ${toLabel}</strong><br/>${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>`
+                `${arrow} : ${fromLabel} → ${toLabel}\n${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`
             );
         }
 
@@ -819,7 +819,7 @@ export const AchatsKanban = () => {
                         await patchAchat(achat.id, { status: statusIri });
                         await updateTransitStatus(achat.odooPurchaseOrderId, 'RECU');
                         postPOMessage(achat.odooPurchaseOrderId,
-                            `<p><strong>✅ RÉCEPTION COMPLÈTE</strong><br/>Détectée automatiquement le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>`
+                            `✅ RÉCEPTION COMPLÈTE\nDétectée automatiquement le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`
                         );
                         receivedCount++;
                     }
@@ -860,7 +860,7 @@ export const AchatsKanban = () => {
                             await patchAchat(achat.id, { status: statusIri });
                             await updateTransitStatus(achat.odooPurchaseOrderId, 'RECU');
                             postPOMessage(achat.odooPurchaseOrderId,
-                                `<p><strong>✅ RÉCEPTION COMPLÈTE</strong><br/>Détectée automatiquement le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>`
+                                `✅ RÉCEPTION COMPLÈTE\nDétectée automatiquement le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`
                             );
                             notify('Réception détectée dans Odoo — carte déplacée vers REÇU', { type: 'success' });
                             refresh();
