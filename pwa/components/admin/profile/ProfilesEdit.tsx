@@ -88,15 +88,10 @@ export const ProfilesEdit = () => {
         })
     );
 
-    const piloteClients = isDefinedAndNotVoid(data.pilote?.clients)
-        ? data.pilote.clients.map(c => getFormattedValueForBackEnd(c))
-        : [];
-
     const updatedProfile = {
         ...data,
         documents: documentIds,
         pilote: getFormattedValueForBackEnd(data.pilote),
-        clients: piloteClients,
         pilotQualifications: !isDefinedAndNotVoid(pilotQualifications) ? [] : formattedPilotQualifications,
         certificatMedical: {
             ...certificatMedical,
@@ -141,11 +136,6 @@ export const ProfilesEdit = () => {
               <DateInput source="birthDate" label="Date de naissance" validate={required()}/>
               <TextInput source="totalFlightHours" label="Total des heures de vol" format={ decimalToTime } parse={ timeToDecimal }/>
               <BooleanInput source="availableByDefault" label="Disponible par défaut" defaultValue={ false }/>
-              <ArrayInput source="pilote.clients" label="Clients">
-                <SimpleFormIterator inline disableReordering>
-                  <ReferenceInput reference="clients" source="@id" label="Client"/>
-                </SimpleFormIterator>
-              </ArrayInput>
               <ArrayInput source="pilotQualifications" label="Qualifications">
                 <SimpleFormIterator inline disableReordering>
                     <ReferenceInput reference="qualifications" source="qualification.@id">
